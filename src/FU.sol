@@ -56,6 +56,7 @@ contract FU is IERC20Big, IERC6093 {
         _totalSupply = initialSupply.toExternal();
 
         uint512 initialShares = alloc().from(type(uint256).max, type(uint256).max); // TODO: correctly initialize `_totalShares`
+        _totalShares = initialShares.toExternal();
         uint512 sharesToLiquidity = alloc().odiv(initialShares, 10);
         _mintShares(address(pair), sharesToLiquidity);
         _mintShares(msg.sender, tmp().osub(initialShares, sharesToLiquidity));
