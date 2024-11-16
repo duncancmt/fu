@@ -194,7 +194,6 @@ contract FU is IERC20Big, IERC6093 {
         return false;
     }
 
-
     function deliver(uint256 amount_hi) external returns (bool) {
         uint512 amount = alloc();
         {
@@ -216,7 +215,10 @@ contract FU is IERC20Big, IERC6093 {
             }
             amount.from(amount_hi, amount_lo);
         }
-        revert("unimplemented");
+        if (!_spendAllowance(from, msg.sender, amount)) {
+            return false;
+        }
+        return _burn(from, amount);
     }
 
     function deliverFrom(address from, uint256 amount_hi) external returns (bool) {
@@ -228,6 +230,9 @@ contract FU is IERC20Big, IERC6093 {
             }
             amount.from(amount_hi, amount_lo);
         }
-        revert("unimplemented");
+        if (!_spendAllowance(from, msg.sender, amount)) {
+            return false;
+        }
+        return _deliver(from, amount);
     }
 }
