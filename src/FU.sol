@@ -33,14 +33,17 @@ contract FU is IERC20Big, IERC6093 {
     }
 
     constructor() payable {
-        assert(msg.value == 1 ether);
-        pair = FACTORY.createPair(WETH, IERC20(address(this)));
-        assert(uint160(address(pair)) >> 120 == 1);
+        require(msg.value == 1 ether);
+        try FACTORY.createPair(WETH, IERC20(address(this))) returns (IUniswapV2Pair newPair) {
+            pair = newPair;
+        } catch {
+            pair = FACTORY.getPair(WETH, IERC20(address(this)));
+        }
+        require(uint160(address(pair)) >> 120 == 1);
 
         (bool success, ) = address(WETH).call{value: msg.value}("");
-        assert(success);
-        assert(WETH.transfer(address(pair), msg.value));
-        assert(WETH.balanceOf(address(pair)) == msg.value);
+        require(success);
+        require(WETH.transfer(address(pair), msg.value));
 
         uint512 initialSupply = alloc().from(type(uint152).max, type(uint256).max);
         _totalSupply = initialSupply.toExternal();
