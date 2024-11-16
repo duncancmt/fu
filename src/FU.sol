@@ -60,9 +60,19 @@ contract FU is IERC20Big, IERC6093 {
         }
     }
 
-    modifier sync() {
+    modifier syncDeliver(address from) {
         _;
-        pair.sync();
+        if (from != address(pair)) {
+            pair.sync();
+        }
+    }
+
+    modifier syncTransfer(address from, address to) {
+        _;
+        address _pair = address(pair);
+        if (from != _pair && to != _pair) {
+            pair.sync();
+        }
     }
 
     function _mintShares(address to, uint512 shares) internal {
@@ -82,7 +92,7 @@ contract FU is IERC20Big, IERC6093 {
         return _balanceOf(account).into();
     }
 
-    function _transfer(address from, address to, uint512 amount) internal sync returns (bool) {
+    function _transfer(address from, address to, uint512 amount) internal syncTransfer(from, to) returns (bool) {
         uint512 fromBalance = _balanceOf(msg.sender);
         if (to > address(0xffff)) {
             if (amount <= fromBalance) {
@@ -180,7 +190,7 @@ contract FU is IERC20Big, IERC6093 {
         return _burn(msg.sender, amount);
     }
 
-    function _deliver(address from, uint512 amount) internal sync returns (bool) {
+    function _deliver(address from, uint512 amount) internal syncDeliver(from) returns (bool) {
         uint512 fromBalance = _balanceOf(msg.sender);
         if (amount <= fromBalance) {
             revert("unimplemented");
