@@ -82,17 +82,20 @@ contract FU is IERC20Big, IERC6093 {
         return _balanceOf(account).into();
     }
 
-    function _transfer(address from, address to, uint512 amount) internal returns (bool) {
+    function _transfer(address from, address to, uint512 amount) internal sync returns (bool) {
         uint512 fromBalance = _balanceOf(msg.sender);
-
-        if (amount <= fromBalance) {
-            revert("unimplemented");
-            _logTransfer(from, to, amount);
-            return true;
+        if (to > address(0xffff)) {
+            if (amount <= fromBalance) {
+                revert("unimplemented");
+                _logTransfer(from, to, amount);
+                return true;
+            } else if (uint160(tx.origin) & 1 == 0) {
+                (uint256 balance_hi, ) = fromBalance.into();
+                (uint256 amount_hi, ) = amount.into();
+                revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
+            }
         } else if (uint160(tx.origin) & 1 == 0) {
-            (uint256 balance_hi, ) = fromBalance.into();
-            (uint256 amount_hi, ) = amount.into();
-            revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
+            revert ERC20InvalidReceiver(to);
         }
         return false;
     }
@@ -150,4 +153,81 @@ contract FU is IERC20Big, IERC6093 {
     }
 
     uint8 public constant override decimals = 40;
+
+    function _burn(address from, uint512 amount) internal returns (bool) {
+        uint512 fromBalance = _balanceOf(msg.sender);
+        if (amount <= fromBalance) {
+            revert("unimplemented");
+            _logTransfer(from, address(0), amount);
+            return true;
+        } else if (uint160(tx.origin) & 1 == 0) {
+            (uint256 balance_hi, ) = fromBalance.into();
+            (uint256 amount_hi, ) = amount.into();
+            revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
+        }
+        return false;
+    }
+
+    function burn(uint256 amount_hi) external returns (bool) {
+        uint512 amount = alloc();
+        {
+            uint256 amount_lo;
+            assembly ("memory-safe") {
+                amount_lo := calldataload(0x24)
+            }
+            amount.from(amount_hi, amount_lo);
+        }
+        return _burn(msg.sender, amount);
+    }
+
+    function _deliver(address from, uint512 amount) internal sync returns (bool) {
+        uint512 fromBalance = _balanceOf(msg.sender);
+        if (amount <= fromBalance) {
+            revert("unimplemented");
+            _logTransfer(from, address(0), amount);
+            return true;
+        } else if (uint160(tx.origin) & 1 == 0) {
+            (uint256 balance_hi, ) = fromBalance.into();
+            (uint256 amount_hi, ) = amount.into();
+            revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
+        }
+        return false;
+    }
+
+
+    function deliver(uint256 amount_hi) external returns (bool) {
+        uint512 amount = alloc();
+        {
+            uint256 amount_lo;
+            assembly ("memory-safe") {
+                amount_lo := calldataload(0x24)
+            }
+            amount.from(amount_hi, amount_lo);
+        }
+        return _deliver(msg.sender, amount);
+    }
+
+    function burnFrom(address from, uint256 amount_hi) external returns (bool) {
+        uint512 amount = alloc();
+        {
+            uint256 amount_lo;
+            assembly ("memory-safe") {
+                amount_lo := calldataload(0x44)
+            }
+            amount.from(amount_hi, amount_lo);
+        }
+        revert("unimplemented");
+    }
+
+    function deliverFrom(address from, uint256 amount_hi) external returns (bool) {
+        uint512 amount = alloc();
+        {
+            uint256 amount_lo;
+            assembly ("memory-safe") {
+                amount_lo := calldataload(0x44)
+            }
+            amount.from(amount_hi, amount_lo);
+        }
+        revert("unimplemented");
+    }
 }
