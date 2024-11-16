@@ -121,28 +121,25 @@ contract FU is IERC20Big, IERC6093 {
         return false;
     }
 
-    function transfer(address to, uint256 amount_hi) external override returns (bool) {
+    function _amount(uint256 amount_hi, uint256 normalCalldataSize) internal pure returns (uint512) {
         uint512 amount = alloc();
-        {
-            uint256 amount_lo;
-            assembly ("memory-safe") {
-                amount_lo := calldataload(0x44)
-            }
-            amount.from(amount_hi, amount_lo);
+        uint256 amount_lo;
+        assembly ("memory-safe") {
+            amount_lo := calldataload(normalCalldataSize)
         }
-        return _transfer(msg.sender, to, amount);
+        return amount.from(amount_hi, amount_lo);
+    }
+
+    function transfer(address to, uint256 amount_hi) external override returns (bool) {
+        return _transfer(msg.sender, to, _amount(amount_hi, 0x44));
     }
 
     function approve(address spender, uint256 amount_hi) external returns (bool) {
-        uint512 amount = alloc();
+        uint512 amount;
         if (amount_hi == type(uint256).max) {
-            amount.from(amount_hi, amount_hi);
+            amount = alloc().from(amount_hi, amount_hi);
         } else {
-            uint256 amount_lo;
-            assembly ("memory-safe") {
-                amount_lo := calldataload(0x64)
-            }
-            amount.from(amount_hi, amount_lo);
+            amount = _amount(amount_hi, 0x44);
         }
         allowance[msg.sender][spender] = amount.toExternal();
         _logApproval(msg.sender, spender, amount);
@@ -169,14 +166,7 @@ contract FU is IERC20Big, IERC6093 {
     }
 
     function transferFrom(address from, address to, uint256 amount_hi) external override returns (bool) {
-        uint512 amount = alloc();
-        {
-            uint256 amount_lo;
-            assembly ("memory-safe") {
-                amount_lo := calldataload(0x64)
-            }
-            amount.from(amount_hi, amount_lo);
-        }
+        uint512 amount = _amount(amount_hi, 0x64);
         if (!_spendAllowance(from, msg.sender, amount)) {
             return false;
         }
@@ -208,15 +198,7 @@ contract FU is IERC20Big, IERC6093 {
     }
 
     function burn(uint256 amount_hi) external returns (bool) {
-        uint512 amount = alloc();
-        {
-            uint256 amount_lo;
-            assembly ("memory-safe") {
-                amount_lo := calldataload(0x24)
-            }
-            amount.from(amount_hi, amount_lo);
-        }
-        return _burn(msg.sender, amount);
+        return _burn(msg.sender, _amount(amount_hi, 0x24));
     }
 
     function _deliver(address from, uint512 amount) internal syncDeliver(from) returns (bool) {
@@ -234,26 +216,11 @@ contract FU is IERC20Big, IERC6093 {
     }
 
     function deliver(uint256 amount_hi) external returns (bool) {
-        uint512 amount = alloc();
-        {
-            uint256 amount_lo;
-            assembly ("memory-safe") {
-                amount_lo := calldataload(0x24)
-            }
-            amount.from(amount_hi, amount_lo);
-        }
-        return _deliver(msg.sender, amount);
+        return _deliver(msg.sender, _amount(amount_hi, 0x24));
     }
 
     function burnFrom(address from, uint256 amount_hi) external returns (bool) {
-        uint512 amount = alloc();
-        {
-            uint256 amount_lo;
-            assembly ("memory-safe") {
-                amount_lo := calldataload(0x44)
-            }
-            amount.from(amount_hi, amount_lo);
-        }
+        uint512 amount = _amount(amount_hi, 0x44);
         if (!_spendAllowance(from, msg.sender, amount)) {
             return false;
         }
@@ -261,14 +228,7 @@ contract FU is IERC20Big, IERC6093 {
     }
 
     function deliverFrom(address from, uint256 amount_hi) external returns (bool) {
-        uint512 amount = alloc();
-        {
-            uint256 amount_lo;
-            assembly ("memory-safe") {
-                amount_lo := calldataload(0x44)
-            }
-            amount.from(amount_hi, amount_lo);
-        }
+        uint512 amount = _amount(amount_hi, 0x44);
         if (!_spendAllowance(from, msg.sender, amount)) {
             return false;
         }
