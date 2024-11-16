@@ -19,30 +19,24 @@ contract FU is IERC20Big, IERC6093 {
     uint512_external internal _totalShares;
     IUniswapV2Pair public immutable pair;
 
-    function _logTransfer(address from, address to, uint512 amount) internal {
-        bytes32 selector = IERC20Big.Transfer.selector;
+    function _logBig(bytes32 selector, address a, address b, uint512 amount) internal {
         assembly ("memory-safe") {
             log3(
                 amount,
                 0x40,
                 selector,
-                and(0xffffffffffffffffffffffffffffffffffffffff, from),
-                and(0xffffffffffffffffffffffffffffffffffffffff, to)
+                and(0xffffffffffffffffffffffffffffffffffffffff, a),
+                and(0xffffffffffffffffffffffffffffffffffffffff, b)
             )
         }
     }
 
+    function _logTransfer(address from, address to, uint512 amount) internal {
+        _logBig(IERC20Big.Transfer.selector, from, to, amount);
+    }
+
     function _logApproval(address owner, address spender, uint512 amount) internal {
-        bytes32 selector = IERC20Big.Approval.selector;
-        assembly ("memory-safe") {
-            log3(
-                amount,
-                0x40,
-                selector,
-                and(0xffffffffffffffffffffffffffffffffffffffff, owner),
-                and(0xffffffffffffffffffffffffffffffffffffffff, spender)
-            )
-        }
+        _logBig(IERC20Big.Approval.selector, owner, spender, amount);
     }
 
     constructor() payable {
