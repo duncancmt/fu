@@ -212,6 +212,13 @@ library Lib512MathComparisons {
         }
     }
 
+    function isMax(uint512 x) internal pure returns (bool r) {
+        (uint256 x_hi, uint256 x_lo) = x.into();
+        assembly ("memory-safe") {
+            r := iszero(not(and(x_hi, x_lo)))
+        }
+    }
+
     function eq(uint512 x, uint256 y) internal pure returns (bool r) {
         (uint256 x_hi, uint256 x_lo) = x.into();
         assembly ("memory-safe") {

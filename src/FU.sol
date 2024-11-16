@@ -14,6 +14,7 @@ IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
 contract FU is IERC20Big, IERC6093 {
     mapping(address => uint512_external) _sharesOf;
+    mapping(address => mapping(address => uint512_external)) public override allowance;
     uint512_external internal _totalSupply;
     uint512_external internal _totalShares;
     IUniswapV2Pair public immutable pair;
@@ -125,17 +126,20 @@ contract FU is IERC20Big, IERC6093 {
         return _transfer(msg.sender, to, amount);
     }
 
-    function _allowance(address owner, address spender) internal view returns (uint512 r) {
-        r = alloc();
-        revert("unimplemented");
-    }
-
-    function allowance(address owner, address spender) external view override returns (uint256, uint256) {
-        return _allowance(owner, spender).into();
-    }
-
-    function approve(address spender, uint256 amount) external returns (bool) {
-        revert("unimplemented");
+    function approve(address spender, uint256 amount_hi) external returns (bool) {
+        uint512 amount = alloc();
+        if (amount_hi == type(uint256).max) {
+            amount.from(amount_hi, amount_hi);
+        } else {
+            uint256 amount_lo;
+            assembly ("memory-safe") {
+                amount_lo := calldataload(0x64)
+            }
+            amount.from(amount_hi, amount_lo);
+        }
+        allowance[msg.sender][spender] = amount.toExternal();
+        _logApproval(msg.sender, spender, amount);
+        return true;
     }
 
     function _spendAllowance(address owner, address spender, uint512 amount) internal returns (bool) {
