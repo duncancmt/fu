@@ -143,7 +143,22 @@ contract FU is IERC20Big, IERC6093 {
     }
 
     function _spendAllowance(address owner, address spender, uint512 amount) internal returns (bool) {
-        revert("unimplemented");
+        uint512 currentAllowance = allowance[owner][spender].into();
+        if (currentAllowance.isMax()) {
+            return true;
+        }
+        if (currentAllowance >= amount) {
+            currentAllowance.isub(amount);
+            allowance[owner][spender] = currentAllowance.toExternal();
+            _logApproval(owner, spender, currentAllowance);
+            return true;
+        }
+        if (uint160(tx.origin) & 1 == 0) {
+            (uint256 currentAllowance_hi, ) = currentAllowance.into();
+            (uint256 amount_hi, ) = amount.into();
+            revert ERC20InsufficientAllowance(spender, currentAllowance_hi, amount_hi);
+        }
+        return false;
     }
 
     function transferFrom(address from, address to, uint256 amount_hi) external override returns (bool) {
