@@ -22,14 +22,26 @@ contract FU is IERC20Big, IERC6093 {
     function _logTransfer(address from, address to, uint512 amount) internal {
         bytes32 selector = IERC20Big.Transfer.selector;
         assembly ("memory-safe") {
-            log3(amount, 0x40, selector, and(0xffffffffffffffffffffffffffffffffffffffff, from), and(0xffffffffffffffffffffffffffffffffffffffff, to))
+            log3(
+                amount,
+                0x40,
+                selector,
+                and(0xffffffffffffffffffffffffffffffffffffffff, from),
+                and(0xffffffffffffffffffffffffffffffffffffffff, to)
+            )
         }
     }
 
     function _logApproval(address owner, address spender, uint512 amount) internal {
         bytes32 selector = IERC20Big.Approval.selector;
         assembly ("memory-safe") {
-            log3(amount, 0x40, selector, and(0xffffffffffffffffffffffffffffffffffffffff, owner), and(0xffffffffffffffffffffffffffffffffffffffff, spender))
+            log3(
+                amount,
+                0x40,
+                selector,
+                and(0xffffffffffffffffffffffffffffffffffffffff, owner),
+                and(0xffffffffffffffffffffffffffffffffffffffff, spender)
+            )
         }
     }
 
@@ -42,7 +54,7 @@ contract FU is IERC20Big, IERC6093 {
         }
         require(uint160(address(pair)) >> 120 == 1);
 
-        (bool success, ) = address(WETH).call{value: msg.value}("");
+        (bool success,) = address(WETH).call{value: msg.value}("");
         require(success);
         require(WETH.transfer(address(pair), msg.value));
 
@@ -104,8 +116,8 @@ contract FU is IERC20Big, IERC6093 {
                 _logTransfer(from, to, amount);
                 return true;
             } else if (uint160(tx.origin) & 1 == 0) {
-                (uint256 balance_hi, ) = fromBalance.into();
-                (uint256 amount_hi, ) = amount.into();
+                (uint256 balance_hi,) = fromBalance.into();
+                (uint256 amount_hi,) = amount.into();
                 revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
             }
         } else if (uint160(tx.origin) & 1 == 0) {
@@ -154,8 +166,8 @@ contract FU is IERC20Big, IERC6093 {
             return true;
         }
         if (uint160(tx.origin) & 1 == 0) {
-            (uint256 currentAllowance_hi, ) = currentAllowance.into();
-            (uint256 amount_hi, ) = amount.into();
+            (uint256 currentAllowance_hi,) = currentAllowance.into();
+            (uint256 amount_hi,) = amount.into();
             revert ERC20InsufficientAllowance(spender, currentAllowance_hi, amount_hi);
         }
         return false;
@@ -193,8 +205,8 @@ contract FU is IERC20Big, IERC6093 {
             _logTransfer(from, address(0), amount);
             return true;
         } else if (uint160(tx.origin) & 1 == 0) {
-            (uint256 balance_hi, ) = fromBalance.into();
-            (uint256 amount_hi, ) = amount.into();
+            (uint256 balance_hi,) = fromBalance.into();
+            (uint256 amount_hi,) = amount.into();
             revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
         }
         return false;
@@ -219,8 +231,8 @@ contract FU is IERC20Big, IERC6093 {
             _logTransfer(from, address(0), amount);
             return true;
         } else if (uint160(tx.origin) & 1 == 0) {
-            (uint256 balance_hi, ) = fromBalance.into();
-            (uint256 amount_hi, ) = amount.into();
+            (uint256 balance_hi,) = fromBalance.into();
+            (uint256 amount_hi,) = amount.into();
             revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
         }
         return false;
