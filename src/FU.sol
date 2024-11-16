@@ -90,6 +90,10 @@ contract FU is IERC20Big, IERC6093 {
         revert("unimplemented");
     }
 
+    function _burnTokens(uint512 amount) internal {
+        revert("unimplemented");
+    }
+
     function totalSupply() external view override returns (uint256, uint256) {
         return _totalSupply.into().into();
     }
@@ -103,12 +107,26 @@ contract FU is IERC20Big, IERC6093 {
         return _balanceOf(account).into();
     }
 
+    function _debit(address from, uint512 amount) internal {
+        // TODO: this function is used in both `_transfer` and `_deliver`, which
+        // have subtly different behavior as it pertains to the knock-on effect
+        // of removing shares from circulation. There probably needs to be 2
+        // versions.
+        revert("unimplemented");
+    }
+
+    function _credit(address to, uint512 amount) internal {
+        revert("unimplemented");
+    }
+
     function _transfer(address from, address to, uint512 amount) internal syncTransfer(from, to) returns (bool) {
         uint512 fromBalance = _balanceOf(msg.sender);
         if (to > address(0xffff)) {
             if (amount <= fromBalance) {
-                revert("unimplemented");
+                _debit(from, amount);
+                _credit(to, amount);
                 _logTransfer(from, to, amount);
+                // TODO: log fee amount
                 return true;
             } else if (uint160(tx.origin) & 1 == 0) {
                 (uint256 balance_hi,) = fromBalance.into();
@@ -186,7 +204,8 @@ contract FU is IERC20Big, IERC6093 {
     function _burn(address from, uint512 amount) internal returns (bool) {
         uint512 fromBalance = _balanceOf(msg.sender);
         if (amount <= fromBalance) {
-            revert("unimplemented");
+            _debit(from, amount);
+            _burnTokens(amount);
             _logTransfer(from, address(0), amount);
             return true;
         } else if (uint160(tx.origin) & 1 == 0) {
@@ -204,7 +223,7 @@ contract FU is IERC20Big, IERC6093 {
     function _deliver(address from, uint512 amount) internal syncDeliver(from) returns (bool) {
         uint512 fromBalance = _balanceOf(msg.sender);
         if (amount <= fromBalance) {
-            revert("unimplemented");
+            _debit(from, amount);
             _logTransfer(from, address(0), amount);
             return true;
         } else if (uint160(tx.origin) & 1 == 0) {
