@@ -3,9 +3,21 @@ pragma solidity ^0.8.25;
 
 import {IERC20Big} from "./interfaces/IERC20Big.sol";
 import {IERC6093} from "./interfaces/IERC6093.sol";
-import {uint512, tmp, alloc} from "./lib/512Math.sol";
+
+import {uint512, tmp, alloc, uint512_external} from "./lib/512Math.sol";
+
+import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
+import {FACTORY} from "./interfaces/IUniswapV2Factory.sol";
+import {IERC20} from "@forge-std/interfaces/IERC20.sol";
+
+IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
 contract FU is IERC20Big, IERC6093 {
+    mapping(address => uint512_external) _sharesOf;
+    uint512_external internal _totalSupply;
+    uint512_external internal _totalShares;
+    IUniswapV2Pair public immutable pair;
+
     function _logTransfer(address from, address to, uint512 value) internal {
         bytes32 selector = IERC20Big.Transfer.selector;
         assembly ("memory-safe") {
@@ -20,16 +32,45 @@ contract FU is IERC20Big, IERC6093 {
         }
     }
 
-    constructor() {
-        // We have to be able to emit the event, even hypothetically in order for it to show up in the ABI
-        if (block.coinbase == address(0xdead)) {
-            emit Transfer(address(0), msg.sender, type(uint256).max);
+    constructor() payable {
+        assert(msg.value == 1 ether);
+        pair = FACTORY.createPair(WETH, IERC20(address(this)));
+        assert(uint160(address(pair)) >> 120 == 1);
+
+        (bool success, ) = address(WETH).call{value: msg.value}("");
+        assert(success);
+        assert(WETH.transfer(address(pair), msg.value));
+        assert(WETH.balanceOf(address(pair)) == msg.value);
+
+        uint512 initialSupply = alloc().from(type(uint152).max, type(uint256).max);
+        _totalSupply = initialSupply.toExternal();
+
+        uint512 initialShares = alloc().from(type(uint256).max, type(uint256).max); // TODO: correctly initialize `_totalShares`
+        uint512 sharesToLiquidity = alloc().odiv(initialShares, 10);
+        _mintShares(address(pair), sharesToLiquidity);
+        _mintShares(msg.sender, tmp().osub(initialShares, sharesToLiquidity));
+
+        pair.mint(msg.sender);
+
+        // We have to be able to emit the event, even hypothetically, in order
+        // for it to show up in the ABI
+        if (block.coinbase == address(this)) {
+            emit Transfer(address(0), address(0), 0);
             emit Approval(address(0), address(0), 0);
         }
     }
 
-    function totalSupply() external pure override returns (uint256, uint256) {
-        return (type(uint152).max, type(uint256).max);
+    modifier sync() {
+        _;
+        pair.sync();
+    }
+
+    function _mintShares(address to, uint512 shares) internal {
+        revert("unimplemented");
+    }
+
+    function totalSupply() external view override returns (uint256, uint256) {
+        return _totalSupply.into().into();
     }
 
     function _balanceOf(address account) internal view returns (uint512 r) {
