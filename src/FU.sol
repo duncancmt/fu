@@ -107,6 +107,9 @@ contract FU is IERC20, IERC6093 {
         uint256 d = cachedTotalSupply * feeBasis - amount * ((feeBasis << 1) - feeRate);
 
         uint256 debitShares = n.div(d);
+        if (tmp().omul(debitShares, d) < n) {
+            debitShares++;
+        }
         sharesOf[from] -= debitShares;
 
         return debitShares;
