@@ -28,7 +28,7 @@ contract FU is IERC20, IERC6093 {
         require(success);
         require(WETH.transfer(address(pair), msg.value));
 
-        totalSupply = type(uint112).max * type(uint40).max;
+        totalSupply = uint256(type(uint112).max) * type(uint40).max;
         totalShares = type(uint256).max / type(uint40).max;
         sharesOf[address(pair)] = totalShares / 10;
         sharesOf[msg.sender] = totalShares - sharesOf[address(pair)];
