@@ -80,15 +80,14 @@ contract FU is IERC20, IERC6093 {
         return balance;
     }
 
-    /*
     function fee() public view returns (uint256) {
         revert("unimplemented");
     }
-    */
 
     function _debit(
         address from,
         uint256 amount,
+        uint256 feeRate,
         uint256 cachedTotalSupply,
         uint256 cachedTotalShares,
         uint256 cachedFromShares,
@@ -100,19 +99,20 @@ contract FU is IERC20, IERC6093 {
         // versions.
 
         uint256 debitShares;
-        (sharesOf[from], debitShares) = ReflectMath.debit(amount, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+        (sharesOf[from], debitShares) = ReflectMath.debit(amount, feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
         return debitShares;
     }
 
     function _credit(
         address to,
         uint256 amount,
+        uint256 feeRate,
         uint256 cachedTotalSupply,
         uint256 cachedTotalShares,
         uint256 cachedToShares,
         uint256 debitShares
     ) internal {
-        (sharesOf[to], totalShares) = ReflectMath.credit(amount, cachedTotalSupply, cachedTotalShares, cachedToShares, debitShares);
+        (sharesOf[to], totalShares) = ReflectMath.credit(amount, feeRate, cachedTotalSupply, cachedTotalShares, cachedToShares, debitShares);
     }
 
     function _transfer(address from, address to, uint256 amount) internal syncTransfer(from, to) returns (bool) {
@@ -120,13 +120,14 @@ contract FU is IERC20, IERC6093 {
             _balanceOf(from);
         if (uint256(uint160(to)) > type(uint120).max) {
             if (amount <= fromBalance) {
-                uint256 feeAmount = amount * ReflectMath.feeRate / ReflectMath.feeBasis;
+                uint256 feeRate = fee();
+                uint256 feeAmount = amount * feeRate / ReflectMath.feeBasis;
                 emit Transfer(from, to, amount - feeAmount);
                 emit Transfer(from, address(0), feeAmount);
                 uint256 cachedToShares = sharesOf[to];
                 uint256 shares =
-                    _debit(from, amount, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
-                _credit(to, amount, cachedTotalSupply, cachedTotalShares, cachedToShares, shares);
+                    _debit(from, amount, feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+                _credit(to, amount, feeRate, cachedTotalSupply, cachedTotalShares, cachedToShares, shares);
                 return true;
             } else if (_shouldRevert()) {
                 revert ERC20InsufficientBalance(from, fromBalance, amount);
@@ -184,7 +185,7 @@ contract FU is IERC20, IERC6093 {
     function _burn(address from, uint256 amount) internal returns (bool) {
         (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
-            uint256 amountShares = _debit(from, amount, cachedTotalSupply, cachedTotalShares, shares, 0); // TODO: WRONG
+            uint256 amountShares = _debit(from, amount, fee(), cachedTotalSupply, cachedTotalShares, shares, 0); // TODO: WRONG
             totalSupply = cachedTotalSupply - amount;
             totalShares = cachedTotalShares - amountShares;
             emit Transfer(from, address(0), amount);
@@ -202,7 +203,7 @@ contract FU is IERC20, IERC6093 {
     function _deliver(address from, uint256 amount) internal syncDeliver(from) returns (bool) {
         (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
-            uint256 amountShares = _debit(from, amount, cachedTotalSupply, cachedTotalShares, shares, 100); // TODO: WRONG
+            uint256 amountShares = _debit(from, amount, fee(), cachedTotalSupply, cachedTotalShares, shares, 100); // TODO: WRONG
             totalShares -= amountShares;
             emit Transfer(from, address(0), amount);
             return true;

@@ -4,11 +4,11 @@ pragma solidity ^0.8.25;
 import {uint512, tmp, alloc} from "../lib/512Math.sol";
 
 library ReflectMath {
-    uint256 internal constant feeRate = 100;
     uint256 internal constant feeBasis = 10_000;
-    
+
     function debit(
         uint256 amount,
+        uint256 feeRate,
         uint256 totalSupply,
         uint256 totalShares,
         uint256 fromShares,
@@ -30,6 +30,7 @@ library ReflectMath {
 
     function credit(
         uint256 amount,
+        uint256 feeRate,
         uint256 totalSupply,
         uint256 totalShares,
         uint256 toShares,
