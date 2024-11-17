@@ -100,11 +100,11 @@ contract FU is IERC20, IERC6093 {
         // of removing shares from circulation. There probably needs to be 2
         // versions.
 
-        uint512 n = alloc().omul(cachedFromShares, cachedTotalSupply);
-        n.iadd(tmp().omul(amount, cachedToShares));
-        n.isub(tmp().omul(amount, cachedTotalShares));
-        n.isub(tmp().omul(amount, cachedFromShares * (feeBasis - feeRate) / feeBasis)); // TODO: eliminate division
-        uint256 d = cachedTotalSupply - amount * ((feeBasis << 1) - feeRate) / feeBasis;
+        uint512 n = alloc().omul(cachedTotalSupply * feeBasis, cachedFromShares);
+        n.iadd(tmp().omul(amount * feeBasis, cachedToShares));
+        n.isub(tmp().omul(amount * feeBasis, cachedTotalShares));
+        n.isub(tmp().omul(amount, cachedFromShares * (feeBasis - feeRate)));
+        uint256 d = cachedTotalSupply * feeBasis - amount * ((feeBasis << 1) - feeRate);
 
         uint256 debitShares = n.div(d);
         sharesOf[from] -= debitShares;
