@@ -87,7 +87,7 @@ contract FU is IERC20, IERC6093 {
     function _debit(
         address from,
         uint256 amount,
-        uint256 feeRate,
+        uint256 cachedFeeRate,
         uint256 cachedTotalSupply,
         uint256 cachedTotalShares,
         uint256 cachedFromShares,
@@ -99,20 +99,20 @@ contract FU is IERC20, IERC6093 {
         // versions.
 
         uint256 debitShares;
-        (sharesOf[from], debitShares) = ReflectMath.debit(amount, feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+        (sharesOf[from], debitShares) = ReflectMath.debit(amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
         return debitShares;
     }
 
     function _credit(
         address to,
         uint256 amount,
-        uint256 feeRate,
+        uint256 cachedFeeRate,
         uint256 cachedTotalSupply,
         uint256 cachedTotalShares,
         uint256 cachedToShares,
         uint256 debitShares
     ) internal {
-        (sharesOf[to], totalShares) = ReflectMath.credit(amount, feeRate, cachedTotalSupply, cachedTotalShares, cachedToShares, debitShares);
+        (sharesOf[to], totalShares) = ReflectMath.credit(amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedToShares, debitShares);
     }
 
     function _transfer(address from, address to, uint256 amount) internal syncTransfer(from, to) returns (bool) {
@@ -120,14 +120,16 @@ contract FU is IERC20, IERC6093 {
             _balanceOf(from);
         if (uint256(uint160(to)) > type(uint120).max) {
             if (amount <= fromBalance) {
-                uint256 feeRate = fee();
-                uint256 feeAmount = amount * feeRate / ReflectMath.feeBasis;
-                emit Transfer(from, to, amount - feeAmount);
-                emit Transfer(from, address(0), feeAmount);
+                uint256 cachedFeeRate = fee();
+                {
+                    uint256 feeAmount = amount * cachedFeeRate / ReflectMath.feeBasis;
+                    emit Transfer(from, to, amount - feeAmount);
+                    emit Transfer(from, address(0), feeAmount);
+                }
                 uint256 cachedToShares = sharesOf[to];
                 uint256 shares =
-                    _debit(from, amount, feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
-                _credit(to, amount, feeRate, cachedTotalSupply, cachedTotalShares, cachedToShares, shares);
+                    _debit(from, amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+                _credit(to, amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedToShares, shares);
                 return true;
             } else if (_shouldRevert()) {
                 revert ERC20InsufficientBalance(from, fromBalance, amount);
