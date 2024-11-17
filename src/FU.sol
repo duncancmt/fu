@@ -83,31 +83,56 @@ contract FU is IERC20, IERC6093 {
         return balance;
     }
 
-    function _debit(address from, uint512 amount) internal {
+    /*
+    function fee() public view returns (uint256) {
+        revert("unimplemented");
+    }
+    */
+    uint256 internal constant feeRate = 100;
+    uint256 internal constant feeBasis = 10_000;
+
+    function _debit(address from, uint256 amount, uint256 cachedTotalSupply, uint256 cachedTotalShares, uint256 cachedFromShares, uint256 cachedToShares) internal returns (uint256) {
         // TODO: this function is used in both `_transfer` and `_deliver`, which
         // have subtly different behavior as it pertains to the knock-on effect
         // of removing shares from circulation. There probably needs to be 2
         // versions.
-        revert("unimplemented");
+
+        uint512 n = alloc().omul(cachedFromShares, cachedTotalSupply);
+        n.iadd(tmp().omul(amount, cachedToShares));
+        n.isub(tmp().omul(amount, cachedTotalShares));
+        n.isub(tmp().omul(amount, cachedFromShares * (feeBasis - feeRate) / feeBasis)); // TODO: eliminate division
+        uint256 d = cachedTotalSupply - amount * ((feeBasis << 1) - feeRate) / feeBasis;
+
+        uint256 debitShares = n.div(d);
+        sharesOf[from] -= debitShares;
+
+        return debitShares;
     }
 
-    function _credit(address to, uint512 amount) internal {
-        revert("unimplemented");
+    function _credit(address to, uint256 amount, uint256 cachedTotalSupply, uint256 cachedTotalShares, uint256 cachedToShares, uint256 debitShares) internal {
+        uint512 n = alloc().omul(cachedTotalSupply, cachedToShares);
+        n.iadd(tmp().omul(cachedTotalSupply, debitShares));
+        n.isub(tmp().omul(amount, cachedTotalShares * (feeBasis - feeRate) / feeBasis));
+        uint256 d = cachedTotalSupply - amount * (feeBasis - feeRate) / feeBasis;
+
+        uint256 burnShares = n.div(d);
+        sharesOf[to] += debitShares - burnShares;
+        totalShares -= burnShares;
     }
 
-    function _transfer(address from, address to, uint512 amount) internal syncTransfer(from, to) returns (bool) {
-        uint512 fromBalance = balanceOf(msg.sender);
+    function _transfer(address from, address to, uint256 amount) internal syncTransfer(from, to) returns (bool) {
+        (uint256 fromBalance, uint256 cachedFromShares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
         if (uint256(uint160(to)) > type(uint120).max) {
             if (amount <= fromBalance) {
-                _debit(from, amount);
-                _credit(to, amount);
-                emit Transfer(from, to, amount);
-                // TODO: log fee amount
+                uint256 feeAmount = amount * feeRate / feeBasis;
+                emit Transfer(from, to, amount - feeAmount);
+                emit Transfer(from, address(0), feeAmount);
+                uint256 cachedToShares = sharesOf[to];
+                uint256 shares = _debit(from, amount, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+                _credit(to, amount, cachedTotalSupply, cachedTotalShares, cachedToShares, shares);
                 return true;
             } else if (_shouldRevert()) {
-                (uint256 balance_hi,) = fromBalance.into();
-                (uint256 amount_hi,) = amount.into();
-                revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
+                revert ERC20InsufficientBalance(from, fromBalance, amount);
             }
         } else if (_shouldRevert()) {
             revert ERC20InvalidReceiver(to);
