@@ -61,10 +61,6 @@ contract FU is IERC20, IERC6093 {
         return uint256(uint160(tx.origin)) & 1 == 0;
     }
 
-    function _burnTokens(uint512 amount) internal {
-        revert("unimplemented");
-    }
-
     function _balanceOf(address account) internal view returns (uint256, uint256, uint256, uint256) {
         uint256 shares = sharesOf[account];
         uint256 balance;
@@ -140,52 +136,34 @@ contract FU is IERC20, IERC6093 {
         return false;
     }
 
-    function _amount(uint256 amount_hi, uint256 normalCalldataSize) internal pure returns (uint512) {
-        uint512 amount = alloc();
-        uint256 amount_lo;
-        assembly ("memory-safe") {
-            amount_lo := calldataload(normalCalldataSize)
-        }
-        return amount.from(amount_hi, amount_lo);
+    function transfer(address to, uint256 amount) external override returns (bool) {
+        return _transfer(msg.sender, to, amount);
     }
 
-    function transfer(address to, uint256 amount_hi) external override returns (bool) {
-        return _transfer(msg.sender, to, _amount(amount_hi, 0x44));
-    }
-
-    function approve(address spender, uint256 amount_hi) external returns (bool) {
-        uint512 amount;
-        if (amount_hi == type(uint256).max) {
-            amount = alloc().from(amount_hi, amount_hi);
-        } else {
-            amount = _amount(amount_hi, 0x44);
-        }
-        allowance[msg.sender][spender] = amount.toExternal();
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
         emit Approval(msg.sender, spender, amount);
         return true;
     }
 
-    function _spendAllowance(address owner, address spender, uint512 amount) internal returns (bool) {
-        uint512 currentAllowance = allowance[owner][spender].into();
-        if (currentAllowance.isMax()) {
+    function _spendAllowance(address owner, address spender, uint256 amount) internal returns (bool) {
+        uint256 currentAllowance = allowance[owner][spender];
+        if (~currentAllowance == 0) {
             return true;
         }
         if (currentAllowance >= amount) {
-            currentAllowance.isub(amount);
-            allowance[owner][spender] = currentAllowance.toExternal();
+            currentAllowance -= amount;
+            allowance[owner][spender] = currentAllowance;
             emit Approval(owner, spender, currentAllowance);
             return true;
         }
         if (_shouldRevert()) {
-            (uint256 currentAllowance_hi,) = currentAllowance.into();
-            (uint256 amount_hi,) = amount.into();
-            revert ERC20InsufficientAllowance(spender, currentAllowance_hi, amount_hi);
+            revert ERC20InsufficientAllowance(spender, currentAllowance, amount);
         }
         return false;
     }
 
-    function transferFrom(address from, address to, uint256 amount_hi) external override returns (bool) {
-        uint512 amount = _amount(amount_hi, 0x64);
+    function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
         if (!_spendAllowance(from, msg.sender, amount)) {
             return false;
         }
@@ -202,53 +180,49 @@ contract FU is IERC20, IERC6093 {
 
     uint8 public constant override decimals = 36;
 
-    function _burn(address from, uint512 amount) internal returns (bool) {
-        uint512 fromBalance = balanceOf(msg.sender);
-        if (amount <= fromBalance) {
-            _debit(from, amount);
-            _burnTokens(amount);
+    function _burn(address from, uint256 amount) internal returns (bool) {
+        (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
+        if (amount <= balance) {
+            uint256 amountShares = _debit(from, amount, cachedTotalSupply, cachedTotalShares, shares, 0); // TODO: WRONG
+            totalSupply = cachedTotalSupply - amount;
+            totalShares = cachedTotalShares - amountShares;
             emit Transfer(from, address(0), amount);
             return true;
         } else if (_shouldRevert()) {
-            (uint256 balance_hi,) = fromBalance.into();
-            (uint256 amount_hi,) = amount.into();
-            revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
+            revert ERC20InsufficientBalance(from, balance, amount);
         }
         return false;
     }
 
-    function burn(uint256 amount_hi) external returns (bool) {
-        return _burn(msg.sender, _amount(amount_hi, 0x24));
+    function burn(uint256 amount) external returns (bool) {
+        return _burn(msg.sender, amount);
     }
 
-    function _deliver(address from, uint512 amount) internal syncDeliver(from) returns (bool) {
-        uint512 fromBalance = balanceOf(msg.sender);
-        if (amount <= fromBalance) {
-            _debit(from, amount);
+    function _deliver(address from, uint256 amount) internal syncDeliver(from) returns (bool) {
+        (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
+        if (amount <= balance) {
+            uint256 amountShares = _debit(from, amount, cachedTotalSupply, cachedTotalShares, shares, 100); // TODO: WRONG
+            totalShares -= amountShares;
             emit Transfer(from, address(0), amount);
             return true;
         } else if (_shouldRevert()) {
-            (uint256 balance_hi,) = fromBalance.into();
-            (uint256 amount_hi,) = amount.into();
-            revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
+            revert ERC20InsufficientBalance(from, balance, amount);
         }
         return false;
     }
 
-    function deliver(uint256 amount_hi) external returns (bool) {
-        return _deliver(msg.sender, _amount(amount_hi, 0x24));
+    function deliver(uint256 amount) external returns (bool) {
+        return _deliver(msg.sender, amount);
     }
 
-    function burnFrom(address from, uint256 amount_hi) external returns (bool) {
-        uint512 amount = _amount(amount_hi, 0x44);
+    function burnFrom(address from, uint256 amount) external returns (bool) {
         if (!_spendAllowance(from, msg.sender, amount)) {
             return false;
         }
         return _burn(from, amount);
     }
 
-    function deliverFrom(address from, uint256 amount_hi) external returns (bool) {
-        uint512 amount = _amount(amount_hi, 0x44);
+    function deliverFrom(address from, uint256 amount) external returns (bool) {
         if (!_spendAllowance(from, msg.sender, amount)) {
             return false;
         }
