@@ -57,10 +57,6 @@ contract FU is IERC20, IERC6093 {
         }
     }
 
-    function _mintShares(address to, uint512 shares) internal {
-        revert("unimplemented");
-    }
-
     function _shouldRevert() internal view returns (bool) {
         return uint256(uint160(tx.origin)) & 1 == 0;
     }
@@ -69,13 +65,10 @@ contract FU is IERC20, IERC6093 {
         revert("unimplemented");
     }
 
-    function _balanceOf(address account) internal view returns (uint512 r) {
-        r = alloc();
-        revert("unimplemented");
-    }
-
-    function balanceOf(address account) external view override returns (uint256, uint256) {
-        return _balanceOf(account).into();
+    function balanceOf(address account) public view override returns (uint256) {
+        uint256 shares = sharesOf[account];
+        uint256 balance = alloc().from(shares).imul(totalSupply << 40).div(tmp().omul(totalShares, uint256(uint160(account)) >> 120));
+        return balance;
     }
 
     function _debit(address from, uint512 amount) internal {
@@ -91,7 +84,7 @@ contract FU is IERC20, IERC6093 {
     }
 
     function _transfer(address from, address to, uint512 amount) internal syncTransfer(from, to) returns (bool) {
-        uint512 fromBalance = _balanceOf(msg.sender);
+        uint512 fromBalance = balanceOf(msg.sender);
         if (uint256(uint160(to)) > type(uint120).max) {
             if (amount <= fromBalance) {
                 _debit(from, amount);
@@ -173,7 +166,7 @@ contract FU is IERC20, IERC6093 {
     uint8 public constant override decimals = 36;
 
     function _burn(address from, uint512 amount) internal returns (bool) {
-        uint512 fromBalance = _balanceOf(msg.sender);
+        uint512 fromBalance = balanceOf(msg.sender);
         if (amount <= fromBalance) {
             _debit(from, amount);
             _burnTokens(amount);
@@ -192,7 +185,7 @@ contract FU is IERC20, IERC6093 {
     }
 
     function _deliver(address from, uint512 amount) internal syncDeliver(from) returns (bool) {
-        uint512 fromBalance = _balanceOf(msg.sender);
+        uint512 fromBalance = balanceOf(msg.sender);
         if (amount <= fromBalance) {
             _debit(from, amount);
             emit Transfer(from, address(0), amount);
