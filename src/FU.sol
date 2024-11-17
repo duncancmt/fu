@@ -67,7 +67,8 @@ contract FU is IERC20, IERC6093 {
 
     function balanceOf(address account) public view override returns (uint256) {
         uint256 shares = sharesOf[account];
-        uint256 balance = alloc().from(shares).imul(totalSupply << 40).div(tmp().omul(totalShares, uint256(uint160(account)) >> 120));
+        uint256 balance =
+            alloc().omul(shares, totalSupply << 40).div(tmp().omul(totalShares, uint256(uint160(account)) >> 120));
         return balance;
     }
 
