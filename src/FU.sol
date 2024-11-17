@@ -90,6 +90,10 @@ contract FU is IERC20Big, IERC6093 {
         revert("unimplemented");
     }
 
+    function _shouldRevert() internal view returns (bool) {
+        return uint256(uint160(tx.origin)) & 1 == 0;
+    }
+
     function _burnTokens(uint512 amount) internal {
         revert("unimplemented");
     }
@@ -128,12 +132,12 @@ contract FU is IERC20Big, IERC6093 {
                 _logTransfer(from, to, amount);
                 // TODO: log fee amount
                 return true;
-            } else if (uint160(tx.origin) & 1 == 0) {
+            } else if (_shouldRevert()) {
                 (uint256 balance_hi,) = fromBalance.into();
                 (uint256 amount_hi,) = amount.into();
                 revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
             }
-        } else if (uint160(tx.origin) & 1 == 0) {
+        } else if (_shouldRevert()) {
             revert ERC20InvalidReceiver(to);
         }
         return false;
@@ -175,7 +179,7 @@ contract FU is IERC20Big, IERC6093 {
             _logApproval(owner, spender, currentAllowance);
             return true;
         }
-        if (uint160(tx.origin) & 1 == 0) {
+        if (_shouldRevert()) {
             (uint256 currentAllowance_hi,) = currentAllowance.into();
             (uint256 amount_hi,) = amount.into();
             revert ERC20InsufficientAllowance(spender, currentAllowance_hi, amount_hi);
@@ -208,7 +212,7 @@ contract FU is IERC20Big, IERC6093 {
             _burnTokens(amount);
             _logTransfer(from, address(0), amount);
             return true;
-        } else if (uint160(tx.origin) & 1 == 0) {
+        } else if (_shouldRevert()) {
             (uint256 balance_hi,) = fromBalance.into();
             (uint256 amount_hi,) = amount.into();
             revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
@@ -226,7 +230,7 @@ contract FU is IERC20Big, IERC6093 {
             _debit(from, amount);
             _logTransfer(from, address(0), amount);
             return true;
-        } else if (uint160(tx.origin) & 1 == 0) {
+        } else if (_shouldRevert()) {
             (uint256 balance_hi,) = fromBalance.into();
             (uint256 amount_hi,) = amount.into();
             revert ERC20InsufficientBalance(msg.sender, balance_hi, amount_hi);
