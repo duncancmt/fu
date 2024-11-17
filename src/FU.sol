@@ -65,12 +65,22 @@ contract FU is IERC20, IERC6093 {
         revert("unimplemented");
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
+    function _balanceOf(address account) internal view returns (uint256, uint256, uint256, uint256) {
+        uint256 shares = sharesOf[account];
+        uint256 balance;
+        uint256 cachedTotalSupply = totalSupply;
+        uint256 cachedTotalShares = totalShares;
         unchecked {
-            return tmp().omul(sharesOf[account], totalSupply * (uint256(uint160(account)) >> 120)).div(
-                totalShares * type(uint40).max
+            balance = tmp().omul(shares, cachedTotalSupply * (uint256(uint160(account)) >> 120)).div(
+                cachedTotalShares * type(uint40).max
             );
         }
+        return (balance, shares, cachedTotalSupply, cachedTotalShares);
+    }
+
+    function balanceOf(address account) public view override returns (uint256) {
+        (uint256 balance,,,) = _balanceOf(account);
+        return balance;
     }
 
     function _debit(address from, uint512 amount) internal {
