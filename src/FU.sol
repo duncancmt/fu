@@ -99,7 +99,9 @@ contract FU is IERC20, IERC6093 {
         // versions.
 
         uint256 debitShares;
-        (sharesOf[from], debitShares) = ReflectMath.debit(amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+        (sharesOf[from], debitShares) = ReflectMath.debit(
+            amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+        );
         return debitShares;
     }
 
@@ -112,7 +114,8 @@ contract FU is IERC20, IERC6093 {
         uint256 cachedToShares,
         uint256 debitShares
     ) internal {
-        (sharesOf[to], totalShares) = ReflectMath.credit(amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedToShares, debitShares);
+        (sharesOf[to], totalShares) =
+            ReflectMath.credit(amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedToShares, debitShares);
     }
 
     function _transfer(address from, address to, uint256 amount) internal syncTransfer(from, to) returns (bool) {
@@ -127,8 +130,9 @@ contract FU is IERC20, IERC6093 {
                     emit Transfer(from, address(0), feeAmount);
                 }
                 uint256 cachedToShares = sharesOf[to];
-                uint256 shares =
-                    _debit(from, amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+                uint256 shares = _debit(
+                    from, amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                );
                 _credit(to, amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedToShares, shares);
                 return true;
             } else if (_shouldRevert()) {
