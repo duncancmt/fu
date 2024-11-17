@@ -39,7 +39,7 @@ contract FU is IERC20, IERC6093 {
         } catch {
             require(pair == FACTORY.getPair(WETH, IERC20(address(this))));
         }
-        pair.mint(msg.sender);
+        pair.mint(address(0xdead));
     }
 
     modifier syncDeliver(address from) {
