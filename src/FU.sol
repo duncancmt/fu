@@ -25,7 +25,7 @@ contract FU is IERC20Big, IERC6093 {
         } catch {
             pair = FACTORY.getPair(WETH, IERC20(address(this)));
         }
-        require(uint160(address(pair)) >> 120 == 1);
+        require(uint256(uint160(address(pair))) >> 120 == 1);
 
         (bool success,) = address(WETH).call{value: msg.value}("");
         require(success);
