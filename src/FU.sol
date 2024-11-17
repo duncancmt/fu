@@ -31,7 +31,7 @@ contract FU is IERC20, IERC6093 {
         totalShares = type(uint216).max;
         sharesOf[address(pair)] = type(uint216).max / 10;
         sharesOf[msg.sender] = type(uint216).max - sharesOf[address(pair)];
-        emit Transfer(address(0), address(pair), tmp().omul(sharesOf[pair], totalSupply).div(totalShares));
+        emit Transfer(address(0), address(pair), tmp().omul(sharesOf[address(pair)], totalSupply).div(totalShares));
         emit Transfer(address(0), msg.sender, tmp().omul(sharesOf[msg.sender], totalSupply).div(totalShares));
 
         try FACTORY.createPair(WETH, IERC20(address(this))) returns (IUniswapV2Pair newPair) {
@@ -67,8 +67,9 @@ contract FU is IERC20, IERC6093 {
 
     function balanceOf(address account) public view override returns (uint256) {
         unchecked {
-            return
-                tmp().omul(sharesOf[account], totalSupply * (uint256(uint160(account)) >> 120)).div(totalShares * type(uint40).max);
+            return tmp().omul(sharesOf[account], totalSupply * (uint256(uint160(account)) >> 120)).div(
+                totalShares * type(uint40).max
+            );
         }
     }
 
