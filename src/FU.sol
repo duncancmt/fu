@@ -13,31 +13,10 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
 contract FU is IERC20Big, IERC6093 {
-    mapping(address => uint512_external) _sharesOf;
-    mapping(address => mapping(address => uint512_external)) public override allowance;
-    uint512_external internal _totalSupply;
-    uint512_external internal _totalShares;
-    IUniswapV2Pair public immutable pair;
-
-    function _logBig(bytes32 selector, address a, address b, uint512 amount) internal {
-        assembly ("memory-safe") {
-            log3(
-                amount,
-                0x40,
-                selector,
-                and(0xffffffffffffffffffffffffffffffffffffffff, a),
-                and(0xffffffffffffffffffffffffffffffffffffffff, b)
-            )
-        }
-    }
-
-    function _logTransfer(address from, address to, uint512 amount) internal {
-        _logBig(IERC20Big.Transfer.selector, from, to, amount);
-    }
-
-    function _logApproval(address owner, address spender, uint512 amount) internal {
-        _logBig(IERC20Big.Approval.selector, owner, spender, amount);
-    }
+    mapping(address => uint256) public sharesOf;
+    mapping(address => mapping(address => uint256)) public override allowance;
+    uint256 public override totalSupply;
+    uint256 public totalShares;
 
     constructor() payable {
         require(msg.value == 1 ether);
@@ -62,13 +41,6 @@ contract FU is IERC20Big, IERC6093 {
         _mintShares(msg.sender, tmp().osub(initialShares, sharesToLiquidity));
 
         pair.mint(msg.sender);
-
-        // We have to be able to emit the event, even hypothetically, in order
-        // for it to show up in the ABI
-        if (block.coinbase == address(this)) {
-            emit Transfer(address(0), address(0), 0);
-            emit Approval(address(0), address(0), 0);
-        }
     }
 
     modifier syncDeliver(address from) {
@@ -129,7 +101,7 @@ contract FU is IERC20Big, IERC6093 {
             if (amount <= fromBalance) {
                 _debit(from, amount);
                 _credit(to, amount);
-                _logTransfer(from, to, amount);
+                emit Transfer(from, to, amount);
                 // TODO: log fee amount
                 return true;
             } else if (_shouldRevert()) {
@@ -164,7 +136,7 @@ contract FU is IERC20Big, IERC6093 {
             amount = _amount(amount_hi, 0x44);
         }
         allowance[msg.sender][spender] = amount.toExternal();
-        _logApproval(msg.sender, spender, amount);
+        emit Approval(msg.sender, spender, amount);
         return true;
     }
 
@@ -176,7 +148,7 @@ contract FU is IERC20Big, IERC6093 {
         if (currentAllowance >= amount) {
             currentAllowance.isub(amount);
             allowance[owner][spender] = currentAllowance.toExternal();
-            _logApproval(owner, spender, currentAllowance);
+            emit Approval(owner, spender, currentAllowance);
             return true;
         }
         if (_shouldRevert()) {
@@ -210,7 +182,7 @@ contract FU is IERC20Big, IERC6093 {
         if (amount <= fromBalance) {
             _debit(from, amount);
             _burnTokens(amount);
-            _logTransfer(from, address(0), amount);
+            emit Transfer(from, address(0), amount);
             return true;
         } else if (_shouldRevert()) {
             (uint256 balance_hi,) = fromBalance.into();
@@ -228,7 +200,7 @@ contract FU is IERC20Big, IERC6093 {
         uint512 fromBalance = _balanceOf(msg.sender);
         if (amount <= fromBalance) {
             _debit(from, amount);
-            _logTransfer(from, address(0), amount);
+            emit Transfer(from, address(0), amount);
             return true;
         } else if (_shouldRevert()) {
             (uint256 balance_hi,) = fromBalance.into();
