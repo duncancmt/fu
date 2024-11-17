@@ -175,7 +175,7 @@ contract FU is IERC20Big, IERC6093 {
         revert("unimplemented");
     }
 
-    uint8 public constant override decimals = 40;
+    uint8 public constant override decimals = 36;
 
     function _burn(address from, uint512 amount) internal returns (bool) {
         uint512 fromBalance = _balanceOf(msg.sender);
