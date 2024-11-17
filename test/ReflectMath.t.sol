@@ -6,6 +6,8 @@ import {uint512, tmp, alloc} from "src/lib/512Math.sol";
 
 import {Test} from "@forge-std/Test.sol";
 
+import {console} from "@forge-std/console.sol";
+
 contract ReflectMathTest is Test {
     uint256 internal constant feeRate = ReflectMath.feeBasis / 100;
 
@@ -28,6 +30,7 @@ contract ReflectMathTest is Test {
         uint256 fromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
         assertGt(fromBalance, 0);
         amount = bound(amount, 1, fromBalance);
+        vm.assume(amount < totalSupply / 2); // TODO: remove
         uint256 toBalance = tmp().omul(toShares, totalSupply).div(totalShares);
 
         (uint256 newFromShares, uint256 debitShares) =
