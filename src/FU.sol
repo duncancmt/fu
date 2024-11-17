@@ -123,10 +123,10 @@ contract FU is IERC20, IERC6093 {
         uint256 cachedToShares,
         uint256 debitShares
     ) internal {
-        uint512 n = alloc().omul(cachedTotalSupply, cachedToShares);
-        n.iadd(tmp().omul(cachedTotalSupply, debitShares));
-        n.isub(tmp().omul(amount, cachedTotalShares * (feeBasis - feeRate) / feeBasis));
-        uint256 d = cachedTotalSupply - amount * (feeBasis - feeRate) / feeBasis;
+        uint512 n = alloc().omul(cachedTotalSupply * feeBasis, cachedToShares);
+        n.iadd(tmp().omul(cachedTotalSupply * feeBasis, debitShares));
+        n.isub(tmp().omul(amount, cachedTotalShares * (feeBasis - feeRate)));
+        uint256 d = cachedTotalSupply * feeBasis - amount * (feeBasis - feeRate);
 
         uint256 burnShares = n.div(d);
         sharesOf[to] += debitShares - burnShares;
