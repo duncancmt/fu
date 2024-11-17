@@ -28,11 +28,11 @@ contract FU is IERC20, IERC6093 {
         require(WETH.transfer(address(pair), msg.value));
 
         totalSupply = type(uint152).max;
-        totalShares = type(uint256).max;
-        sharesOf[address(pair)] = type(uint256).max / 10;
-        emit Transfer(address(0), address(pair), type(uint152).max / 10);
-        sharesOf[msg.sender] = type(uint256).max - type(uint256).max / 10;
-        emit Transfer(address(0), msg.sender, type(uint152).max - type(uint152).max / 10);
+        totalShares = type(uint216).max;
+        sharesOf[address(pair)] = type(uint216).max / 10;
+        sharesOf[msg.sender] = type(uint216).max - sharesOf[address(pair)];
+        emit Transfer(address(0), address(pair), tmp().omul(sharesOf[pair], totalSupply).div(totalShares));
+        emit Transfer(address(0), msg.sender, tmp().omul(sharesOf[msg.sender], totalSupply).div(totalShares));
 
         try FACTORY.createPair(WETH, IERC20(address(this))) returns (IUniswapV2Pair newPair) {
             require(pair == newPair);
