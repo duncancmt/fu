@@ -6,7 +6,7 @@ import {IERC6093} from "./interfaces/IERC6093.sol";
 import {uint512, tmp, alloc, uint512_external} from "./lib/512Math.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
-import {FACTORY} from "./interfaces/IUniswapV2Factory.sol";
+import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
@@ -19,12 +19,8 @@ contract FU is IERC20, IERC6093 {
     IUniswapV2Pair public immutable pair;
 
     constructor() payable {
-        require(msg.value == 1 ether);
-        try FACTORY.createPair(WETH, IERC20(address(this))) returns (IUniswapV2Pair newPair) {
-            pair = newPair;
-        } catch {
-            pair = FACTORY.getPair(WETH, IERC20(address(this)));
-        }
+        require(msg.value >= 1 ether);
+        pair = pairFor(WETH, IERC20(address(this)));
         require(uint256(uint160(address(pair))) >> 120 == 1);
 
         (bool success,) = address(WETH).call{value: msg.value}("");
@@ -38,6 +34,11 @@ contract FU is IERC20, IERC6093 {
         sharesOf[msg.sender] = type(uint256).max - type(uint256).max / 10;
         emit Transfer(address(0), msg.sender, type(uint152).max - type(uint152).max / 10);
 
+        try FACTORY.createPair(WETH, IERC20(address(this))) returns (IUniswapV2Pair newPair) {
+            require(pair == newPair);
+        } catch {
+            require(pair == FACTORY.getPair(WETH, IERC20(address(this))));
+        }
         pair.mint(msg.sender);
     }
 
