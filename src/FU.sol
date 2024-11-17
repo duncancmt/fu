@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import {IERC20Big} from "./interfaces/IERC20Big.sol";
 import {IERC6093} from "./interfaces/IERC6093.sol";
 
 import {uint512, tmp, alloc, uint512_external} from "./lib/512Math.sol";
@@ -12,11 +11,12 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-contract FU is IERC20Big, IERC6093 {
+contract FU is IERC20, IERC6093 {
     mapping(address => uint256) public sharesOf;
     mapping(address => mapping(address => uint256)) public override allowance;
     uint256 public override totalSupply;
     uint256 public totalShares;
+    IUniswapV2Pair public immutable pair;
 
     constructor() payable {
         require(msg.value == 1 ether);
@@ -31,14 +31,12 @@ contract FU is IERC20Big, IERC6093 {
         require(success);
         require(WETH.transfer(address(pair), msg.value));
 
-        uint512 initialSupply = alloc().from(type(uint152).max, type(uint256).max);
-        _totalSupply = initialSupply.toExternal();
-
-        uint512 initialShares = alloc().from(type(uint256).max, type(uint256).max); // TODO: correctly initialize `_totalShares`
-        _totalShares = initialShares.toExternal();
-        uint512 sharesToLiquidity = alloc().odiv(initialShares, 10);
-        _mintShares(address(pair), sharesToLiquidity);
-        _mintShares(msg.sender, tmp().osub(initialShares, sharesToLiquidity));
+        totalSupply = type(uint152).max;
+        totalShares = type(uint256).max;
+        sharesOf[address(pair)] = type(uint256).max / 10;
+        emit Transfer(address(0), address(pair), type(uint152).max / 10);
+        sharesOf[msg.sender] = type(uint256).max - type(uint256).max / 10;
+        emit Transfer(address(0), msg.sender, type(uint152).max - type(uint152).max / 10);
 
         pair.mint(msg.sender);
     }
@@ -68,10 +66,6 @@ contract FU is IERC20Big, IERC6093 {
 
     function _burnTokens(uint512 amount) internal {
         revert("unimplemented");
-    }
-
-    function totalSupply() external view override returns (uint256, uint256) {
-        return _totalSupply.into().into();
     }
 
     function _balanceOf(address account) internal view returns (uint512 r) {
