@@ -129,8 +129,8 @@ contract FU is IERC20, IERC6093 {
         uint256 d = cachedTotalSupply * feeBasis - amount * (feeBasis - feeRate);
 
         uint256 burnShares = n.div(d);
-        sharesOf[to] += debitShares - burnShares;
-        totalShares -= burnShares;
+        sharesOf[to] = cachedToShares + debitShares - burnShares;
+        totalShares = cachedTotalShares - burnShares;
     }
 
     function _transfer(address from, address to, uint256 amount) internal syncTransfer(from, to) returns (bool) {
