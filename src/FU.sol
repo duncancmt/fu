@@ -87,7 +87,14 @@ contract FU is IERC20, IERC6093 {
     uint256 internal constant feeRate = 100;
     uint256 internal constant feeBasis = 10_000;
 
-    function _debit(address from, uint256 amount, uint256 cachedTotalSupply, uint256 cachedTotalShares, uint256 cachedFromShares, uint256 cachedToShares) internal returns (uint256) {
+    function _debit(
+        address from,
+        uint256 amount,
+        uint256 cachedTotalSupply,
+        uint256 cachedTotalShares,
+        uint256 cachedFromShares,
+        uint256 cachedToShares
+    ) internal returns (uint256) {
         // TODO: this function is used in both `_transfer` and `_deliver`, which
         // have subtly different behavior as it pertains to the knock-on effect
         // of removing shares from circulation. There probably needs to be 2
@@ -105,7 +112,14 @@ contract FU is IERC20, IERC6093 {
         return debitShares;
     }
 
-    function _credit(address to, uint256 amount, uint256 cachedTotalSupply, uint256 cachedTotalShares, uint256 cachedToShares, uint256 debitShares) internal {
+    function _credit(
+        address to,
+        uint256 amount,
+        uint256 cachedTotalSupply,
+        uint256 cachedTotalShares,
+        uint256 cachedToShares,
+        uint256 debitShares
+    ) internal {
         uint512 n = alloc().omul(cachedTotalSupply, cachedToShares);
         n.iadd(tmp().omul(cachedTotalSupply, debitShares));
         n.isub(tmp().omul(amount, cachedTotalShares * (feeBasis - feeRate) / feeBasis));
@@ -117,14 +131,16 @@ contract FU is IERC20, IERC6093 {
     }
 
     function _transfer(address from, address to, uint256 amount) internal syncTransfer(from, to) returns (bool) {
-        (uint256 fromBalance, uint256 cachedFromShares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
+        (uint256 fromBalance, uint256 cachedFromShares, uint256 cachedTotalSupply, uint256 cachedTotalShares) =
+            _balanceOf(from);
         if (uint256(uint160(to)) > type(uint120).max) {
             if (amount <= fromBalance) {
                 uint256 feeAmount = amount * feeRate / feeBasis;
                 emit Transfer(from, to, amount - feeAmount);
                 emit Transfer(from, address(0), feeAmount);
                 uint256 cachedToShares = sharesOf[to];
-                uint256 shares = _debit(from, amount, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+                uint256 shares =
+                    _debit(from, amount, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
                 _credit(to, amount, cachedTotalSupply, cachedTotalShares, cachedToShares, shares);
                 return true;
             } else if (_shouldRevert()) {
