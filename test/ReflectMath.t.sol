@@ -17,7 +17,7 @@ contract ReflectMathTest is Test {
         uint256 amount
     ) external view {
         totalSupply = bound(totalSupply, uint256(1e36), uint256(type(uint112).max) * type(uint40).max);
-        totalShares = bound(totalShares, uint256(1e36) * type(uint64).max, type(uint256).max / type(uint40).max);
+        totalShares = bound(totalShares, uint256(1e36) * type(uint64).max, type(uint256).max / type(uint40).max / ReflectMath.feeBasis);
         {
             uint256 minShares = totalShares / totalSupply;
             minShares = minShares == 0 ? 1 : minShares;
