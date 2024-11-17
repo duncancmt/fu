@@ -9,9 +9,15 @@ import {Test} from "@forge-std/Test.sol";
 contract ReflectMathTest is Test {
     uint256 internal constant feeRate = ReflectMath.feeBasis / 100;
 
-    function testTransfer(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 toShares, uint256 amount) external view {
-        totalSupply = bound(totalSupply, 1e36, type(uint112).max * type(uint40).max);
-        totalShares = bound(totalShares, 1e36 * type(uint64).max, type(uint256).max / type(uint40).max);
+    function testTransfer(
+        uint256 totalSupply,
+        uint256 totalShares,
+        uint256 fromShares,
+        uint256 toShares,
+        uint256 amount
+    ) external view {
+        totalSupply = bound(totalSupply, uint256(1e36), uint256(type(uint112).max) * type(uint40).max);
+        totalShares = bound(totalShares, uint256(1e36) * type(uint64).max, type(uint256).max / type(uint40).max);
         {
             uint256 minShares = totalShares / totalSupply;
             minShares = minShares == 0 ? 1 : minShares;
@@ -24,8 +30,10 @@ contract ReflectMathTest is Test {
         amount = bound(amount, 1, fromBalance);
         uint256 toBalance = tmp().omul(toShares, totalSupply).div(totalShares);
 
-        (uint256 newFromShares, uint256 debitShares) = ReflectMath.debit(amount, feeRate, totalSupply, totalShares, fromShares, toShares);
-        (uint256 newToShares, uint256 newTotalShares) = ReflectMath.credit(amount, feeRate, totalSupply, totalShares, toShares, debitShares);
+        (uint256 newFromShares, uint256 debitShares) =
+            ReflectMath.debit(amount, feeRate, totalSupply, totalShares, fromShares, toShares);
+        (uint256 newToShares, uint256 newTotalShares) =
+            ReflectMath.credit(amount, feeRate, totalSupply, totalShares, toShares, debitShares);
 
         uint256 newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
         uint256 newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
