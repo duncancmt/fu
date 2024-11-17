@@ -2,12 +2,13 @@
 pragma solidity ^0.8.25;
 
 import {IERC6093} from "./interfaces/IERC6093.sol";
-
-import {uint512, tmp, alloc, uint512_external} from "./lib/512Math.sol";
+import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
-import {IERC20} from "@forge-std/interfaces/IERC20.sol";
+
+import {uint512, tmp, alloc} from "./lib/512Math.sol";
+import {ReflectMath} from "./core/ReflectMath.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
@@ -84,8 +85,6 @@ contract FU is IERC20, IERC6093 {
         revert("unimplemented");
     }
     */
-    uint256 internal constant feeRate = 100;
-    uint256 internal constant feeBasis = 10_000;
 
     function _debit(
         address from,
@@ -100,18 +99,8 @@ contract FU is IERC20, IERC6093 {
         // of removing shares from circulation. There probably needs to be 2
         // versions.
 
-        uint512 n = alloc().omul(cachedTotalSupply * feeBasis, cachedFromShares);
-        n.iadd(tmp().omul(amount * feeBasis, cachedToShares));
-        n.isub(tmp().omul(amount * feeBasis, cachedTotalShares));
-        n.isub(tmp().omul(amount, cachedFromShares * (feeBasis - feeRate)));
-        uint256 d = cachedTotalSupply * feeBasis - amount * ((feeBasis << 1) - feeRate);
-
-        uint256 debitShares = n.div(d);
-        if (tmp().omul(debitShares, d) < n) {
-            debitShares++;
-        }
-        sharesOf[from] -= debitShares;
-
+        uint256 debitShares;
+        (sharesOf[from], debitShares) = ReflectMath.debit(amount, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
         return debitShares;
     }
 
@@ -123,14 +112,7 @@ contract FU is IERC20, IERC6093 {
         uint256 cachedToShares,
         uint256 debitShares
     ) internal {
-        uint512 n = alloc().omul(cachedTotalSupply * feeBasis, cachedToShares);
-        n.iadd(tmp().omul(cachedTotalSupply * feeBasis, debitShares));
-        n.isub(tmp().omul(amount, cachedTotalShares * (feeBasis - feeRate)));
-        uint256 d = cachedTotalSupply * feeBasis - amount * (feeBasis - feeRate);
-
-        uint256 burnShares = n.div(d);
-        sharesOf[to] = cachedToShares + debitShares - burnShares;
-        totalShares = cachedTotalShares - burnShares;
+        (sharesOf[to], totalShares) = ReflectMath.credit(amount, cachedTotalSupply, cachedTotalShares, cachedToShares, debitShares);
     }
 
     function _transfer(address from, address to, uint256 amount) internal syncTransfer(from, to) returns (bool) {
@@ -138,7 +120,7 @@ contract FU is IERC20, IERC6093 {
             _balanceOf(from);
         if (uint256(uint160(to)) > type(uint120).max) {
             if (amount <= fromBalance) {
-                uint256 feeAmount = amount * feeRate / feeBasis;
+                uint256 feeAmount = amount * ReflectMath.feeRate / ReflectMath.feeBasis;
                 emit Transfer(from, to, amount - feeAmount);
                 emit Transfer(from, address(0), feeAmount);
                 uint256 cachedToShares = sharesOf[to];
