@@ -125,7 +125,7 @@ contract FU is IERC20Big, IERC6093 {
 
     function _transfer(address from, address to, uint512 amount) internal syncTransfer(from, to) returns (bool) {
         uint512 fromBalance = _balanceOf(msg.sender);
-        if (to > address(0xffff)) {
+        if (uint256(uint160(to)) > type(uint120).max) {
             if (amount <= fromBalance) {
                 _debit(from, amount);
                 _credit(to, amount);
