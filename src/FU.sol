@@ -44,9 +44,9 @@ contract FU is IERC20, IERC6093 {
         pair.mint(DEAD);
     }
 
-    function _mintShares(address who, uint256 shares) internal {
-        uint256 newShares = (sharesOf[who] += shares);
-        emit Transfer(address(0), who, tmp().omul(newShares, totalSupply).div(totalShares));
+    function _mintShares(address to, uint256 shares) internal {
+        uint256 newShares = (sharesOf[to] += shares);
+        emit Transfer(address(0), to, tmp().omul(newShares, totalSupply).div(totalShares));
     }
 
     modifier syncDeliver(address from) {
