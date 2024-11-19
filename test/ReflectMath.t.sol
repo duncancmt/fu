@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
+import {Settings} from "src/core/Settings.sol";
 import {ReflectMath} from "src/core/ReflectMath.sol";
 import {uint512, tmp, alloc} from "src/lib/512Math.sol";
 
@@ -18,8 +19,8 @@ contract ReflectMathTest is Test {
         uint256 toShares,
         uint256 amount
     ) external view {
-        totalSupply = bound(totalSupply, uint256(1e36), uint256(type(uint112).max) * type(uint40).max);
-        totalShares = bound(totalShares, uint256(1e36) * type(uint64).max, type(uint256).max / type(uint40).max / ReflectMath.feeBasis);
+        totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS, Settings.INITIAL_SUPPLY);
+        totalShares = bound(totalShares, totalSupply, Settings.INITIAL_SHARES);
         {
             uint256 minShares = totalShares / totalSupply;
             minShares = minShares == 0 ? 1 : minShares;

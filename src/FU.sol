@@ -8,6 +8,7 @@ import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
 import {uint512, tmp, alloc} from "./lib/512Math.sol";
+import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
@@ -28,8 +29,8 @@ contract FU is IERC20, IERC6093 {
         require(success);
         require(WETH.transfer(address(pair), msg.value));
 
-        totalSupply = uint256(type(uint112).max) * type(uint40).max;
-        totalShares = type(uint256).max / type(uint40).max / ReflectMath.feeBasis;
+        totalSupply = Settings.INITIAL_SUPPLY;
+        totalShares = Settings.INITIAL_SHARES;
         sharesOf[address(pair)] = totalShares / 10;
         sharesOf[msg.sender] = totalShares - sharesOf[address(pair)];
         emit Transfer(address(0), address(pair), tmp().omul(sharesOf[address(pair)], totalSupply).div(totalShares));
@@ -186,7 +187,7 @@ contract FU is IERC20, IERC6093 {
         revert("unimplemented");
     }
 
-    uint8 public constant override decimals = 36;
+    uint8 public constant override decimals = Settings.DECIMALS;
 
     function _burn(address from, uint256 amount) internal returns (bool) {
         (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
