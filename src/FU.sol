@@ -85,40 +85,6 @@ contract FU is IERC20, IERC6093 {
         revert("unimplemented");
     }
 
-    function _debit(
-        address from,
-        uint256 amount,
-        uint256 cachedFeeRate,
-        uint256 cachedTotalSupply,
-        uint256 cachedTotalShares,
-        uint256 cachedFromShares,
-        uint256 cachedToShares
-    ) internal returns (uint256) {
-        // TODO: this function is used in both `_transfer` and `_deliver`, which
-        // have subtly different behavior as it pertains to the knock-on effect
-        // of removing shares from circulation. There probably needs to be 2
-        // versions.
-
-        uint256 debitShares;
-        (sharesOf[from], debitShares) = ReflectMath.debit(
-            amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
-        );
-        return debitShares;
-    }
-
-    function _credit(
-        address to,
-        uint256 amount,
-        uint256 cachedFeeRate,
-        uint256 cachedTotalSupply,
-        uint256 cachedTotalShares,
-        uint256 cachedToShares,
-        uint256 debitShares
-    ) internal {
-        (sharesOf[to], totalShares) =
-            ReflectMath.credit(amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedToShares, debitShares);
-    }
-
     function _transfer(address from, address to, uint256 amount) internal syncTransfer(from, to) returns (bool) {
         (uint256 fromBalance, uint256 cachedFromShares, uint256 cachedTotalSupply, uint256 cachedTotalShares) =
             _balanceOf(from);
@@ -131,10 +97,10 @@ contract FU is IERC20, IERC6093 {
                     emit Transfer(from, address(0), feeAmount);
                 }
                 uint256 cachedToShares = sharesOf[to];
-                uint256 shares = _debit(
-                    from, amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
-                );
-                _credit(to, amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedToShares, shares);
+                (uint256 transferShares, uint256 burnShares) = ReflectMath.getTransferShares(amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+                sharesOf[from] = cachedFromShares - transferShares;
+                sharesOf[to] = cachedToShares + transferShares - burnShares;
+                totalShares = cachedTotalShares - burnShares;
                 return true;
             } else if (_shouldRevert()) {
                 revert ERC20InsufficientBalance(from, fromBalance, amount);
@@ -192,7 +158,11 @@ contract FU is IERC20, IERC6093 {
     function _burn(address from, uint256 amount) internal returns (bool) {
         (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
-            uint256 amountShares = _debit(from, amount, fee(), cachedTotalSupply, cachedTotalShares, shares, 0); // TODO: WRONG
+            uint512 p = alloc().omul(amount, shares);
+            uint256 amountShares = p.div(balance);
+            if (tmp().omul(amountShares, balance) < p) {
+                amountShares++;
+            }
             totalSupply = cachedTotalSupply - amount;
             totalShares = cachedTotalShares - amountShares;
             emit Transfer(from, address(0), amount);
@@ -210,9 +180,10 @@ contract FU is IERC20, IERC6093 {
     function _deliver(address from, uint256 amount) internal syncDeliver(from) returns (bool) {
         (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
-            uint256 amountShares = _debit(from, amount, fee(), cachedTotalSupply, cachedTotalShares, shares, 100); // TODO: WRONG
-            totalShares -= amountShares;
             emit Transfer(from, address(0), amount);
+            uint256 amountShares = ReflectMath.getDeliverShares(amount, cachedTotalSupply, cachedTotalShares, shares);
+            sharesOf[from] = shares - amountShares;
+            totalShares = cachedTotalShares - amountShares;
             return true;
         } else if (_shouldRevert()) {
             revert ERC20InsufficientBalance(from, balance, amount);

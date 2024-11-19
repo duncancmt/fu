@@ -34,10 +34,10 @@ contract ReflectMathTest is Test {
         vm.assume(amount < totalSupply / 2); // TODO: remove
         uint256 toBalance = tmp().omul(toShares, totalSupply).div(totalShares);
 
-        (uint256 newFromShares, uint256 debitShares) =
-            ReflectMath.debit(amount, feeRate, totalSupply, totalShares, fromShares, toShares);
-        (uint256 newToShares, uint256 newTotalShares) =
-            ReflectMath.credit(amount, feeRate, totalSupply, totalShares, toShares, debitShares);
+        (uint256 transferShares, uint256 burnShares) = ReflectMath.getTransferShares(amount, feeRate, totalSupply, totalShares, fromShares, toShares);
+        uint256 newFromShares = fromShares - transferShares;
+        uint256 newToShares = toShares + transferShares - burnShares;
+        uint256 newTotalShares = totalShares - burnShares;
 
         uint256 newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
         uint256 newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
