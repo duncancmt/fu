@@ -22,8 +22,9 @@ contract ReflectMathTest is Test {
         uint256 toShares,
         uint256 amount
     ) external view {
+        uint256 initialSharesRatio = Settings.INITIAL_SHARES / Settings.INITIAL_SUPPLY;
         totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
-        totalShares = bound(totalShares, totalSupply << 12, Settings.INITIAL_SHARES); // TODO: reduce multiplier
+        totalShares = bound(totalShares, totalSupply * (initialSharesRatio >> 20), Settings.INITIAL_SHARES); // TODO: reduce multiplier
 
         console.log("totalSupply", totalSupply);
         console.log("totalShares", totalShares);
