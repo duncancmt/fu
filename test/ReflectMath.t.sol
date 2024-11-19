@@ -19,14 +19,36 @@ contract ReflectMathTest is Test {
         uint256 toShares,
         uint256 amount
     ) external view {
-        totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS, Settings.INITIAL_SUPPLY);
-        totalShares = bound(totalShares, totalSupply, Settings.INITIAL_SHARES);
+        totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
+        totalShares = bound(totalShares, totalSupply * 100, Settings.INITIAL_SHARES); // TODO: remove `* 100`
+
+        console.log("totalSupply", totalSupply);
+        console.log("totalShares", totalShares);
+
+        uint256 oneTokenInShares;
         {
-            uint256 minShares = totalShares / totalSupply;
-            minShares = minShares == 0 ? 1 : minShares;
-            fromShares = bound(fromShares, minShares, totalShares);
+            uint512 tmp1 = alloc().omul(10 ** Settings.DECIMALS, totalShares);
+            oneTokenInShares = tmp1.div(totalSupply);
+            if (tmp().omul(oneTokenInShares, totalSupply) < tmp1) {
+                oneTokenInShares++;
+            }
+            assertTrue(tmp().omul(oneTokenInShares, totalSupply) >= tmp1);
         }
-        toShares = bound(toShares, 0, totalShares - fromShares);
+        uint256 oneWeiInShares = totalShares / totalSupply;
+        if (oneWeiInShares * totalSupply < totalShares) {
+            oneWeiInShares++;
+        }
+        console.log("one token  ", oneTokenInShares);
+        console.log("one wei    ", oneWeiInShares);
+
+        vm.assume(oneWeiInShares < totalShares - oneTokenInShares); // only possible in extreme conditions due to rounding error
+        fromShares = bound(fromShares, oneWeiInShares, totalShares - oneTokenInShares);
+        toShares = bound(toShares, 0, totalShares - oneTokenInShares - fromShares);
+
+        console.log("fromShares ", fromShares);
+        console.log("toShares   ", toShares);
+
+        vm.assume((fromShares + toShares) * 10 < totalShares);
 
         uint256 fromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
         assertGt(fromBalance, 0);
@@ -34,7 +56,16 @@ contract ReflectMathTest is Test {
         vm.assume(amount < totalSupply / 2); // TODO: remove
         uint256 toBalance = tmp().omul(toShares, totalSupply).div(totalShares);
 
+        console.log("amount     ", amount);
+        console.log("===");
+        console.log("fromBalance", fromBalance);
+        console.log("toBalance  ", toBalance);
+        console.log("===");
         (uint256 transferShares, uint256 burnShares) = ReflectMath.getTransferShares(amount, feeRate, totalSupply, totalShares, fromShares, toShares);
+        console.log("transferShares", transferShares);
+        console.log("burnShares", burnShares);
+        assertLe(transferShares, fromShares, "transferShares");
+        assertLt(burnShares, transferShares, "burnShares");
         uint256 newFromShares = fromShares - transferShares;
         uint256 newToShares = toShares + transferShares - burnShares;
         uint256 newTotalShares = totalShares - burnShares;

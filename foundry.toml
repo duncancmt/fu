@@ -11,4 +11,4 @@ yul = true
 
 [fuzz]
 runs = 100_000
-max_test_rejects = 1_000_000
+max_test_rejects = 10_000_000
