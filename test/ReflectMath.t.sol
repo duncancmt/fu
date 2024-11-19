@@ -56,7 +56,6 @@ contract ReflectMathTest is Test {
         uint256 fromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
         assertGt(fromBalance, 0);
         amount = bound(amount, 1, fromBalance);
-        vm.assume(amount < totalSupply / 2); // TODO: remove
         uint256 toBalance = tmp().omul(toShares, totalSupply).div(totalShares);
 
         console.log("amount     ", amount);
