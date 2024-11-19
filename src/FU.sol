@@ -7,6 +7,7 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
+import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {uint512, tmp, alloc} from "./lib/512Math.sol";
 import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
@@ -15,6 +16,8 @@ IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 
 contract FU is IERC20, IERC6093 {
+    using UnsafeMath for uint256;
+
     mapping(address => uint256) public sharesOf;
     mapping(address => mapping(address => uint256)) public override allowance;
     uint256 public override totalSupply;
@@ -49,8 +52,17 @@ contract FU is IERC20, IERC6093 {
         emit Transfer(address(0), to, tmp().omul(newShares, totalSupply).div(totalShares));
     }
 
-    function _shouldRevert() internal view returns (bool) {
-        return uint256(uint160(tx.origin)) & 1 == 0;
+    function _check() internal view returns (bool) {
+        return uint256(blockhash(block.number.unsafeDec())) & 1 == 0;
+    }
+
+    function _success() internal view returns (bool) {
+        if (_check()) {
+            assembly ("memory-safe") {
+                stop()
+            }
+        }
+        return true;
     }
 
     function _balanceOf(address account) internal view returns (uint256, uint256, uint256, uint256) {
@@ -101,11 +113,11 @@ contract FU is IERC20, IERC6093 {
                     }
                 }
 
-                return true;
-            } else if (_shouldRevert()) {
+                return _success();
+            } else if (_check()) {
                 revert ERC20InsufficientBalance(from, fromBalance, amount);
             }
-        } else if (_shouldRevert()) {
+        } else if (_check()) {
             revert ERC20InvalidReceiver(to);
         }
         return false;
@@ -118,7 +130,7 @@ contract FU is IERC20, IERC6093 {
     function approve(address spender, uint256 amount) external returns (bool) {
         allowance[msg.sender][spender] = amount;
         emit Approval(msg.sender, spender, amount);
-        return true;
+        return _success();
     }
 
     function _spendAllowance(address owner, address spender, uint256 amount) internal returns (bool) {
@@ -132,7 +144,7 @@ contract FU is IERC20, IERC6093 {
             emit Approval(owner, spender, currentAllowance);
             return true;
         }
-        if (_shouldRevert()) {
+        if (_check()) {
             revert ERC20InsufficientAllowance(spender, currentAllowance, amount);
         }
         return false;
@@ -166,8 +178,8 @@ contract FU is IERC20, IERC6093 {
             totalSupply = cachedTotalSupply - amount;
             totalShares = cachedTotalShares - amountShares;
             emit Transfer(from, address(0), amount);
-            return true;
-        } else if (_shouldRevert()) {
+            return _success();
+        } else if (_check()) {
             revert ERC20InsufficientBalance(from, balance, amount);
         }
         return false;
@@ -187,8 +199,8 @@ contract FU is IERC20, IERC6093 {
 
             pair.sync();
 
-            return true;
-        } else if (_shouldRevert()) {
+            return _success();
+        } else if (_check()) {
             revert ERC20InsufficientBalance(from, balance, amount);
         }
         return false;
