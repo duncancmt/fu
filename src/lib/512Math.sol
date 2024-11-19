@@ -91,6 +91,7 @@ WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING
 /// ### Comparison (all functions return `(bool)`)
 ///
 /// * isZero(uint512)
+/// * isMax(uint512)
 /// * eq(uint512,uint256)
 /// * eq(uint512,uint512)
 /// * ne(uint512,uint256)
