@@ -27,7 +27,7 @@ contract FU is IERC20, IERC6093 {
     constructor() payable {
         require(msg.value >= 1 ether);
         pair = pairFor(WETH, IERC20(address(this)));
-        require(uint256(uint160(address(pair))) >> 120 == 1);
+        require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
 
         (bool success,) = address(WETH).call{value: msg.value}("");
         require(success);
@@ -71,11 +71,19 @@ contract FU is IERC20, IERC6093 {
         uint256 cachedTotalSupply = totalSupply;
         uint256 cachedTotalShares = totalShares;
         unchecked {
-            balance = tmp().omul(shares, cachedTotalSupply * (uint256(uint160(account)) >> 120)).div(
-                cachedTotalShares * type(uint40).max
+            balance = tmp().omul(shares, cachedTotalSupply * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)).div(
+                cachedTotalShares * Settings.CRAZY_BALANCE_BASIS
             );
         }
         return (balance, shares, cachedTotalSupply, cachedTotalShares);
+    }
+
+    function _scaleUp(uint256 balance, address account) internal pure returns (uint256) {
+        unchecked {
+            // Checking for overflow in the multiplication is
+            // unnecessary. Checking for division by zero is required.
+            return balance * Settings.CRAZY_BALANCE_BASIS / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR);
+        }
     }
 
     function balanceOf(address account) public view override returns (uint256) {
@@ -101,7 +109,12 @@ contract FU is IERC20, IERC6093 {
 
                 uint256 cachedToShares = sharesOf[to];
                 (uint256 transferShares, uint256 burnShares) = ReflectMath.getTransferShares(
-                    amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                    _scaleUp(amount, from),
+                    cachedFeeRate,
+                    cachedTotalSupply,
+                    cachedTotalShares,
+                    cachedFromShares,
+                    cachedToShares
                 );
                 if (amount == fromBalance) {
                     burnShares += cachedFromShares - transferShares;
@@ -203,7 +216,8 @@ contract FU is IERC20, IERC6093 {
             if (amount == balance) {
                 amountShares = shares;
             } else {
-                amountShares = ReflectMath.getDeliverShares(amount, cachedTotalSupply, cachedTotalShares, shares);
+                amountShares =
+                    ReflectMath.getDeliverShares(_scaleUp(amount, from), cachedTotalSupply, cachedTotalShares, shares);
             }
             sharesOf[from] = shares - amountShares;
             totalShares = cachedTotalShares - amountShares;

@@ -11,6 +11,9 @@ library Settings {
     uint256 internal constant INITIAL_SUPPLY = uint256(type(uint112).max) * type(uint40).max;
     uint256 internal constant INITIAL_SHARES = INITIAL_SUPPLY << 20;
 
+    uint256 internal constant CRAZY_BALANCE_BASIS = INITIAL_SUPPLY / type(uint112).max;
+    uint256 internal constant ADDRESS_DIVISOR = 2 ** 160 / (CRAZY_BALANCE_BASIS + 1);
+
     function oneTokenInShares() internal pure returns (uint256) {
         uint512 initialSharesTimesOneToken = alloc().omul(INITIAL_SHARES, 10 ** DECIMALS);
         uint256 result = initialSharesTimesOneToken.div(INITIAL_SUPPLY);
