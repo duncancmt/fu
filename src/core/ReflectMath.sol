@@ -57,12 +57,11 @@ library ReflectMath {
         //transferShares = n.div(d); // TODO: round up?
     }
 
-    function getDeliverShares(
-        uint256 amount,
-        uint256 totalSupply,
-        uint256 totalShares,
-        uint256 fromShares
-    ) internal view returns (uint256) {
+    function getDeliverShares(uint256 amount, uint256 totalSupply, uint256 totalShares, uint256 fromShares)
+        internal
+        view
+        returns (uint256)
+    {
         revert("unimplemented");
     }
 }

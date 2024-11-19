@@ -61,7 +61,8 @@ contract ReflectMathTest is Test {
         console.log("fromBalance", fromBalance);
         console.log("toBalance  ", toBalance);
         console.log("===");
-        (uint256 transferShares, uint256 burnShares) = ReflectMath.getTransferShares(amount, feeRate, totalSupply, totalShares, fromShares, toShares);
+        (uint256 transferShares, uint256 burnShares) =
+            ReflectMath.getTransferShares(amount, feeRate, totalSupply, totalShares, fromShares, toShares);
         console.log("transferShares", transferShares);
         console.log("burnShares", burnShares);
         assertLe(transferShares, fromShares, "transferShares");

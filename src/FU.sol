@@ -87,7 +87,9 @@ contract FU is IERC20, IERC6093 {
                     emit Transfer(from, address(0), feeAmount);
                 }
                 uint256 cachedToShares = sharesOf[to];
-                (uint256 transferShares, uint256 burnShares) = ReflectMath.getTransferShares(amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+                (uint256 transferShares, uint256 burnShares) = ReflectMath.getTransferShares(
+                    amount, cachedFeeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                );
                 sharesOf[from] = cachedFromShares - transferShares;
                 sharesOf[to] = cachedToShares + transferShares - burnShares;
                 totalShares = cachedTotalShares - burnShares;
