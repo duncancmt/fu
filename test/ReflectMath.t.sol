@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
+import {UnsafeMath} from "src/lib/UnsafeMath.sol";
 import {Settings} from "src/core/Settings.sol";
 import {ReflectMath} from "src/core/ReflectMath.sol";
 import {uint512, tmp, alloc} from "src/lib/512Math.sol";
@@ -10,6 +11,8 @@ import {Test} from "@forge-std/Test.sol";
 import {console} from "@forge-std/console.sol";
 
 contract ReflectMathTest is Test {
+    using UnsafeMath for uint256;
+
     uint256 internal constant feeRate = ReflectMath.feeBasis / 100;
 
     function testTransfer(
@@ -76,5 +79,8 @@ contract ReflectMathTest is Test {
         assertLe(newFromBalance, fromBalance - amount + 1);
         assertGe(newFromBalance + 1, fromBalance - amount);
         uint256 newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
+        // TODO: tighten these bounds to exact equality
+        assertLe(newToBalance, toBalance + (amount * (ReflectMath.feeBasis - feeRate)).unsafeDivUp(ReflectMath.feeBasis));
+        assertGe(newToBalance + 1, toBalance + amount * (ReflectMath.feeBasis - feeRate) / ReflectMath.feeBasis);
     }
 }
