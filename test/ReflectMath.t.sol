@@ -72,6 +72,9 @@ contract ReflectMathTest is Test {
         uint256 newTotalShares = totalShares - burnShares;
 
         uint256 newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
+        // TODO: tighten these bounds to exact equality
+        assertLe(newFromBalance, fromBalance - amount + 1);
+        assertGe(newFromBalance + 1, fromBalance - amount);
         uint256 newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
     }
 }
