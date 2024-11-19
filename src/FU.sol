@@ -8,12 +8,16 @@ import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
 import {uint512, tmp, alloc} from "./lib/512Math.sol";
+import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 
 contract FU is IERC20, IERC6093 {
+    using UnsafeMath for uint256;
+
     mapping(address => uint256) public sharesOf;
     mapping(address => mapping(address => uint256)) public override allowance;
     uint256 public override totalSupply;
@@ -31,17 +35,28 @@ contract FU is IERC20, IERC6093 {
 
         totalSupply = Settings.INITIAL_SUPPLY;
         totalShares = Settings.INITIAL_SHARES;
-        sharesOf[address(pair)] = totalShares / 10;
-        sharesOf[msg.sender] = totalShares - sharesOf[address(pair)];
-        emit Transfer(address(0), address(pair), tmp().omul(sharesOf[address(pair)], totalSupply).div(totalShares));
-        emit Transfer(address(0), msg.sender, tmp().omul(sharesOf[msg.sender], totalSupply).div(totalShares));
+        {
+            uint512 totalSharesTimesOneToken = alloc().omul(10 ** decimals, totalShares);
+            uint256 oneTokenInShares = totalSharesTimesOneToken.div(totalSupply);
+            if (tmp().omul(oneTokenInShares, totalSupply) < totalSharesTimesOneToken) {
+                oneTokenInShares = oneTokenInShares.unsafeInc();
+            }
+            _mintShares(DEAD, oneTokenInShares);
+        }
+        _mintShares(address(pair), totalShares / 10);
+        _mintShares(msg.sender, totalShares - sharesOf[address(pair)] - sharesOf[DEAD]);
 
         try FACTORY.createPair(WETH, IERC20(address(this))) returns (IUniswapV2Pair newPair) {
             require(pair == newPair);
         } catch {
             require(pair == FACTORY.getPair(WETH, IERC20(address(this))));
         }
-        pair.mint(address(0xdead));
+        pair.mint(DEAD);
+    }
+
+    function _mintShares(address who, uint256 shares) internal {
+        uint256 newShares = (sharesOf[who] += shares);
+        emit Transfer(address(0), who, tmp().omul(newShares, totalSupply).div(totalShares));
     }
 
     modifier syncDeliver(address from) {
