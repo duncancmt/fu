@@ -116,7 +116,7 @@ contract FU is IERC20, IERC6093 {
         return false;
     }
 
-    function transfer(address to, uint256 amount) external override returns (bool) {
+    function transfer(address to, uint256 amount) public override returns (bool) {
         return _transfer(msg.sender, to, amount);
     }
 
@@ -143,7 +143,7 @@ contract FU is IERC20, IERC6093 {
         return false;
     }
 
-    function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
         if (!_spendAllowance(from, msg.sender, amount)) {
             return false;
         }
@@ -212,5 +212,13 @@ contract FU is IERC20, IERC6093 {
             return false;
         }
         return _deliver(from, amount);
+    }
+
+    function lock(uint256 amount) external returns (bool) {
+        return transfer(DEAD, amount);
+    }
+
+    function lockFrom(address from, uint256 amount) external returns (bool) {
+        return transferFrom(from, DEAD, amount);
     }
 }
