@@ -8,8 +8,15 @@ library Settings {
     using UnsafeMath for uint256;
 
     uint8 internal constant DECIMALS = 36;
-    uint256 internal constant INITIAL_SUPPLY = uint256(type(uint112).max) * type(uint40).max;
-    uint256 internal constant INITIAL_SHARES = INITIAL_SUPPLY << 20;
+    uint256 internal constant INITIAL_SUPPLY = uint256(type(uint112).max) * type(uint32).max;
+    uint256 internal constant INITIAL_SHARES = INITIAL_SUPPLY << 32;
+
+    // Alternative
+    /*
+    uint8 internal constant DECIMALS = 27;
+    uint256 internal constant INITIAL_SUPPLY = uint256(type(uint112).max);
+    uint256 internal constant INITIAL_SHARES = INITIAL_SUPPLY << 80;
+    */
 
     uint256 internal constant CRAZY_BALANCE_BASIS = INITIAL_SUPPLY / type(uint112).max;
     uint256 internal constant ADDRESS_DIVISOR = 2 ** 160 / (CRAZY_BALANCE_BASIS + 1);

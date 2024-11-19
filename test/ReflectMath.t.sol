@@ -23,7 +23,7 @@ contract ReflectMathTest is Test {
         uint256 amount
     ) external view {
         totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
-        totalShares = bound(totalShares, totalSupply << 20, Settings.INITIAL_SHARES); // TODO: reduce multiplier
+        totalShares = bound(totalShares, totalSupply << 12, Settings.INITIAL_SHARES); // TODO: reduce multiplier
 
         console.log("totalSupply", totalSupply);
         console.log("totalShares", totalShares);
