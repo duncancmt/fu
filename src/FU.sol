@@ -49,21 +49,6 @@ contract FU is IERC20, IERC6093 {
         emit Transfer(address(0), to, tmp().omul(newShares, totalSupply).div(totalShares));
     }
 
-    modifier syncDeliver(address from) {
-        _;
-        if (from != address(pair)) {
-            pair.sync();
-        }
-    }
-
-    modifier syncTransfer(address from, address to) {
-        _;
-        address _pair = address(pair);
-        if (from != _pair && to != _pair) {
-            pair.sync();
-        }
-    }
-
     function _shouldRevert() internal view returns (bool) {
         return uint256(uint160(tx.origin)) & 1 == 0;
     }
@@ -90,7 +75,7 @@ contract FU is IERC20, IERC6093 {
         revert("unimplemented");
     }
 
-    function _transfer(address from, address to, uint256 amount) internal syncTransfer(from, to) returns (bool) {
+    function _transfer(address from, address to, uint256 amount) internal returns (bool) {
         (uint256 fromBalance, uint256 cachedFromShares, uint256 cachedTotalSupply, uint256 cachedTotalShares) =
             _balanceOf(from);
         if (uint256(uint160(to)) > type(uint120).max) {
@@ -106,6 +91,14 @@ contract FU is IERC20, IERC6093 {
                 sharesOf[from] = cachedFromShares - transferShares;
                 sharesOf[to] = cachedToShares + transferShares - burnShares;
                 totalShares = cachedTotalShares - burnShares;
+
+                {
+                    address _pair = address(pair);
+                    if (!(from == _pair || to == _pair)) {
+                        _pair.sync();
+                    }
+                }
+
                 return true;
             } else if (_shouldRevert()) {
                 revert ERC20InsufficientBalance(from, fromBalance, amount);
@@ -182,13 +175,16 @@ contract FU is IERC20, IERC6093 {
         return _burn(msg.sender, amount);
     }
 
-    function _deliver(address from, uint256 amount) internal syncDeliver(from) returns (bool) {
+    function _deliver(address from, uint256 amount) internal returns (bool) {
         (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
             emit Transfer(from, address(0), amount);
             uint256 amountShares = ReflectMath.getDeliverShares(amount, cachedTotalSupply, cachedTotalShares, shares);
             sharesOf[from] = shares - amountShares;
             totalShares = cachedTotalShares - amountShares;
+
+            pair.sync();
+
             return true;
         } else if (_shouldRevert()) {
             revert ERC20InsufficientBalance(from, balance, amount);
