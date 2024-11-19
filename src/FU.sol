@@ -98,7 +98,7 @@ contract FU is IERC20, IERC6093 {
     function _transfer(address from, address to, uint256 amount) internal returns (bool) {
         (uint256 fromBalance, uint256 cachedFromShares, uint256 cachedTotalSupply, uint256 cachedTotalShares) =
             _balanceOf(from);
-        if (uint256(uint160(to)) > type(uint120).max) {
+        if (uint256(uint160(to)) >= Settings.ADDRESS_DIVISOR) {
             if (amount <= fromBalance) {
                 uint256 cachedFeeRate = fee();
                 {
@@ -117,6 +117,7 @@ contract FU is IERC20, IERC6093 {
                     cachedToShares
                 );
                 if (amount == fromBalance) {
+                    // Burn any dust left over if `from` is sending the whole balance
                     burnShares += cachedFromShares - transferShares;
                     transferShares = cachedFromShares;
                 }
