@@ -180,6 +180,7 @@ contract FU is IERC20, IERC6093 {
             if (tmp().omul(amountShares, balance) < p) {
                 amountShares++;
             }
+            sharesOf[from] = shares - amountShares;
             totalSupply = cachedTotalSupply - amount;
             totalShares = cachedTotalShares - amountShares;
             emit Transfer(from, address(0), amount);
