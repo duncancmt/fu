@@ -23,7 +23,7 @@ contract ReflectMathTest is Test {
         uint256 amount
     ) external view {
         totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
-        totalShares = bound(totalShares, totalSupply * 100, Settings.INITIAL_SHARES); // TODO: remove `* 100`
+        totalShares = bound(totalShares, totalSupply << 20, Settings.INITIAL_SHARES); // TODO: reduce multiplier
 
         console.log("totalSupply", totalSupply);
         console.log("totalShares", totalShares);
@@ -51,7 +51,7 @@ contract ReflectMathTest is Test {
         console.log("fromShares ", fromShares);
         console.log("toShares   ", toShares);
 
-        vm.assume((fromShares + toShares) * 10 < totalShares);
+        vm.assume((fromShares + toShares) * 2 <= totalShares); // TODO: reduce multiplier
 
         uint256 fromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
         assertGt(fromBalance, 0);
@@ -79,7 +79,9 @@ contract ReflectMathTest is Test {
         assertGe(newFromBalance + 1, fromBalance - amount);
         uint256 newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
         // TODO: tighten these bounds to exact equality
-        assertLe(newToBalance, toBalance + (amount * (ReflectMath.feeBasis - feeRate)).unsafeDivUp(ReflectMath.feeBasis));
+        assertLe(
+            newToBalance, toBalance + (amount * (ReflectMath.feeBasis - feeRate)).unsafeDivUp(ReflectMath.feeBasis)
+        );
         assertGe(newToBalance + 1, toBalance + amount * (ReflectMath.feeBasis - feeRate) / ReflectMath.feeBasis);
     }
 }

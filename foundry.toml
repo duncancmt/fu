@@ -10,5 +10,5 @@ constantOptimizer = true
 yul = true
 
 [fuzz]
-runs = 100_000
-max_test_rejects = 10_000_000
+runs = 10_000_000
+max_test_rejects = 100_000_000
