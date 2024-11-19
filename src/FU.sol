@@ -109,7 +109,7 @@ contract FU is IERC20, IERC6093 {
                 {
                     address _pair = address(pair);
                     if (!(from == _pair || to == _pair)) {
-                        _pair.sync();
+                        IUniswapV2Pair(_pair).sync();
                     }
                 }
 
