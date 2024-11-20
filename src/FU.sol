@@ -218,15 +218,15 @@ contract FU is IERC20, IERC6093 {
         (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
             emit Transfer(from, address(0), amount);
-            uint256 amountShares;
             if (amount == balance) {
-                amountShares = shares;
+                cachedTotalShares -= shares;
+                shares = 0;
             } else {
-                amountShares =
+                (shares, cachedTotalShares) =
                     ReflectMath.getDeliverShares(_scaleUp(amount, from), cachedTotalSupply, cachedTotalShares, shares);
             }
-            sharesOf[from] = shares - amountShares;
-            totalShares = cachedTotalShares - amountShares;
+            sharesOf[from] = shares;
+            totalShares = cachedTotalShares;
 
             pair.sync();
 

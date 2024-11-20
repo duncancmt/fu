@@ -75,7 +75,7 @@ library ReflectMath {
     function getDeliverShares(uint256 amount, uint256 totalSupply, uint256 totalShares, uint256 fromShares)
         internal
         view
-        returns (uint256 newFromShares)
+        returns (uint256 newFromShares, uint256 newTotalShares)
     {
         uint512 t1 = alloc().omul(fromShares, totalSupply);
         uint512 t2 = alloc().omul(amount, totalShares);
@@ -85,5 +85,6 @@ library ReflectMath {
         uint512 d = alloc().oadd(t4, t2);
 
         newFromShares = n.div(d);
+        newTotalShares = totalShares - (fromShares - newFromShares);
     }
 }
