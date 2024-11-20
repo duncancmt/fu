@@ -20,28 +20,23 @@ library ReflectMath {
         uint256 toShares
     ) internal view returns (uint256 newFromShares, uint256 newToShares, uint256 newTotalShares) {
         uint256 uninvolvedShares = totalShares - fromShares - toShares;
-        uint512 totalSharesSquared = alloc().omul(totalShares, totalShares);
-        uint512 n = alloc().omul(totalSharesSquared, amount * feeRate);
-        uint512 t1 = alloc().omul(amount * feeRate, totalShares);
-        uint512 t2 = alloc().omul(feeBasis * totalSupply, uninvolvedShares);
-        uint512 d = alloc().oadd(t1, t2);
+        uint512 t1 = alloc().omul(fromShares, totalSupply);
+        uint512 t2 = alloc().omul(amount, totalShares);
+        uint512 t3 = alloc().osub(t1, t2);
+        uint512 n1 = alloc().omul(t3, uninvolvedShares * feeBasis);
+        uint512 t4 = alloc().omul(totalSupply, uninvolvedShares * feeBasis);
+        uint512 t5 = alloc().omul(amount * feeRate, totalShares);
+        uint512 d = alloc().oadd(t4, t5);
+        uint512 t6 = alloc().omul(amount * (feeBasis - feeRate), totalShares);
+        uint512 t7 = alloc().omul(toShares, totalSupply * feeBasis);
+        uint512 t8 = alloc().oadd(t6, t7);
+        uint512 n2 = alloc().omul(t8, uninvolvedShares);
 
-        uint256 burnShares = n.div(d);
+        newFromShares = n1.div(d);
+        newToShares = n2.div(d);
+        newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
 
-        uint512 ab = alloc().omul(fromShares, totalSupply);
-        uint512 cd = alloc().omul(amount, totalShares);
-        uint512 diff = alloc().osub(ab, cd);
-        uint512 term1 = alloc().omul(diff, burnShares);
-        uint512 amount_totalSharesSquared = alloc().omul(totalSharesSquared, amount);
-        n.oadd(term1, amount_totalSharesSquared);
-        d.omul(totalSupply, totalShares);
-
-        uint256 transferShares = n.div(d);
-
-        newTotalShares = totalShares - burnShares;
-        newFromShares = fromShares - transferShares;
-        newToShares = toShares + transferShares - burnShares;
-
+        /*
         // Fixup rounding error
         {
             uint256 beforeToBalance = tmp().omul(toShares, totalSupply).div(totalShares);
@@ -70,6 +65,7 @@ library ReflectMath {
                 newTotalShares += incr;
             }
         }
+        */
     }
 
     function getDeliverShares(uint256 amount, uint256 totalSupply, uint256 totalShares, uint256 fromShares)
