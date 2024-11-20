@@ -102,8 +102,8 @@ contract FU is IERC20, IERC6093 {
         if (
             // "efficient" addresses can't hold tokens because they have zero multiplier
             uint256(uint160(to)) >= Settings.ADDRESS_DIVISOR
-                // anti-whale (also because the reflection math breaks down)
-                && cachedFromShares + cachedToShares < cachedTotalShares / Settings.ANTI_WHALE_DIVISOR
+            // anti-whale (also because the reflection math breaks down)
+            && cachedFromShares + cachedToShares < cachedTotalShares / Settings.ANTI_WHALE_DIVISOR
         ) {
             if (amount <= fromBalance) {
                 uint256 cachedFeeRate = fee();

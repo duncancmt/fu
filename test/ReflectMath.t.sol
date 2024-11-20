@@ -80,7 +80,9 @@ contract ReflectMathTest is Test {
         assertGe(newFromBalance + 1, expectedNewFromBalance, "newFromBalance lower");
         // TODO: tighten these bounds to exact equality
         assertLe(
-            newToBalance, toBalance + (amount * (ReflectMath.feeBasis - feeRate)).unsafeDivUp(ReflectMath.feeBasis) + 1, "newToBalance upper"
+            newToBalance,
+            toBalance + (amount * (ReflectMath.feeBasis - feeRate)).unsafeDivUp(ReflectMath.feeBasis) + 1,
+            "newToBalance upper"
         );
         assertGe(newToBalance + 1, expectedNewToBalance, "newToBalance lower");
     }
