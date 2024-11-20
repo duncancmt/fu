@@ -108,7 +108,7 @@ contract FU is IERC20, IERC6093 {
                 }
 
                 uint256 cachedToShares = sharesOf[to];
-                (uint256 transferShares, uint256 burnShares) = ReflectMath.getTransferShares(
+                (uint256 newFromShares, uint256 newToShares, uint256 newTotalShares) = ReflectMath.getTransferShares(
                     _scaleUp(amount, from),
                     cachedFeeRate,
                     cachedTotalSupply,
@@ -118,12 +118,12 @@ contract FU is IERC20, IERC6093 {
                 );
                 if (amount == fromBalance) {
                     // Burn any dust left over if `from` is sending the whole balance
-                    burnShares += cachedFromShares - transferShares;
-                    transferShares = cachedFromShares;
+                    newTotalShares -= newFromShares;
+                    newFromShares = 0;
                 }
-                sharesOf[from] = cachedFromShares - transferShares;
-                sharesOf[to] = cachedToShares + transferShares - burnShares;
-                totalShares = cachedTotalShares - burnShares;
+                sharesOf[from] = newFromShares;
+                sharesOf[to] = newToShares;
+                totalShares = newTotalShares;
 
                 {
                     address _pair = address(pair);

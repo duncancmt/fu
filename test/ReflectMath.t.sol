@@ -64,49 +64,16 @@ contract ReflectMathTest is Test {
         console.log("fromBalance", fromBalance);
         console.log("toBalance  ", toBalance);
         console.log("===");
-        (uint256 transferShares, uint256 burnShares) =
+        (uint256 newFromShares, uint256 newToShares, uint256 newTotalShares) =
             ReflectMath.getTransferShares(amount, feeRate, totalSupply, totalShares, fromShares, toShares);
-        console.log("transferShares", transferShares);
-        console.log("burnShares", burnShares);
-        assertLe(transferShares, fromShares, "transferShares");
-        assertLt(burnShares, transferShares, "burnShares");
-
-        uint256 newFromShares = fromShares - transferShares;
-        uint256 newToShares = toShares + transferShares - burnShares;
-        uint256 newTotalShares = totalShares - burnShares;
-
-        uint256 expectedNewFromBalance = fromBalance - amount;
-        uint256 expectedNewToBalance = toBalance + amount * (ReflectMath.feeBasis - feeRate) / ReflectMath.feeBasis;
-
-        uint256 newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
-        if (newToBalance < expectedNewToBalance) {
-            console.log("newToBalance too low");
-            uint256 incr = tmp().omul(expectedNewToBalance - newToBalance, newTotalShares).div(totalSupply);
-            newToShares += incr;
-            newTotalShares += incr;
-            newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
-        }
+        assertLe(newFromShares, fromShares);
+        assertGe(newToShares, toShares);
+        assertLe(newTotalShares, totalShares);
 
         uint256 newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
-        if (newFromBalance > expectedNewFromBalance) {
-            console.log("newFromBalance too high");
-            uint256 decr = tmp().omul(newFromBalance - expectedNewFromBalance, newTotalShares).div(totalSupply);
-            newFromShares -= decr;
-            newTotalShares -= decr;
-
-            newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
-            newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
-        } else if (newFromBalance < expectedNewFromBalance) {
-            console.log("newFromBalance too low");
-            uint256 incr = tmp().omul(expectedNewFromBalance - newFromBalance, newTotalShares).div(totalSupply);
-            newFromShares += incr;
-            newTotalShares += incr;
-
-            newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
-            newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
-        }
-
-        assertLe(newTotalShares, totalShares);
+        uint256 newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
+        uint256 expectedNewFromBalance = fromBalance - amount;
+        uint256 expectedNewToBalance = toBalance + amount * (ReflectMath.feeBasis - feeRate) / ReflectMath.feeBasis;
 
         assertEq(newFromBalance, fromBalance - amount, "newFromBalance");
         // TODO: tighten these bounds to exact equality
