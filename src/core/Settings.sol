@@ -8,6 +8,9 @@ library Settings {
     using UnsafeMath for uint256;
 
     uint256 internal constant INITIAL_LIQUIDITY_DIVISOR = 10;
+    // This constant can be set as low as 2 without breaking anything. Setting
+    // it near to INITIAL_LIQUIDITY_DIVISOR will cause unexpected reverts.
+    uint256 internal constant ANTI_WHALE_DIVISOR = 4;
 
     uint8 internal constant DECIMALS = 36;
     uint256 internal constant INITIAL_SUPPLY = uint256(type(uint112).max) * type(uint32).max;

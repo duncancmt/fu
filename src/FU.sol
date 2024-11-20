@@ -98,7 +98,13 @@ contract FU is IERC20, IERC6093 {
     function _transfer(address from, address to, uint256 amount) internal returns (bool) {
         (uint256 fromBalance, uint256 cachedFromShares, uint256 cachedTotalSupply, uint256 cachedTotalShares) =
             _balanceOf(from);
-        if (uint256(uint160(to)) >= Settings.ADDRESS_DIVISOR) {
+        uint256 cachedToShares = sharesOf[to];
+        if (
+            // "efficient" addresses can't hold tokens because they have zero multiplier
+            uint256(uint160(to)) >= Settings.ADDRESS_DIVISOR
+                // anti-whale (also because the reflection math breaks down)
+                && cachedFromShares + cachedToShares < cachedTotalShares / Settings.ANTI_WHALE_DIVISOR
+        ) {
             if (amount <= fromBalance) {
                 uint256 cachedFeeRate = fee();
                 {
@@ -107,7 +113,6 @@ contract FU is IERC20, IERC6093 {
                     emit Transfer(from, address(0), feeAmount);
                 }
 
-                uint256 cachedToShares = sharesOf[to];
                 (uint256 newFromShares, uint256 newToShares, uint256 newTotalShares) = ReflectMath.getTransferShares(
                     _scaleUp(amount, from),
                     cachedFeeRate,
