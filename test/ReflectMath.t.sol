@@ -75,14 +75,25 @@ contract ReflectMathTest is Test {
         uint256 newTotalShares = totalShares - burnShares;
 
         uint256 newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
-        // TODO: tighten these bounds to exact equality
-        assertLe(newFromBalance, fromBalance - amount + 1);
-        assertGe(newFromBalance + 1, fromBalance - amount);
+        if (newFromBalance > fromBalance - amount) {
+            newFromShares--;
+            newTotalShares--;
+        }
+
         uint256 newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
+        if (newToBalance < toBalance + amount * (ReflectMath.feeBasis - feeRate) / ReflectMath.feeBasis) {
+            newToShares++;
+            newTotalShares++;
+        }
+
+        newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
+        newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
+
+        assertEq(newFromBalance, fromBalance - amount, "newFromBalance");
         // TODO: tighten these bounds to exact equality
         assertLe(
-            newToBalance, toBalance + (amount * (ReflectMath.feeBasis - feeRate)).unsafeDivUp(ReflectMath.feeBasis)
+            newToBalance, toBalance + (amount * (ReflectMath.feeBasis - feeRate)).unsafeDivUp(ReflectMath.feeBasis), "newToBalance upper"
         );
-        assertGe(newToBalance + 1, toBalance + amount * (ReflectMath.feeBasis - feeRate) / ReflectMath.feeBasis);
+        assertGe(newToBalance, toBalance + amount * (ReflectMath.feeBasis - feeRate) / ReflectMath.feeBasis, "newToBalance lower");
     }
 }

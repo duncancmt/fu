@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
+import {UnsafeMath} from "../lib/UnsafeMath.sol";
 import {uint512, tmp, alloc} from "../lib/512Math.sol";
 
 import {console} from "@forge-std/console.sol";
 
 library ReflectMath {
+    using UnsafeMath for uint256;
+
     uint256 internal constant feeBasis = 10_000;
 
     function getTransferShares(
@@ -33,8 +36,11 @@ library ReflectMath {
         uint256 tmp1;
         (tmp1, burnShares) = tmp().odiv(n, d).into();
         console.log("should be zero", tmp1);
-        //burnShares = n.div(d); // TODO: round up?
-        //require(burnShares < fromShares, "burn too much");
+        /*
+        if (tmp().omul(d, burnShares) < n) {
+            burnShares = burnShares.unsafeInc();
+        }
+        */
 
         console.log("8");
         uint512 ab = alloc().omul(fromShares, totalSupply);
@@ -54,7 +60,11 @@ library ReflectMath {
 
         (tmp1, transferShares) = tmp().odiv(n, d).into();
         console.log("should be zero", tmp1);
-        //transferShares = n.div(d); // TODO: round up?
+        /*
+        if (tmp().omul(d, transferShares) < n) {
+            transferShares = transferShares.unsafeInc();
+        }
+        */
     }
 
     function getDeliverShares(uint256 amount, uint256 totalSupply, uint256 totalShares, uint256 fromShares)
