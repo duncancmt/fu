@@ -11,6 +11,8 @@ library Settings {
     uint256 internal constant INITIAL_LIQUIDITY_DIVISOR = 10;
     // This constant can be set as low as 2 without breaking anything. Setting
     // it near to INITIAL_LIQUIDITY_DIVISOR will cause unexpected reverts.
+    // TODO: verify that it's still possible to `deliver` without serious issue
+    // even when the balance is well above the limit
     uint256 internal constant ANTI_WHALE_DIVISOR = 4;
 
     uint256 internal constant MIN_FEE = 1;
