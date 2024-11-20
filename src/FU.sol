@@ -150,9 +150,9 @@ contract FU is IERC2612, IERC5267, IERC6093 {
                 totalShares = newTotalShares;
 
                 {
-                    address _pair = address(pair);
-                    if (!(from == _pair || to == _pair)) {
-                        IUniswapV2Pair(_pair).sync();
+                    address pair_ = address(pair);
+                    if (!(from == pair_ || to == pair_)) {
+                        IUniswapV2Pair(pair_).sync();
                     }
                 }
 
