@@ -115,12 +115,12 @@ contract ReflectMathTest is Test {
 
         (uint256 newFromShares, uint256 newTotalShares) =
             ReflectMath.getDeliverShares(amount, totalSupply, totalShares, fromShares);
+        assertLe(newFromShares, fromShares);
+        assertLe(newTotalShares, totalShares);
 
         uint256 newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
         uint256 expectedNewFromBalance = fromBalance - amount;
 
-        // TODO: tighten these bounds to exact equality
-        assertLe(newFromBalance, expectedNewFromBalance + 1, "newFromBalance upper");
-        assertGe(newFromBalance + 1, expectedNewFromBalance, "newFromBalance lower");
+        assertEq(newFromBalance, expectedNewFromBalance);
     }
 }

@@ -86,5 +86,15 @@ library ReflectMath {
 
         newFromShares = n.div(d);
         newTotalShares = totalShares - (fromShares - newFromShares);
+
+        // Fixup rounding error
+        uint256 beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
+        uint256 afterFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
+        uint256 expectedAfterFromBalance = beforeFromBalance - amount;
+        if (afterFromBalance < expectedAfterFromBalance) {
+            uint256 incr = tmp().omul(expectedAfterFromBalance - afterFromBalance, newTotalShares).div(totalSupply);
+            newFromShares += incr;
+            newTotalShares += incr;
+        }
     }
 }
