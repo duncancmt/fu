@@ -13,18 +13,18 @@ import {console} from "@forge-std/console.sol";
 contract ReflectMathTest is Test {
     using UnsafeMath for uint256;
 
-    uint256 internal constant feeRate = ReflectMath.feeBasis / 100;
-
     function testTransfer(
         uint256 totalSupply,
         uint256 totalShares,
         uint256 fromShares,
         uint256 toShares,
-        uint256 amount
+        uint256 amount,
+        uint16 feeRate
     ) external view {
         uint256 initialSharesRatio = Settings.INITIAL_SHARES / Settings.INITIAL_SUPPLY;
         totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
         totalShares = bound(totalShares, totalSupply * (initialSharesRatio >> 20), Settings.INITIAL_SHARES); // TODO: reduce multiplier
+        feeRate = uint16(bound(feeRate, 1, ReflectMath.feeBasis / 2));
 
         console.log("totalSupply", totalSupply);
         console.log("totalShares", totalShares);

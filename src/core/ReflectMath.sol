@@ -34,6 +34,10 @@ library ReflectMath {
 
         newFromShares = n1.div(d);
         newToShares = n2.div(d);
+        console.log("   fromShares", fromShares);
+        console.log("newFromShares", newFromShares);
+        console.log("     toShares", toShares);
+        console.log("  newToShares", newToShares);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
 
         /*
