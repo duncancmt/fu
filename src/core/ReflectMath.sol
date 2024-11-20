@@ -34,15 +34,18 @@ library ReflectMath {
 
         newFromShares = n1.div(d);
         newToShares = n2.div(d);
-        console.log("   fromShares", fromShares);
-        console.log("newFromShares", newFromShares);
-        console.log("     toShares", toShares);
-        console.log("  newToShares", newToShares);
+        console.log("    fromShares", fromShares);
+        console.log(" newFromShares", newFromShares);
+        console.log("      toShares", toShares);
+        console.log("   newToShares", newToShares);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
+        console.log("   totalShares", totalShares);
+        console.log("newTotalShares", newTotalShares);
 
-        /*
         // Fixup rounding error
+        /*
         {
+            console.log("===");
             uint256 beforeToBalance = tmp().omul(toShares, totalSupply).div(totalShares);
             uint256 afterToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
             uint256 expectedAfterToBalance = beforeToBalance + amount * (feeBasis - feeRate) / feeBasis;
@@ -53,10 +56,14 @@ library ReflectMath {
                 newTotalShares += incr;
             }
         }
+        */
         {
+            console.log("===");
             uint256 beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
             uint256 afterFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
             uint256 expectedAfterFromBalance = beforeFromBalance - amount;
+            console.log("  actual fromBalance", afterFromBalance);
+            console.log("expected fromBalance", expectedAfterFromBalance);
             if (afterFromBalance > expectedAfterFromBalance) {
                 console.log("fromBalance too high");
                 uint256 decr = tmp().omul(afterFromBalance - expectedAfterFromBalance, newTotalShares).div(totalSupply);
@@ -64,12 +71,12 @@ library ReflectMath {
                 newTotalShares -= decr;
             } else if (afterFromBalance < expectedAfterFromBalance) {
                 console.log("fromBalance too low");
-                uint256 incr = tmp().omul(expectedAfterFromBalance - afterFromBalance, newTotalShares).div(totalSupply);
+                //uint256 incr = tmp().omul(expectedAfterFromBalance - afterFromBalance, newTotalShares).div(totalSupply);
+                uint256 incr = 1;
                 newFromShares += incr;
                 newTotalShares += incr;
             }
         }
-        */
     }
 
     function getDeliverShares(uint256 amount, uint256 totalSupply, uint256 totalShares, uint256 fromShares)

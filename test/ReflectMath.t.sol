@@ -64,6 +64,9 @@ contract ReflectMathTest is Test {
         vm.assume(fromShares + toShares < totalShares / 2);
         uint256 toBalance = tmp().omul(toShares, totalSupply).div(totalShares);
 
+        console.log("===");
+        console.log("totalSupply", totalSupply);
+        console.log("feeRate    ", feeRate);
         console.log("amount     ", amount);
         console.log("===");
         console.log("fromBalance", fromBalance);
@@ -81,8 +84,11 @@ contract ReflectMathTest is Test {
         uint256 expectedNewToBalance = toBalance + amount * (ReflectMath.feeBasis - feeRate) / ReflectMath.feeBasis;
 
         // TODO: tighten these bounds to exact equality
+        assertEq(newFromBalance, expectedNewFromBalance, "newFromBalance");
+        /*
         assertLe(newFromBalance, expectedNewFromBalance + 1, "newFromBalance upper");
         assertGe(newFromBalance + 1, expectedNewFromBalance, "newFromBalance lower");
+        */
         // TODO: tighten these bounds to exact equality
         assertLe(
             newToBalance,
