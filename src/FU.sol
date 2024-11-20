@@ -82,6 +82,13 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         uint256 balance;
         uint256 cachedTotalSupply = totalSupply;
         uint256 cachedTotalShares = totalShares;
+        {
+            uint256 whaleLimit = cachedTotalShares / Settings.ANTI_WHALE_DIVISOR - 1;
+            if (shares > whaleLimit) {
+                cachedTotalShares -= (shares - whaleLimit);
+                shares = whaleLimit;
+            }
+        }
         unchecked {
             balance = tmp().omul(shares, cachedTotalSupply * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)).div(
                 cachedTotalShares * Settings.CRAZY_BALANCE_BASIS
@@ -115,7 +122,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
             // "efficient" addresses can't hold tokens because they have zero multiplier
             uint256(uint160(to)) >= Settings.ADDRESS_DIVISOR
             // anti-whale (also because the reflection math breaks down)
-            && cachedFromShares + cachedToShares < cachedTotalShares / Settings.ANTI_WHALE_DIVISOR
+            && cachedToShares < cachedTotalShares / Settings.ANTI_WHALE_DIVISOR
         ) {
             if (amount <= fromBalance) {
                 uint256 cachedFeeRate = fee();
@@ -340,5 +347,17 @@ contract FU is IERC2612, IERC5267, IERC6093 {
 
     function lockFrom(address from, uint256 amount) external returns (bool) {
         return transferFrom(from, DEAD, amount);
+    }
+
+    function punishWhale(address whale) external returns (bool) {
+        // TODO `_balanceOf` does a bunch of extra math; refactor that.
+        (, uint256 newShares,, uint256 newTotalShares) = _balanceOf(whale);
+        sharesOf[whale] = newShares;
+        totalShares = newTotalShares;
+        IUniswapV2Pair pair_ = pair;
+        if (whale != address(pair_)) {
+            pair_.sync();
+        }
+        return _success();
     }
 }
