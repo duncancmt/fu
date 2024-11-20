@@ -27,8 +27,10 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     IUniswapV2Pair public immutable pair;
     mapping(address => uint256) public override nonces;
 
-    constructor() payable {
+    constructor(address[] memory initialHolders) payable {
         require(msg.value >= 1 ether);
+        require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
+
         pair = pairFor(WETH, IERC20(address(this)));
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
 
@@ -40,7 +42,14 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         totalShares = Settings.INITIAL_SHARES;
         _mintShares(DEAD, Settings.oneTokenInShares());
         _mintShares(address(pair), totalShares / Settings.INITIAL_LIQUIDITY_DIVISOR);
-        _mintShares(msg.sender, totalShares - sharesOf[address(pair)] - sharesOf[DEAD]);
+        {
+            uint256 toMint = totalShares - sharesOf[DEAD] - sharesOf[address(pair)];
+            uint256 toMintEach = toMint / initialHolders.length;
+            _mintShares(initialHolders[0], toMint - toMintEach * (initialHolders.length - 1));
+            for (uint256 i = 1; i < initialHolders.length; i++) {
+                _mintShares(initialHolders[i], toMintEach);
+            }
+        }
 
         try FACTORY.createPair(WETH, IERC20(address(this))) returns (IUniswapV2Pair newPair) {
             require(pair == newPair);
