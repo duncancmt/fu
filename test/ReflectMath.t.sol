@@ -52,7 +52,7 @@ contract ReflectMathTest is Test {
         console.log("fromShares ", fromShares);
         console.log("toShares   ", toShares);
 
-        vm.assume((fromShares + toShares) * 2 <= totalShares); // TODO: reduce multiplier
+        vm.assume(fromShares + toShares < totalShares / 2);
 
         uint256 fromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
         assertGt(fromBalance, 0);
@@ -85,5 +85,42 @@ contract ReflectMathTest is Test {
             "newToBalance upper"
         );
         assertGe(newToBalance + 1, expectedNewToBalance, "newToBalance lower");
+    }
+
+    function testDeliver(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount) external view {
+        uint256 initialSharesRatio = Settings.INITIAL_SHARES / Settings.INITIAL_SUPPLY;
+        totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
+        totalShares = bound(totalShares, totalSupply * (initialSharesRatio >> 20), Settings.INITIAL_SHARES); // TODO: reduce multiplier
+        uint256 oneTokenInShares;
+        {
+            uint512 tmp1 = alloc().omul(10 ** Settings.DECIMALS, totalShares);
+            oneTokenInShares = tmp1.div(totalSupply);
+            if (tmp().omul(oneTokenInShares, totalSupply) < tmp1) {
+                oneTokenInShares++;
+            }
+            assertTrue(tmp().omul(oneTokenInShares, totalSupply) >= tmp1);
+        }
+        uint256 oneWeiInShares = totalShares / totalSupply;
+        if (oneWeiInShares * totalSupply < totalShares) {
+            oneWeiInShares++;
+        }
+
+        vm.assume(oneWeiInShares < totalShares - oneTokenInShares); // only possible in extreme conditions due to rounding error
+        fromShares = bound(fromShares, oneWeiInShares, totalShares - oneTokenInShares);
+        vm.assume(fromShares < totalShares / 2);
+
+        uint256 fromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
+        assertGt(fromBalance, 0);
+        amount = bound(amount, 1, fromBalance);
+
+        (uint256 newFromShares, uint256 newTotalShares) =
+            ReflectMath.getDeliverShares(amount, totalSupply, totalShares, fromShares);
+
+        uint256 newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
+        uint256 expectedNewFromBalance = fromBalance - amount;
+
+        // TODO: tighten these bounds to exact equality
+        assertLe(newFromBalance, expectedNewFromBalance + 1, "newFromBalance upper");
+        assertGe(newFromBalance + 1, expectedNewFromBalance, "newFromBalance lower");
     }
 }
