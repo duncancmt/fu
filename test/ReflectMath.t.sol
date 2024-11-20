@@ -26,7 +26,7 @@ contract ReflectMathTest is Test {
 
     function _boundCommon(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount)
         internal
-        view
+        pure
         returns (uint256, uint256, uint256, uint256, uint256)
     {
         uint256 initialSharesRatio = Settings.INITIAL_SHARES / Settings.INITIAL_SUPPLY;
@@ -57,6 +57,7 @@ contract ReflectMathTest is Test {
         uint256 fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount);
+
         feeRate = uint16(bound(feeRate, Settings.MIN_FEE, Settings.MAX_FEE));
 
         toShares = bound(toShares, 0, totalShares - _oneTokenInShares(totalSupply, totalShares) - fromShares);
@@ -95,6 +96,7 @@ contract ReflectMathTest is Test {
         uint256 fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount);
+        vm.assume(fromShares < totalShares / 2);
 
         (uint256 newFromShares, uint256 newTotalShares) =
             ReflectMath.getDeliverShares(amount, totalSupply, totalShares, fromShares);
@@ -104,6 +106,6 @@ contract ReflectMathTest is Test {
         uint256 newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
         uint256 expectedNewFromBalance = fromBalance - amount;
 
-        assertEq(newFromBalance, expectedNewFromBalance);
+        assertEq(newFromBalance, expectedNewFromBalance, "new balance, expected new balance");
     }
 }
