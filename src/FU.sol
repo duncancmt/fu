@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.25;
 
-import {IERC6093} from "./interfaces/IERC6093.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
+import {IERC2612} from "./interfaces/IERC2612.sol";
+import {IERC5267} from "./interfaces/IERC5267.sol";
+import {IERC6093} from "./interfaces/IERC6093.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
@@ -15,7 +17,7 @@ import {ReflectMath} from "./core/ReflectMath.sol";
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 
-contract FU is IERC20, IERC6093 {
+contract FU is IERC2612, IERC5267, IERC6093 {
     using UnsafeMath for uint256;
 
     mapping(address => uint256) public sharesOf;
@@ -23,6 +25,7 @@ contract FU is IERC20, IERC6093 {
     uint256 public override totalSupply;
     uint256 public totalShares;
     IUniswapV2Pair public immutable pair;
+    mapping(address => uint256) public override nonces;
 
     constructor() payable {
         require(msg.value >= 1 ether);
@@ -181,7 +184,7 @@ contract FU is IERC20, IERC6093 {
         return _transfer(from, to, amount);
     }
 
-    function name() external view override returns (string memory) {
+    function name() public view override returns (string memory) {
         revert("unimplemented");
     }
 
@@ -190,6 +193,66 @@ contract FU is IERC20, IERC6093 {
     }
 
     uint8 public constant override decimals = Settings.DECIMALS;
+
+    function DOMAIN_SEPARATOR() public view override returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes(name())),
+                block.chainid,
+                address(this)
+            )
+        );
+    }
+
+    function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
+        external
+        override
+    {
+        if (owner == address(0)) {
+            revert ERC20InvalidApprover(address(0));
+        }
+        if (block.timestamp > deadline) {
+            revert ERC2612ExpiredSignature(deadline);
+        }
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                owner,
+                spender,
+                amount,
+                nonces[owner]++,
+                deadline
+            )
+        );
+        bytes32 signingHash = keccak256(abi.encodePacked(bytes2(0x1901), DOMAIN_SEPARATOR(), structHash));
+        address signer = ecrecover(signingHash, v, r, s);
+        if (ecrecover(signingHash, v, r, s) != owner) {
+            revert ERC2612InvalidSigner(signer, owner);
+        }
+        allowance[owner][spender] = amount;
+        emit Approval(owner, spender, amount);
+    }
+
+    function eip712Domain()
+        external
+        view
+        override
+        returns (
+            bytes1 fields,
+            string memory name_,
+            string memory version,
+            uint256 chainId,
+            address verifyingContract,
+            bytes32 salt,
+            uint256[] memory extensions
+        )
+    {
+        fields = bytes1(0x0d);
+        name_ = name();
+        chainId = block.chainid;
+        verifyingContract = address(this);
+    }
 
     function _burn(address from, uint256 amount) internal returns (bool) {
         (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
