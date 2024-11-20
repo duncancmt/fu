@@ -36,7 +36,7 @@ contract FU is IERC20, IERC6093 {
         totalSupply = Settings.INITIAL_SUPPLY;
         totalShares = Settings.INITIAL_SHARES;
         _mintShares(DEAD, Settings.oneTokenInShares());
-        _mintShares(address(pair), totalShares / 10);
+        _mintShares(address(pair), totalShares / Settings.INITIAL_LIQUIDITY_DIVISOR);
         _mintShares(msg.sender, totalShares - sharesOf[address(pair)] - sharesOf[DEAD]);
 
         try FACTORY.createPair(WETH, IERC20(address(this))) returns (IUniswapV2Pair newPair) {

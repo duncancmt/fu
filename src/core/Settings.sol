@@ -7,6 +7,8 @@ import {UnsafeMath} from "../lib/UnsafeMath.sol";
 library Settings {
     using UnsafeMath for uint256;
 
+    uint256 internal constant INITIAL_LIQUIDITY_DIVISOR = 10;
+
     uint8 internal constant DECIMALS = 36;
     uint256 internal constant INITIAL_SUPPLY = uint256(type(uint112).max) * type(uint32).max;
     uint256 internal constant INITIAL_SHARES = INITIAL_SUPPLY << 32;
