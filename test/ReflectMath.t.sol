@@ -2,9 +2,9 @@
 pragma solidity ^0.8.25;
 
 import {UnsafeMath} from "src/lib/UnsafeMath.sol";
+import {uint512, tmp, alloc} from "src/lib/512Math.sol";
 import {Settings} from "src/core/Settings.sol";
 import {ReflectMath} from "src/core/ReflectMath.sol";
-import {uint512, tmp, alloc} from "src/lib/512Math.sol";
 
 import {Test} from "@forge-std/Test.sol";
 
@@ -24,7 +24,7 @@ contract ReflectMathTest is Test {
         uint256 initialSharesRatio = Settings.INITIAL_SHARES / Settings.INITIAL_SUPPLY;
         totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
         totalShares = bound(totalShares, totalSupply * (initialSharesRatio >> 20), Settings.INITIAL_SHARES); // TODO: reduce multiplier
-        feeRate = uint16(bound(feeRate, 1, ReflectMath.feeBasis / 2));
+        feeRate = uint16(bound(feeRate, Settings.MIN_FEE, Settings.MAX_FEE));
 
         console.log("totalSupply", totalSupply);
         console.log("totalShares", totalShares);

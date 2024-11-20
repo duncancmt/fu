@@ -3,6 +3,7 @@ pragma solidity ^0.8.25;
 
 import {uint512, tmp, alloc} from "../lib/512Math.sol";
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
+import {ReflectMath} from "./ReflectMath.sol";
 
 library Settings {
     using UnsafeMath for uint256;
@@ -11,6 +12,11 @@ library Settings {
     // This constant can be set as low as 2 without breaking anything. Setting
     // it near to INITIAL_LIQUIDITY_DIVISOR will cause unexpected reverts.
     uint256 internal constant ANTI_WHALE_DIVISOR = 4;
+
+    uint256 internal constant MIN_FEE = 1;
+    // If the fee is set above `ReflectMath.feeBasis / 2`, the reflection math
+    // breaks down.
+    uint256 internal constant MAX_FEE = ReflectMath.feeBasis / 2;
 
     uint8 internal constant DECIMALS = 36;
     uint256 internal constant INITIAL_SUPPLY = uint256(type(uint112).max) * type(uint32).max;
