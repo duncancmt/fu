@@ -90,8 +90,9 @@ contract ReflectMathTest is Test {
         uint256 newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
         if (newFromBalance > expectedNewFromBalance) {
             console.log("newFromBalance too high");
-            newFromShares--;
-            newTotalShares--;
+            uint256 decr = tmp().omul(newFromBalance - expectedNewFromBalance, newTotalShares).div(totalSupply);
+            newFromShares -= decr;
+            newTotalShares -= decr;
 
             newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
             newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
