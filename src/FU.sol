@@ -257,14 +257,21 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     function _burn(address from, uint256 amount) internal returns (bool) {
         (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
-            uint512 p = alloc().omul(amount, shares);
-            uint256 amountShares = p.div(balance);
-            if (tmp().omul(amountShares, balance) < p) {
-                amountShares++;
+            if (amount == balance) {
+                cachedTotalShares -= shares;
+                shares = 0;
+            } else {
+                uint512 p = alloc().omul(amount, shares);
+                uint256 burnShares = p.div(balance);
+                if (tmp().omul(burnShares, balance) < p) {
+                    burnShares++;
+                }
+                shares -= burnShares;
+                cachedTotalShares -= burnShares;
             }
-            sharesOf[from] = shares - amountShares;
-            totalSupply = cachedTotalSupply - amount;
-            totalShares = cachedTotalShares - amountShares;
+            sharesOf[from] = shares;
+            totalSupply = cachedTotalSupply - _scaleUp(amount, from);
+            totalShares = cachedTotalShares;
             emit Transfer(from, address(0), amount);
             return _success();
         } else if (_check()) {
