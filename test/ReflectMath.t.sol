@@ -13,6 +13,39 @@ import {console} from "@forge-std/console.sol";
 contract ReflectMathTest is Test {
     using UnsafeMath for uint256;
 
+    function _oneTokenInShares(uint256 totalSupply, uint256 totalShares) internal pure returns (uint256) {
+        uint256 oneTokenInShares;
+        uint512 tmp1 = alloc().omul(10 ** Settings.DECIMALS, totalShares);
+        oneTokenInShares = tmp1.div(totalSupply);
+        if (tmp().omul(oneTokenInShares, totalSupply) < tmp1) {
+            oneTokenInShares++;
+        }
+        assertTrue(tmp().omul(oneTokenInShares, totalSupply) >= tmp1);
+        return oneTokenInShares;
+    }
+
+    function _boundCommon(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount)
+        internal
+        view
+        returns (uint256, uint256, uint256, uint256, uint256)
+    {
+        uint256 initialSharesRatio = Settings.INITIAL_SHARES / Settings.INITIAL_SUPPLY;
+        totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
+        totalShares = bound(totalShares, totalSupply * (initialSharesRatio >> 20), Settings.INITIAL_SHARES); // TODO: reduce multiplier
+        uint256 oneTokenInShares = _oneTokenInShares(totalSupply, totalShares);
+        uint256 oneWeiInShares = totalShares / totalSupply;
+        if (oneWeiInShares * totalSupply < totalShares) {
+            oneWeiInShares++;
+        }
+        vm.assume(oneWeiInShares < totalShares - oneTokenInShares); // only possible in extreme conditions due to rounding error
+        fromShares = bound(fromShares, oneWeiInShares, totalShares - oneTokenInShares);
+        uint256 fromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
+        assertGt(fromBalance, 0);
+        amount = bound(amount, 1, fromBalance);
+
+        return (totalSupply, totalShares, fromShares, fromBalance, amount);
+    }
+
     function testTransfer(
         uint256 totalSupply,
         uint256 totalShares,
@@ -21,42 +54,13 @@ contract ReflectMathTest is Test {
         uint256 amount,
         uint16 feeRate
     ) external view {
-        uint256 initialSharesRatio = Settings.INITIAL_SHARES / Settings.INITIAL_SUPPLY;
-        totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
-        totalShares = bound(totalShares, totalSupply * (initialSharesRatio >> 20), Settings.INITIAL_SHARES); // TODO: reduce multiplier
+        uint256 fromBalance;
+        (totalSupply, totalShares, fromShares, fromBalance, amount) =
+            _boundCommon(totalSupply, totalShares, fromShares, amount);
         feeRate = uint16(bound(feeRate, Settings.MIN_FEE, Settings.MAX_FEE));
 
-        console.log("totalSupply", totalSupply);
-        console.log("totalShares", totalShares);
-
-        uint256 oneTokenInShares;
-        {
-            uint512 tmp1 = alloc().omul(10 ** Settings.DECIMALS, totalShares);
-            oneTokenInShares = tmp1.div(totalSupply);
-            if (tmp().omul(oneTokenInShares, totalSupply) < tmp1) {
-                oneTokenInShares++;
-            }
-            assertTrue(tmp().omul(oneTokenInShares, totalSupply) >= tmp1);
-        }
-        uint256 oneWeiInShares = totalShares / totalSupply;
-        if (oneWeiInShares * totalSupply < totalShares) {
-            oneWeiInShares++;
-        }
-        console.log("one token  ", oneTokenInShares);
-        console.log("one wei    ", oneWeiInShares);
-
-        vm.assume(oneWeiInShares < totalShares - oneTokenInShares); // only possible in extreme conditions due to rounding error
-        fromShares = bound(fromShares, oneWeiInShares, totalShares - oneTokenInShares);
-        toShares = bound(toShares, 0, totalShares - oneTokenInShares - fromShares);
-
-        console.log("fromShares ", fromShares);
-        console.log("toShares   ", toShares);
-
+        toShares = bound(toShares, 0, totalShares - _oneTokenInShares(totalSupply, totalShares) - fromShares);
         vm.assume(fromShares + toShares < totalShares / 2);
-
-        uint256 fromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
-        assertGt(fromBalance, 0);
-        amount = bound(amount, 1, fromBalance);
         uint256 toBalance = tmp().omul(toShares, totalSupply).div(totalShares);
 
         console.log("amount     ", amount);
@@ -88,30 +92,9 @@ contract ReflectMathTest is Test {
     }
 
     function testDeliver(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount) external view {
-        uint256 initialSharesRatio = Settings.INITIAL_SHARES / Settings.INITIAL_SUPPLY;
-        totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
-        totalShares = bound(totalShares, totalSupply * (initialSharesRatio >> 20), Settings.INITIAL_SHARES); // TODO: reduce multiplier
-        uint256 oneTokenInShares;
-        {
-            uint512 tmp1 = alloc().omul(10 ** Settings.DECIMALS, totalShares);
-            oneTokenInShares = tmp1.div(totalSupply);
-            if (tmp().omul(oneTokenInShares, totalSupply) < tmp1) {
-                oneTokenInShares++;
-            }
-            assertTrue(tmp().omul(oneTokenInShares, totalSupply) >= tmp1);
-        }
-        uint256 oneWeiInShares = totalShares / totalSupply;
-        if (oneWeiInShares * totalSupply < totalShares) {
-            oneWeiInShares++;
-        }
-
-        vm.assume(oneWeiInShares < totalShares - oneTokenInShares); // only possible in extreme conditions due to rounding error
-        fromShares = bound(fromShares, oneWeiInShares, totalShares - oneTokenInShares);
-        vm.assume(fromShares < totalShares / 2);
-
-        uint256 fromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
-        assertGt(fromBalance, 0);
-        amount = bound(amount, 1, fromBalance);
+        uint256 fromBalance;
+        (totalSupply, totalShares, fromShares, fromBalance, amount) =
+            _boundCommon(totalSupply, totalShares, fromShares, amount);
 
         (uint256 newFromShares, uint256 newTotalShares) =
             ReflectMath.getDeliverShares(amount, totalSupply, totalShares, fromShares);
