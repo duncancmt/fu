@@ -83,19 +83,14 @@ contract ReflectMathTest is Test {
         uint256 expectedNewFromBalance = fromBalance - amount;
         uint256 expectedNewToBalance = toBalance + amount * (ReflectMath.feeBasis - feeRate) / ReflectMath.feeBasis;
 
-        // TODO: tighten these bounds to exact equality
         assertEq(newFromBalance, expectedNewFromBalance, "newFromBalance");
-        /*
-        assertLe(newFromBalance, expectedNewFromBalance + 1, "newFromBalance upper");
-        assertGe(newFromBalance + 1, expectedNewFromBalance, "newFromBalance lower");
-        */
         // TODO: tighten these bounds to exact equality
         assertLe(
             newToBalance,
-            toBalance + (amount * (ReflectMath.feeBasis - feeRate)).unsafeDivUp(ReflectMath.feeBasis) + 1,
+            toBalance + (amount * (ReflectMath.feeBasis - feeRate)).unsafeDivUp(ReflectMath.feeBasis),
             "newToBalance upper"
         );
-        assertGe(newToBalance + 1, expectedNewToBalance, "newToBalance lower");
+        assertGe(newToBalance, expectedNewToBalance, "newToBalance lower");
     }
 
     function testDeliver(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount) external view {
