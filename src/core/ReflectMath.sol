@@ -66,7 +66,8 @@ library ReflectMath {
             console.log("expected fromBalance", expectedAfterFromBalance);
             if (afterFromBalance > expectedAfterFromBalance) {
                 console.log("fromBalance too high");
-                uint256 decr = tmp().omul(afterFromBalance - expectedAfterFromBalance, newTotalShares).div(totalSupply);
+                //uint256 decr = tmp().omul(afterFromBalance - expectedAfterFromBalance, newTotalShares).div(totalSupply);
+                uint256 decr = 1;
                 newFromShares -= decr;
                 newTotalShares -= decr;
             } else if (afterFromBalance < expectedAfterFromBalance) {
