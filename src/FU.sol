@@ -336,7 +336,6 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     function _deliver(address from, uint256 amount) internal returns (bool) {
         (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
-            emit Transfer(from, address(0), amount);
             if (amount == balance) {
                 cachedTotalShares -= shares;
                 shares = 0;
@@ -346,6 +345,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
             }
             sharesOf[from] = shares;
             totalShares = cachedTotalShares;
+            emit Transfer(from, address(0), amount);
 
             pair.sync();
 
