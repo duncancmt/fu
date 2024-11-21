@@ -129,16 +129,11 @@ contract FU is IERC2612, IERC5267, IERC6093 {
             // "efficient" addresses can't hold tokens because they have zero multiplier
             uint256(uint160(to)) >= Settings.ADDRESS_DIVISOR
             // anti-whale (also because the reflection math breaks down)
+            // we have to check this twice to ensure no underflow in the reflection math
             && cachedToShares < cachedTotalShares / Settings.ANTI_WHALE_DIVISOR
         ) {
             if (amount <= fromBalance) {
                 uint256 cachedFeeRate = fee();
-                {
-                    uint256 feeAmount = amount * cachedFeeRate / ReflectMath.feeBasis;
-                    emit Transfer(from, to, amount - feeAmount);
-                    emit Transfer(from, address(0), feeAmount);
-                }
-
                 (uint256 newFromShares, uint256 newToShares, uint256 newTotalShares) = ReflectMath.getTransferShares(
                     _scaleUp(amount, from),
                     cachedFeeRate,
@@ -152,18 +147,32 @@ contract FU is IERC2612, IERC5267, IERC6093 {
                     newTotalShares -= newFromShares;
                     newFromShares = 0;
                 }
-                sharesOf[from] = newFromShares;
-                sharesOf[to] = newToShares;
-                totalShares = newTotalShares;
 
-                {
-                    address pair_ = address(pair);
-                    if (!(from == pair_ || to == pair_)) {
-                        IUniswapV2Pair(pair_).sync();
+                if (newToShares < newTotalShares / Settings.ANTI_WHALE_DIVISOR) {
+                    // All effects go here
+                    {
+                        uint256 feeAmount = amount * cachedFeeRate / ReflectMath.feeBasis;
+                        emit Transfer(from, to, amount - feeAmount);
+                        emit Transfer(from, address(0), feeAmount);
                     }
-                }
+                    sharesOf[from] = newFromShares;
+                    sharesOf[to] = newToShares;
+                    totalShares = newTotalShares;
 
-                return _success();
+                    {
+                        address pair_ = address(pair);
+                        if (!(from == pair_ || to == pair_)) {
+                            IUniswapV2Pair(pair_).sync();
+                        }
+                    }
+
+                    return _success();
+                } else if (_check()) {
+                    // TODO: maybe make this a new error? It's not exactly an
+                    // invalid recipient, it's an invalid (too high) transfer
+                    // amount
+                    revert ERC20InvalidReceiver(to);
+                }
             } else if (_check()) {
                 revert ERC20InsufficientBalance(from, fromBalance, amount);
             }
