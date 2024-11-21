@@ -177,6 +177,8 @@ contract FU is IERC2612, IERC5267, IERC6093 {
                 revert ERC20InsufficientBalance(from, fromBalance, amount);
             }
         } else if (_check()) {
+            // TODO: maybe do a fallback to "normal" transfers if the recipient
+            // is the pair?
             revert ERC20InvalidReceiver(to);
         }
         return false;
