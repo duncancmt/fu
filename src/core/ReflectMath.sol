@@ -64,18 +64,15 @@ library ReflectMath {
             uint256 expectedAfterFromBalance = beforeFromBalance - amount;
             console.log("  actual fromBalance", afterFromBalance);
             console.log("expected fromBalance", expectedAfterFromBalance);
-            if (afterFromBalance > expectedAfterFromBalance) {
-                console.log("fromBalance too high");
-                //uint256 decr = tmp().omul(afterFromBalance - expectedAfterFromBalance, newTotalShares).div(totalSupply);
-                uint256 decr = 1;
-                newFromShares -= decr;
-                newTotalShares -= decr;
-            } else if (afterFromBalance < expectedAfterFromBalance) {
-                console.log("fromBalance too low");
-                //uint256 incr = tmp().omul(expectedAfterFromBalance - afterFromBalance, newTotalShares).div(totalSupply);
-                uint256 incr = 1;
-                newFromShares += incr;
-                newTotalShares += incr;
+            {
+                bool condition = afterFromBalance > expectedAfterFromBalance;
+                newFromShares = newFromShares.unsafeDec(condition);
+                newTotalShares = newTotalShares.unsafeDec(condition);
+            }
+            {
+                bool condition = afterFromBalance < expectedAfterFromBalance;
+                newFromShares = newFromShares.unsafeInc(condition);
+                newTotalShares = newTotalShares.unsafeInc(condition);
             }
         }
     }
