@@ -273,7 +273,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         );
         bytes32 signingHash = keccak256(abi.encodePacked(bytes2(0x1901), DOMAIN_SEPARATOR(), structHash));
         address signer = ecrecover(signingHash, v, r, s);
-        if (ecrecover(signingHash, v, r, s) != owner) {
+        if (signer != owner) {
             revert ERC2612InvalidSigner(signer, owner);
         }
         allowance[owner][spender] = amount;
