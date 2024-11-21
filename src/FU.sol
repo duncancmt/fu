@@ -194,6 +194,9 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         return _success();
     }
 
+    // TODO: everywhere we're using `_spendAllowance`, we're using it wrong. We
+    // must not make any state changes if the thing that comes after the
+    // allowance update fails
     function _spendAllowance(address owner, address spender, uint256 amount) internal returns (bool) {
         uint256 currentAllowance = allowance[owner][spender];
         if (~currentAllowance == 0) {
