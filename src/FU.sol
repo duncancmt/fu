@@ -23,11 +23,11 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     using ChecksumAddress for address;
 
     mapping(address => uint256) public sharesOf;
+    mapping(address => uint256) public override nonces;
     mapping(address => mapping(address => uint256)) public override allowance;
     uint256 public override totalSupply;
     uint256 public totalShares;
     IUniswapV2Pair public immutable pair;
-    mapping(address => uint256) public override nonces;
 
     constructor(address[] memory initialHolders) payable {
         require(msg.value >= 1 ether);
