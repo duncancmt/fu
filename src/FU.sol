@@ -358,9 +358,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     }
 
     function punishWhale(address whale) external returns (bool) {
-        (uint256 shares, uint256 totalShares_) = _loadAccount(whale);
-        sharesOf[whale] = shares;
-        totalShares = totalShares_;
+        (sharesOf[whale], totalShares) = _loadAccount(whale);
         IUniswapV2Pair pair_ = pair;
         if (whale != address(pair_)) {
             pair_.sync();
