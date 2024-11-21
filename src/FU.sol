@@ -13,12 +13,14 @@ import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {uint512, tmp, alloc} from "./lib/512Math.sol";
 import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
+import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 
 contract FU is IERC2612, IERC5267, IERC6093 {
     using UnsafeMath for uint256;
+    using ChecksumAddress for address;
 
     mapping(address => uint256) public sharesOf;
     mapping(address => mapping(address => uint256)) public override allowance;
@@ -200,12 +202,13 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         return _transfer(from, to, amount);
     }
 
-    function name() public view override returns (string memory) {
-        revert("unimplemented");
-    }
+    string public constant name = "Fuck You!";
 
     function symbol() external view override returns (string memory) {
-        revert("unimplemented");
+        if (msg.sender == tx.origin) {
+            return "FU";
+        }
+        return string.concat("Fuck you, ", msg.sender.toChecksumAddress(), "!");
     }
 
     uint8 public constant override decimals = Settings.DECIMALS;
@@ -214,7 +217,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         return keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes(name())),
+                keccak256(bytes(name)),
                 block.chainid,
                 address(this)
             )
@@ -265,7 +268,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         )
     {
         fields = bytes1(0x0d);
-        name_ = name();
+        name_ = name;
         chainId = block.chainid;
         verifyingContract = address(this);
     }
