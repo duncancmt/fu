@@ -10,16 +10,16 @@ contract ChecksumAddressTest is Test {
 
     function testDead() external pure {
         string memory checksummed = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD.toChecksumAddress();
-        assertEq(keccak256(bytes(checksummed)), keccak256("0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD"));
+        assertEq(checksummed, "0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD");
     }
 
     function testDuncancmtDotEth() external pure {
         string memory checksummed = 0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60.toChecksumAddress();
-        assertEq(keccak256(bytes(checksummed)), keccak256("0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60"));
+        assertEq(checksummed, "0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60");
     }
 
     function testWeth() external pure {
         string memory checksummed = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2.toChecksumAddress();
-        assertEq(keccak256(bytes(checksummed)), keccak256("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"));
+        assertEq(checksummed, "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
     }
 }
