@@ -79,18 +79,23 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         return true;
     }
 
-    function _balanceOf(address account) internal view returns (uint256, uint256, uint256, uint256) {
+    function _loadAccount(address account) internal view returns (uint256, uint256) {
         uint256 shares = sharesOf[account];
-        uint256 balance;
-        uint256 cachedTotalSupply = totalSupply;
         uint256 cachedTotalShares = totalShares;
-        {
+        unchecked {
             uint256 whaleLimit = cachedTotalShares / Settings.ANTI_WHALE_DIVISOR - 1;
             if (shares > whaleLimit) {
                 cachedTotalShares -= (shares - whaleLimit);
                 shares = whaleLimit;
             }
         }
+        return (shares, cachedTotalShares);
+    }
+
+    function _balanceOf(address account) internal view returns (uint256, uint256, uint256, uint256) {
+        (uint256 shares, uint256 cachedTotalShares) = _loadAccount(account);
+        uint256 cachedTotalSupply = totalSupply;
+        uint256 balance;
         unchecked {
             balance = tmp().omul(shares, cachedTotalSupply * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)).div(
                 cachedTotalShares * Settings.CRAZY_BALANCE_BASIS
@@ -353,10 +358,9 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     }
 
     function punishWhale(address whale) external returns (bool) {
-        // TODO `_balanceOf` does a bunch of extra math; refactor that.
-        (, uint256 newShares,, uint256 newTotalShares) = _balanceOf(whale);
-        sharesOf[whale] = newShares;
-        totalShares = newTotalShares;
+        (uint256 shares, uint256 totalShares_) = _loadAccount(whale);
+        sharesOf[whale] = shares;
+        totalShares = totalShares_;
         IUniswapV2Pair pair_ = pair;
         if (whale != address(pair_)) {
             pair_.sync();
