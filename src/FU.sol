@@ -151,9 +151,9 @@ contract FU is IERC2612, IERC5267, IERC6093 {
                 if (newToShares < newTotalShares / Settings.ANTI_WHALE_DIVISOR) {
                     // All effects go here
                     {
-                        uint256 feeAmount = amount * cachedFeeRate / ReflectMath.feeBasis;
-                        emit Transfer(from, to, amount - feeAmount);
-                        emit Transfer(from, address(0), feeAmount);
+                        uint256 transferAmount = amount * (ReflectMath.feeBasis - cachedFeeRate) / ReflectMath.feeBasis;
+                        emit Transfer(from, to, transferAmount);
+                        emit Transfer(from, address(0), amount - transferAmount);
                     }
                     sharesOf[from] = newFromShares;
                     sharesOf[to] = newToShares;
