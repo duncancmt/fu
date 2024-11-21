@@ -32,6 +32,7 @@ library ReflectMath {
         uint512 t8 = alloc().oadd(t6, t7);
         uint512 n2 = alloc().omul(t8, uninvolvedShares);
 
+        // TODO: add optimized multidiv method to 512Math
         newFromShares = n1.div(d);
         newToShares = n2.div(d);
         console.log("    fromShares", fromShares);
