@@ -166,7 +166,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
                         }
                     }
 
-                    return _success();
+                    return true;
                 } else if (_check()) {
                     // TODO: maybe make this a new error? It's not exactly an
                     // invalid recipient, it's an invalid (too high) transfer
@@ -185,7 +185,10 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     }
 
     function transfer(address to, uint256 amount) public override returns (bool) {
-        return _transfer(msg.sender, to, amount);
+        if (!_transfer(msg.sender, to, amount)) {
+            return false;
+        }
+        return _success();
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
@@ -194,31 +197,36 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         return _success();
     }
 
-    // TODO: everywhere we're using `_spendAllowance`, we're using it wrong. We
-    // must not make any state changes if the thing that comes after the
-    // allowance update fails
-    function _spendAllowance(address owner, address spender, uint256 amount) internal returns (bool) {
-        uint256 currentAllowance = allowance[owner][spender];
-        if (~currentAllowance == 0) {
-            return true;
-        }
-        if (currentAllowance >= amount) {
-            currentAllowance -= amount;
-            allowance[owner][spender] = currentAllowance;
-            emit Approval(owner, spender, currentAllowance);
-            return true;
+    function _checkAllowance(address owner, uint256 amount) internal view returns (bool, uint256) {
+        uint256 currentAllowance = allowance[owner][msg.sender];
+        if (~currentAllowance == 0 || currentAllowance >= amount) {
+            return (true, currentAllowance);
         }
         if (_check()) {
-            revert ERC20InsufficientAllowance(spender, currentAllowance, amount);
+            revert ERC20InsufficientAllowance(msg.sender, currentAllowance, amount);
         }
-        return false;
+        return (false, 0);
+    }
+
+    function _spendAllowance(address owner, uint256 amount, uint256 currentAllowance) internal {
+        if (~currentAllowance == 0) {
+            return;
+        }
+        currentAllowance -= amount;
+        allowance[owner][msg.sender] = currentAllowance;
+        emit Approval(owner, msg.sender, currentAllowance);
     }
 
     function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
-        if (!_spendAllowance(from, msg.sender, amount)) {
+        (bool success, uint256 currentAllowance) = _checkAllowance(from, amount);
+        if (!success) {
             return false;
         }
-        return _transfer(from, to, amount);
+        if (!_transfer(from, to, amount)) {
+            return false;
+        }
+        _spendAllowance(from, amount, currentAllowance);
+        return _success();
     }
 
     string public constant override name = "Fuck You!";
@@ -311,7 +319,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
             totalSupply = cachedTotalSupply - _scaleUp(amount, from);
             totalShares = cachedTotalShares;
             emit Transfer(from, address(0), amount);
-            return _success();
+            return true;
         } else if (_check()) {
             revert ERC20InsufficientBalance(from, balance, amount);
         }
@@ -319,7 +327,10 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     }
 
     function burn(uint256 amount) external returns (bool) {
-        return _burn(msg.sender, amount);
+        if (!_burn(msg.sender, amount)) {
+            return false;
+        }
+        return _success();
     }
 
     function _deliver(address from, uint256 amount) internal returns (bool) {
@@ -338,7 +349,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
 
             pair.sync();
 
-            return _success();
+            return true;
         } else if (_check()) {
             revert ERC20InsufficientBalance(from, balance, amount);
         }
@@ -346,21 +357,34 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     }
 
     function deliver(uint256 amount) external returns (bool) {
-        return _deliver(msg.sender, amount);
+        if (!_deliver(msg.sender, amount)) {
+            return false;
+        }
+        return _success();
     }
 
     function burnFrom(address from, uint256 amount) external returns (bool) {
-        if (!_spendAllowance(from, msg.sender, amount)) {
+        (bool success, uint256 currentAllowance) = _checkAllowance(from, amount);
+        if (!success) {
             return false;
         }
-        return _burn(from, amount);
+        if (!_burn(from, amount)) {
+            return false;
+        }
+        _spendAllowance(from, amount, currentAllowance);
+        return _success();
     }
 
     function deliverFrom(address from, uint256 amount) external returns (bool) {
-        if (!_spendAllowance(from, msg.sender, amount)) {
+        (bool success, uint256 currentAllowance) = _checkAllowance(from, amount);
+        if (!success) {
             return false;
         }
-        return _deliver(from, amount);
+        if (!_deliver(from, amount)) {
+            return false;
+        }
+        _spendAllowance(from, amount, currentAllowance);
+        return _success();
     }
 
     function lock(uint256 amount) external returns (bool) {
