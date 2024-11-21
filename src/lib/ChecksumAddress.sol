@@ -6,7 +6,7 @@ library ChecksumAddress {
     function toChecksumAddress(address addr) internal pure returns (string memory r) {
         assembly ("memory-safe") {
             r := mload(0x40)
-            mstore(0x40, add(r, 0x60))
+            mstore(0x40, add(0x60, r))
             mstore(0x0f, 0x30313233343536373839616263646566) // "0123456789abcdef" lookup table
 
             mstore(add(0x02, r), 0x3078) // "0x" prefix
@@ -21,7 +21,7 @@ library ChecksumAddress {
                 // Split `temp` into nibbles and output the corresponding lookup table entries
                 mstore8(add(0x01, p), mload(and(0x0f, temp)))
                 mstore8(p, mload(shr(0x04, temp)))
-                i := add(i, 0x01)
+                i := add(0x01, i)
                 if eq(i, 0x14) { break }
             }
 
@@ -33,7 +33,7 @@ library ChecksumAddress {
             // aligned as bit 6 of each byte
             for { let i } true {} {
                 mstore(add(i, i), mul(0x88000000000000000000000000000000000000000000000000000000000000, byte(i, hash)))
-                i := add(i, 0x01)
+                i := add(0x01, i)
                 if eq(i, 0x14) { break }
             }
 
@@ -42,7 +42,7 @@ library ChecksumAddress {
             // a..f) and mask the hash with this. Shift those bits up to bit 7 (the case bit) and
             // flip it to zero (uppercase) wherever the hash is set
             mstore(o, xor(mload(o), shr(0x01, and(mload(0x00), and(mload(o), mask)))))
-            o := add(o, 0x20)
+            o := add(0x20, o)
             // Do it again for the second word of the hexlified output
             mstore(o, xor(mload(o), shr(0x01, and(mload(0x20), and(mload(o), mask)))))
         }
