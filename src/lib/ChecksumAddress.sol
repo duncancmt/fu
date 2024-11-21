@@ -17,7 +17,7 @@ library ChecksumAddress {
                 i := sub(i, 0x01)
                 addr_copy := shr(0x04, addr_copy)
             } { mstore8(i, byte(and(0x0f, addr_copy), lookup)) }
-            let hash := shr(0x60, keccak256(add(0x22, r), 0x28))
+            let hash := shr(0x5f, keccak256(add(0x22, r), 0x28))
             for {
                 let i := add(0x49, r)
                 let end := add(0x21, r)
@@ -27,7 +27,7 @@ library ChecksumAddress {
                 hash := shr(0x04, hash)
             } {
                 let nibble := and(0x0f, addr)
-                let check := shl(0x04, gt(and(0x0f, hash), 0x07))
+                let check := and(0x10, hash)
                 mstore8(i, byte(or(nibble, check), lookup))
             }
         }
