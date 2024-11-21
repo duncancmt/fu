@@ -207,7 +207,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         return _transfer(from, to, amount);
     }
 
-    string public constant name = "Fuck You!";
+    string public constant override name = "Fuck You!";
 
     function symbol() external view override returns (string memory) {
         if (msg.sender == tx.origin) {
