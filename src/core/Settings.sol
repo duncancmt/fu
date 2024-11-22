@@ -16,8 +16,7 @@ library Settings {
     uint256 internal constant ANTI_WHALE_DIVISOR = 4;
 
     uint256 internal constant MIN_FEE = 1;
-    // A fee is set above `ReflectMath.feeBasis / 2`, ReflectMath breaks
-    // down
+    // A fee above `ReflectMath.feeBasis / 2` makes ReflectMath break down
     uint256 internal constant MAX_FEE = ReflectMath.feeBasis / 2;
 
     uint256 private constant _UNISWAPV2_MAX_BALANCE = type(uint112).max;
@@ -27,8 +26,8 @@ library Settings {
     uint256 internal constant INITIAL_SHARES = INITIAL_SUPPLY << 32;
 
     uint256 internal constant INITIAL_SHARES_RATIO = INITIAL_SHARES / INITIAL_SUPPLY;
-    uint256 internal constant MIN_SHARES_RATIO = 336; // below this, ReflectMath breaks down
-    // bisecting: lo = 320; hi = 352
+    uint256 internal constant MIN_SHARES_RATIO = 351; // below this, ReflectMath breaks down
+    // lo = 350; hi = 352
 
     // Alternative
     /*
