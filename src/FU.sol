@@ -112,12 +112,13 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         }
     }
 
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceOf(address account) external view override returns (uint256) {
         (uint256 balance,,,) = _balanceOf(account);
         return balance;
     }
 
     function fee() public view returns (uint256) {
+        // TODO: set fee to zero and prohibit `deliver` when the shares ratio gets to `Settings.MIN_SHARES_RATIO`
         revert("unimplemented");
     }
 
@@ -184,7 +185,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         return false;
     }
 
-    function transfer(address to, uint256 amount) public override returns (bool) {
+    function transfer(address to, uint256 amount) external override returns (bool) {
         if (!_transfer(msg.sender, to, amount)) {
             return false;
         }
@@ -217,7 +218,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         emit Approval(owner, msg.sender, currentAllowance);
     }
 
-    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
+    function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
         (bool success, uint256 currentAllowance) = _checkAllowance(from, amount);
         if (!success) {
             return false;
@@ -385,14 +386,6 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         }
         _spendAllowance(from, amount, currentAllowance);
         return _success();
-    }
-
-    function lock(uint256 amount) external returns (bool) {
-        return transfer(DEAD, amount);
-    }
-
-    function lockFrom(address from, uint256 amount) external returns (bool) {
-        return transferFrom(from, DEAD, amount);
     }
 
     function punishWhale(address whale) external returns (bool) {
