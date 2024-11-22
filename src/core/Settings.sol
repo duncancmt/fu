@@ -25,16 +25,15 @@ library Settings {
     uint256 internal constant INITIAL_SUPPLY = _UNISWAPV2_MAX_BALANCE * type(uint32).max;
     uint256 internal constant INITIAL_SHARES = INITIAL_SUPPLY << 32;
 
-    uint256 internal constant INITIAL_SHARES_RATIO = INITIAL_SHARES / INITIAL_SUPPLY;
-    uint256 internal constant MIN_SHARES_RATIO = 351; // below this, ReflectMath breaks down
-    // lo = 350; hi = 352
-
     // Alternative
     /*
     uint8 internal constant DECIMALS = 27;
     uint256 internal constant INITIAL_SUPPLY = uint256(type(uint112).max);
     uint256 internal constant INITIAL_SHARES = INITIAL_SUPPLY << 80;
     */
+
+    uint256 internal constant INITIAL_SHARES_RATIO = INITIAL_SHARES / INITIAL_SUPPLY;
+    uint256 internal constant MIN_SHARES_RATIO = 351; // below this, ReflectMath breaks down
 
     uint256 internal constant CRAZY_BALANCE_BASIS = INITIAL_SUPPLY / _UNISWAPV2_MAX_BALANCE;
     uint256 internal constant ADDRESS_DIVISOR = 2 ** 160 / (CRAZY_BALANCE_BASIS + 1);

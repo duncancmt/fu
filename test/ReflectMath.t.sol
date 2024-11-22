@@ -24,11 +24,13 @@ contract ReflectMathTest is Test {
         return oneTokenInShares;
     }
 
-    function _boundCommon(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount, uint256 sharesRatio)
-        internal
-        pure
-        returns (uint256, uint256, uint256, uint256, uint256)
-    {
+    function _boundCommon(
+        uint256 totalSupply,
+        uint256 totalShares,
+        uint256 fromShares,
+        uint256 amount,
+        uint256 sharesRatio
+    ) internal pure returns (uint256, uint256, uint256, uint256, uint256) {
         totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
         sharesRatio = bound(sharesRatio, Settings.MIN_SHARES_RATIO, Settings.INITIAL_SHARES_RATIO);
         sharesRatio = Settings.MIN_SHARES_RATIO; // TODO: remove
@@ -98,7 +100,13 @@ contract ReflectMathTest is Test {
         assertGe(newToBalance, expectedNewToBalance, "newToBalance lower");
     }
 
-    function testDeliver(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount, uint256 sharesRatio) external view {
+    function testDeliver(
+        uint256 totalSupply,
+        uint256 totalShares,
+        uint256 fromShares,
+        uint256 amount,
+        uint256 sharesRatio
+    ) external view {
         uint256 fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, sharesRatio);
