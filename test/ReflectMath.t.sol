@@ -24,14 +24,18 @@ contract ReflectMathTest is Test {
         return oneTokenInShares;
     }
 
-    function _boundCommon(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount)
+    function _boundCommon(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount, uint256 sharesRatio)
         internal
         pure
         returns (uint256, uint256, uint256, uint256, uint256)
     {
-        uint256 initialSharesRatio = Settings.INITIAL_SHARES / Settings.INITIAL_SUPPLY;
         totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
-        totalShares = bound(totalShares, totalSupply * (initialSharesRatio >> 20), Settings.INITIAL_SHARES); // TODO: reduce multiplier
+        sharesRatio = bound(sharesRatio, Settings.MIN_SHARES_RATIO, Settings.INITIAL_SHARES_RATIO);
+        sharesRatio = Settings.MIN_SHARES_RATIO; // TODO: remove
+        uint256 maxShares = totalSupply * (sharesRatio + 1) - 1;
+        maxShares = maxShares > Settings.INITIAL_SHARES ? Settings.INITIAL_SHARES : maxShares;
+        totalShares = bound(totalShares, totalSupply * sharesRatio, maxShares);
+
         uint256 oneTokenInShares = _oneTokenInShares(totalSupply, totalShares);
         uint256 oneWeiInShares = totalShares / totalSupply;
         if (oneWeiInShares * totalSupply < totalShares) {
@@ -52,11 +56,12 @@ contract ReflectMathTest is Test {
         uint256 fromShares,
         uint256 toShares,
         uint256 amount,
-        uint16 feeRate
+        uint16 feeRate,
+        uint256 sharesRatio
     ) external view {
         uint256 fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
-            _boundCommon(totalSupply, totalShares, fromShares, amount);
+            _boundCommon(totalSupply, totalShares, fromShares, amount, sharesRatio);
 
         feeRate = uint16(bound(feeRate, Settings.MIN_FEE, Settings.MAX_FEE));
 
@@ -93,10 +98,10 @@ contract ReflectMathTest is Test {
         assertGe(newToBalance, expectedNewToBalance, "newToBalance lower");
     }
 
-    function testDeliver(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount) external view {
+    function testDeliver(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount, uint256 sharesRatio) external view {
         uint256 fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
-            _boundCommon(totalSupply, totalShares, fromShares, amount);
+            _boundCommon(totalSupply, totalShares, fromShares, amount, sharesRatio);
         vm.assume(fromShares < totalShares / 2);
 
         (uint256 newFromShares, uint256 newTotalShares) =
