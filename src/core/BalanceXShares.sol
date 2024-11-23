@@ -51,3 +51,9 @@ library BalanceXSharesArithmetic {
 }
 
 using BalanceXSharesArithmetic for BalanceXShares global;
+
+function __lt(BalanceXShares a, BalanceXShares b) pure returns (bool) {
+    return cast(a) < cast(b);
+}
+
+using {__lt as <} for BalanceXShares global;

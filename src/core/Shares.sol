@@ -27,6 +27,18 @@ library SharesUnsafeMathAdapter {
 
 using SharesUnsafeMathAdapter for Shares global;
 
+library SharesArithmetic {
+    function mul(Shares x, uint256 y) internal pure returns (Shares) {
+        return Shares.wrap(Shares.unwrap(x) * y);
+    }
+
+    function div(Shares n, uint256 d) internal pure returns (Shares) {
+        return Shares.wrap(Shares.unwrap(n) / d);
+    }
+}
+
+using SharesArithmetic for Shares global;
+
 function __add(Shares a, Shares b) pure returns (Shares) {
     unchecked {
         return Shares.wrap(Shares.unwrap(a) + Shares.unwrap(b));
@@ -39,16 +51,30 @@ function __sub(Shares a, Shares b) pure returns (Shares) {
     }
 }
 
-function __div(Shares n, Shares d) pure returns (Shares) {
-    return Shares.wrap(Shares.unwrap(n) / Shares.unwrap(d));
-}
-
 function __eq(Shares a, Shares b) pure returns (bool) {
     return Shares.unwrap(a) == Shares.unwrap(b);
+}
+
+function __lt(Shares a, Shares b) pure returns (bool) {
+    return Shares.unwrap(a) < Shares.unwrap(b);
 }
 
 function __gt(Shares a, Shares b) pure returns (bool) {
     return Shares.unwrap(a) > Shares.unwrap(b);
 }
 
-using {__add as +, __sub as -, __div as /, __eq as ==, __gt as >} for Shares global;
+function __ne(Shares a, Shares b) pure returns (bool) {
+    return Shares.unwrap(a) != Shares.unwrap(b);
+}
+
+function __le(Shares a, Shares b) pure returns (bool) {
+    return Shares.unwrap(a) <= Shares.unwrap(b);
+}
+
+function __ge(Shares a, Shares b) pure returns (bool) {
+    return Shares.unwrap(a) >= Shares.unwrap(b);
+}
+
+using {
+    __add as +, __sub as -, __eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __gt as >=
+} for Shares global;

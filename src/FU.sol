@@ -14,8 +14,9 @@ import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 
+import {BasisPoints} from "./core/BasisPoints.sol";
 import {Shares} from "./core/Shares.sol";
-import {Balance} from "./core/Balance.sol";
+import {Balance, fromExternal} from "./core/Balance.sol";
 
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {uint512, tmp, alloc} from "./lib/512Math.sol";
@@ -27,6 +28,7 @@ address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     using UnsafeMath for uint256;
     using ChecksumAddress for address;
+    using {fromExternal} for uint256;
 
     // TODO: use a user-defined type to separate shares-denominated values from balance-denominated values
     mapping(address => Shares) internal _sharesOf;
@@ -69,11 +71,11 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         _totalSupply = Settings.INITIAL_SUPPLY;
         _totalShares = Settings.INITIAL_SHARES;
         _mintShares(DEAD, Settings.oneTokenInShares());
-        _mintShares(address(pair), _totalShares / Settings.INITIAL_LIQUIDITY_DIVISOR);
+        _mintShares(address(pair), _totalShares.div(Settings.INITIAL_LIQUIDITY_DIVISOR));
         {
-            uint256 toMint = _totalShares - _sharesOf[DEAD] - _sharesOf[address(pair)];
-            uint256 toMintEach = toMint / initialHolders.length;
-            _mintShares(initialHolders[0], toMint - toMintEach * (initialHolders.length - 1));
+            Shares toMint = _totalShares - _sharesOf[DEAD] - _sharesOf[address(pair)];
+            Shares toMintEach = toMint.div(initialHolders.length);
+            _mintShares(initialHolders[0], toMint - toMintEach.mul(initialHolders.length - 1));
             for (uint256 i = 1; i < initialHolders.length; i++) {
                 _mintShares(initialHolders[i], toMintEach);
             }
@@ -90,7 +92,9 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function _mintShares(address to, Shares shares) internal {
-        uint256 newShares = (_sharesOf[to] += shares);
+        Shares oldShares = _sharesOf[to];
+        Shares newShares = oldShares + shares;
+        _sharesOf[to] = newShares;
         emit Transfer(
             address(0),
             to,
@@ -116,9 +120,9 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         Shares shares = _sharesOf[account];
         Shares cachedTotalShares = _totalShares;
         unchecked {
-            Shares whaleLimit = cachedTotalShares / Settings.ANTI_WHALE_DIVISOR - Shares.wrap(1);
+            Shares whaleLimit = cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - Shares.wrap(1);
             if (shares > whaleLimit) {
-                cachedTotalShares -= (shares - whaleLimit);
+                cachedTotalShares = cachedTotalShares - (shares - whaleLimit);
                 shares = whaleLimit;
             }
         }
@@ -160,9 +164,13 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return balance.toExternal();
     }
 
-    function fee() public view returns (uint256) {
+    function _fee() internal view returns (BasisPoints) {
         // TODO: set fee to zero and prohibit `deliver` when the shares ratio gets to `Settings.MIN_SHARES_RATIO`
         revert("unimplemented");
+    }
+
+    function fee() external view returns (uint256) {
+        return BasisPoints.unwrap(_fee());
     }
 
     function _transfer(address from, address to, Balance amount) internal returns (bool) {
@@ -174,12 +182,12 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             uint256(uint160(to)) >= Settings.ADDRESS_DIVISOR
             // anti-whale (also because the reflection math breaks down)
             // we have to check this twice to ensure no underflow in the reflection math
-            && cachedToShares < cachedTotalShares / Settings.ANTI_WHALE_DIVISOR
+            && cachedToShares < cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR)
         ) {
             if (amount <= fromBalance) {
                 (Shares newFromShares, Shares newToShares, Shares newTotalShares) = ReflectMath.getTransferShares(
                     _scaleUp(amount, from),
-                    fee(),
+                    _fee(),
                     cachedTotalSupply,
                     cachedTotalShares,
                     cachedFromShares,
@@ -187,11 +195,11 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
                 );
                 if (amount == fromBalance) {
                     // Burn any dust left over if `from` is sending the whole balance
-                    newTotalShares -= newFromShares;
-                    newFromShares = 0;
+                    newTotalShares = newTotalShares - newFromShares;
+                    newFromShares = Shares.wrap(0);
                 }
 
-                if (newToShares < newTotalShares / Settings.ANTI_WHALE_DIVISOR) {
+                if (newToShares < newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
                     // All effects go here
                     unchecked {
                         // Take note of the `to`/`from` mismatch here. We're converting `to`'s
@@ -232,7 +240,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function transfer(address to, uint256 amount) external override returns (bool) {
-        if (!_transfer(msg.sender, to, Balance.wrap(amount))) {
+        if (!_transfer(msg.sender, to, amount.fromExternal())) {
             return false;
         }
         return _success();
@@ -306,7 +314,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         if (!success) {
             return false;
         }
-        if (!_transfer(from, to, Balance.wrap(amount))) {
+        if (!_transfer(from, to, amount.fromExternal())) {
             return false;
         }
         _spendAllowance(from, amount, currentTempAllowance, currentAllowance);
@@ -393,17 +401,15 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         (Balance balance, Shares shares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
             if (amount == balance) {
-                cachedTotalShares -= shares;
-                shares = 0;
+                cachedTotalShares = cachedTotalShares - shares;
+                shares = Shares.wrap(0);
             } else {
                 // TODO: Use BalanceXShares
                 uint512 p = alloc().omul(Balance.unwrap(amount), Shares.unwrap(shares));
                 Shares burnShares = Shares.wrap(p.div(Balance.unwrap(balance)));
-                if (tmp().omul(Shares.unwrap(burnShares), Balance.unwrap(balance)) < p) {
-                    burnShares++;
-                }
-                shares -= burnShares;
-                cachedTotalShares -= burnShares;
+                burnShares = burnShares.inc(tmp().omul(Shares.unwrap(burnShares), Balance.unwrap(balance)) < p);
+                shares = shares - burnShares;
+                cachedTotalShares = cachedTotalShares - burnShares;
             }
             _sharesOf[from] = shares;
             _totalSupply = cachedTotalSupply - _scaleUp(amount, from);
@@ -417,18 +423,18 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function burn(uint256 amount) external returns (bool) {
-        if (!_burn(msg.sender, Balance.wrap(amount))) {
+        if (!_burn(msg.sender, amount.fromExternal())) {
             return false;
         }
         return _success();
     }
 
     function _deliver(address from, Balance amount) internal returns (bool) {
-        (Balance balance, Shares shares, Balance cachedTotalSupply, Balance cachedTotalShares) = _balanceOf(from);
+        (Balance balance, Shares shares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
             if (amount == balance) {
-                cachedTotalShares -= shares;
-                shares = 0;
+                cachedTotalShares = cachedTotalShares - shares;
+                shares = Shares.wrap(0);
             } else {
                 (shares, cachedTotalShares) =
                     ReflectMath.getDeliverShares(_scaleUp(amount, from), cachedTotalSupply, cachedTotalShares, shares);
@@ -447,7 +453,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function deliver(uint256 amount) external returns (bool) {
-        if (!_deliver(msg.sender, amount)) {
+        if (!_deliver(msg.sender, amount.fromExternal())) {
             return false;
         }
         return _success();
@@ -458,7 +464,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         if (!success) {
             return false;
         }
-        if (!_burn(from, Balance.wrap(amount))) {
+        if (!_burn(from, amount.fromExternal())) {
             return false;
         }
         _spendAllowance(from, amount, currentTempAllowance, currentAllowance);
@@ -470,7 +476,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         if (!success) {
             return false;
         }
-        if (!_deliver(from, Balance.wrap(amount))) {
+        if (!_deliver(from, amount.fromExternal())) {
             return false;
         }
         _spendAllowance(from, amount, currentTempAllowance, currentAllowance);

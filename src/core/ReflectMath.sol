@@ -53,8 +53,12 @@ library ReflectMath {
         // TODO use divMulti to compute beforeToBalance and beforeFromBalance (can't use it for after because newTotalShares might change)
         Balance beforeToBalance = tmp().omul(toShares, totalSupply).div(totalShares);
         Balance afterToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
-        Balance expectedAfterToBalanceLo = beforeToBalance + amount - Balance.wrap((Balance.unwrap(amount) * BasisPoints.unwrap(feeRate)).unsafeDivUp(BasisPoints.unwrap(BASIS)));
-        Balance expectedAfterToBalanceHi = beforeToBalance + Balance.wrap((Balance.unwrap(amount) * BasisPoints.unwrap(BASIS - feeRate)).unsafeDivUp(BasisPoints.unwrap(BASIS)));
+        Balance expectedAfterToBalanceLo = beforeToBalance + amount
+            - Balance.wrap((Balance.unwrap(amount) * BasisPoints.unwrap(feeRate)).unsafeDivUp(BasisPoints.unwrap(BASIS)));
+        Balance expectedAfterToBalanceHi = beforeToBalance
+            + Balance.wrap(
+                (Balance.unwrap(amount) * BasisPoints.unwrap(BASIS - feeRate)).unsafeDivUp(BasisPoints.unwrap(BASIS))
+            );
         {
             bool condition = afterToBalance < expectedAfterToBalanceLo;
             newToShares = newToShares.inc(condition);
