@@ -41,19 +41,39 @@ library BalanceXSharesArithmetic {
         return cast(cast(r).omul(Shares.unwrap(s), Balance.unwrap(b)));
     }
 
-    function div(BalanceXShares n, Balance d) internal view returns (Shares) {
+    function div(BalanceXShares n, Balance d) internal pure returns (Shares) {
         return Shares.wrap(cast(n).div(Balance.unwrap(d)));
     }
 
-    function div(BalanceXShares n, Shares d) internal view returns (Balance) {
+    function div(BalanceXShares n, Shares d) internal pure returns (Balance) {
         return Balance.wrap(cast(n).div(Shares.unwrap(d)));
     }
 }
 
 using BalanceXSharesArithmetic for BalanceXShares global;
 
+function __eq(BalanceXShares a, BalanceXShares b) pure returns (bool) {
+    return cast(a) == cast(b);
+}
+
 function __lt(BalanceXShares a, BalanceXShares b) pure returns (bool) {
     return cast(a) < cast(b);
 }
 
-using {__lt as <} for BalanceXShares global;
+function __gt(BalanceXShares a, BalanceXShares b) pure returns (bool) {
+    return cast(a) > cast(b);
+}
+
+function __ne(BalanceXShares a, BalanceXShares b) pure returns (bool) {
+    return cast(a) != cast(b);
+}
+
+function __le(BalanceXShares a, BalanceXShares b) pure returns (bool) {
+    return cast(a) <= cast(b);
+}
+
+function __ge(BalanceXShares a, BalanceXShares b) pure returns (bool) {
+    return cast(a) >= cast(b);
+}
+
+using {__eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __ge as >=} for BalanceXShares global;
