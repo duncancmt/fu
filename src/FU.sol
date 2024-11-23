@@ -14,9 +14,9 @@ import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 
-import {BasisPoints} from "./core/BasisPoints.sol";
-import {Shares} from "./core/Shares.sol";
-import {Balance, fromExternal} from "./core/Balance.sol";
+import {BasisPoints} from "./core/types/BasisPoints.sol";
+import {Shares} from "./core/types/Shares.sol";
+import {Balance, fromExternal} from "./core/types/Balance.sol";
 
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {uint512, tmp, alloc} from "./lib/512Math.sol";

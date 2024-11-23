@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {BasisPoints, BASIS} from "./BasisPoints.sol";
-import {Shares, scale} from "./Shares.sol";
-import {Balance} from "./Balance.sol";
-import {BalanceXShares, tmp, alloc, cast} from "./BalanceXShares.sol";
-import {BalanceXShares2, tmp as tmp2, alloc as alloc2, cast} from "./BalanceXShares2.sol";
+import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
+import {Shares, scale} from "./types/Shares.sol";
+import {Balance} from "./types/Balance.sol";
+import {BalanceXShares, tmp, alloc, cast} from "./types/BalanceXShares.sol";
+import {BalanceXShares2, tmp as tmp2, alloc as alloc2, cast} from "./types/BalanceXShares2.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
