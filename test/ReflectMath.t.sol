@@ -24,11 +24,13 @@ contract ReflectMathTest is Test {
         return oneTokenInShares;
     }
 
-    function _boundCommon(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount, uint256 sharesRatio)
-        internal
-        pure
-        returns (uint256, uint256, uint256, uint256, uint256)
-    {
+    function _boundCommon(
+        uint256 totalSupply,
+        uint256 totalShares,
+        uint256 fromShares,
+        uint256 amount,
+        uint256 sharesRatio
+    ) internal pure returns (uint256, uint256, uint256, uint256, uint256) {
         totalSupply = bound(totalSupply, 10 ** Settings.DECIMALS + 1, Settings.INITIAL_SUPPLY);
         //sharesRatio = bound(sharesRatio, Settings.MIN_SHARES_RATIO, Settings.INITIAL_SHARES_RATIO);
         sharesRatio = Settings.MIN_SHARES_RATIO; // TODO: remove
@@ -82,20 +84,19 @@ contract ReflectMathTest is Test {
         assertLe(newFromShares, fromShares, "from shares increased");
         assertGe(newToShares, toShares, "to shares decreased");
         assertLe(newTotalShares, totalShares, "total shares increased");
+        assertEq(totalShares - newTotalShares, fromShares + toShares - (newFromShares + newToShares), "shares delta");
 
         uint256 newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
         uint256 newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
         uint256 expectedNewFromBalance = fromBalance - amount;
-        uint256 expectedNewToBalance = toBalance + amount * (ReflectMath.feeBasis - feeRate) / ReflectMath.feeBasis;
+        uint256 expectedNewToBalanceHi =
+            toBalance + (amount * (ReflectMath.feeBasis - feeRate)).unsafeDivUp(ReflectMath.feeBasis);
+        uint256 expectedNewToBalanceLo = toBalance + amount - (amount * feeRate).unsafeDivUp(ReflectMath.feeBasis);
 
         assertEq(newFromBalance, expectedNewFromBalance, "newFromBalance");
         // TODO: tighten these bounds to exact equality
-        assertLe(
-            newToBalance,
-            toBalance + (amount * (ReflectMath.feeBasis - feeRate)).unsafeDivUp(ReflectMath.feeBasis) + 1,
-            "newToBalance upper"
-        );
-        assertGe(newToBalance + 1, expectedNewToBalance, "newToBalance lower");
+        assertGe(newToBalance, expectedNewToBalanceLo, "newToBalance lower");
+        assertLe(newToBalance, expectedNewToBalanceHi, "newToBalance upper");
     }
 
     function testDeliver(uint256 totalSupply, uint256 totalShares, uint256 fromShares, uint256 amount/*, uint256 sharesRatio */) external view {

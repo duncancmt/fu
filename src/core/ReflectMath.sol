@@ -44,17 +44,21 @@ library ReflectMath {
         // console.log("newTotalShares", newTotalShares);
 
         // Fixup rounding error
-        /*
         console.log("===");
         uint256 beforeToBalance = tmp().omul(toShares, totalSupply).div(totalShares);
         uint256 afterToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
-        uint256 expectedAfterToBalance = beforeToBalance + amount * (feeBasis - feeRate) / feeBasis;
+        uint256 expectedAfterToBalanceLo = beforeToBalance + amount - (amount * feeRate).unsafeDivUp(feeBasis);
+        uint256 expectedAfterToBalanceHi = beforeToBalance + (amount * (feeBasis - feeRate)).unsafeDivUp(feeBasis);
         {
-            bool condition = afterToBalance < expectedAfterToBalance;
+            bool condition = afterToBalance < expectedAfterToBalanceLo;
             newToShares = newToShares.unsafeInc(condition);
             newTotalShares = newTotalShares.unsafeInc(condition);
         }
-        */
+        {
+            bool condition = afterToBalance > expectedAfterToBalanceHi;
+            newToShares = newToShares.unsafeDec(condition);
+            newTotalShares = newTotalShares.unsafeDec(condition);
+        }
 
         // console.log("===");
         uint256 beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
@@ -72,16 +76,6 @@ library ReflectMath {
             newFromShares = newFromShares.unsafeInc(condition);
             newTotalShares = newTotalShares.unsafeInc(condition);
         }
-
-        /*
-        if (afterToBalance > expectedAfterToBalance) {
-            console.log("toBalance too high");
-            //uint256 decr = tmp().omul(afterToBalance - expectedAfterToBalance, newTotalShares).div(totalSupply);
-            uint256 decr = 1;
-            newToShares -= decr;
-            newTotalShares -= decr;
-        }
-        */
     }
 
     function getDeliverShares(uint256 amount, uint256 totalSupply, uint256 totalShares, uint256 fromShares)
