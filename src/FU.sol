@@ -180,6 +180,12 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             }
             return false;
         }
+        if (to == address(this)) {
+            if (_check()) {
+                revert ERC20InvalidReceiver(to);
+            }
+            return false;
+        }
         if (uint256(uint160(to)) < Settings.ADDRESS_DIVISOR) {
             // "efficient" addresses can't hold tokens because they have zero multiplier
             if (_check()) {
