@@ -8,7 +8,6 @@ import {BalanceXShares, tmp, alloc, cast} from "./BalanceXShares.sol";
 import {BalanceXShares2, tmp as tmp2, alloc as alloc2, cast} from "./BalanceXShares2.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
-import {uint512, tmp as baseTmp, alloc as baseAlloc} from "../lib/512Math.sol";
 
 import {console} from "@forge-std/console.sol";
 
