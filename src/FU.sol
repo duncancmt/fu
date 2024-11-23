@@ -36,12 +36,13 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     Shares internal _totalShares;
     IUniswapV2Pair public immutable pair;
 
-    function sharesOf(address account) external view returns (uint256) {
-        return Shares.unwrap(_sharesOf[account]);
-    }
-
     function totalSupply() external view override returns (uint256) {
         return _totalSupply.toExternal();
+    }
+
+    // TODO: maybe we shouldn't expose these two functions? They're an abstraction leak
+    function sharesOf(address account) external view returns (uint256) {
+        return Shares.unwrap(_sharesOf[account]);
     }
 
     function totalShares() external view returns (uint256) {
