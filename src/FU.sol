@@ -146,8 +146,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
 
     function _scaleUp(Balance balance, address account) internal pure returns (Balance) {
         unchecked {
-            // Checking for overflow in the multiplication is
-            // unnecessary. Checking for division by zero is required.
+            // Checking for overflow in the multiplication is unnecessary. Checking for division by
+            // zero is required.
             return Balance.wrap(Balance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR));
         }
     }
@@ -189,7 +189,6 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         if (uint256(uint160(to)) < Settings.ADDRESS_DIVISOR) {
             // "efficient" addresses can't hold tokens because they have zero multiplier
             if (_check()) {
-                // TODO: maybe do a fallback to "normal" transfers if the recipient is the pair?
                 revert ERC20InvalidReceiver(to);
             }
             return false;
@@ -203,6 +202,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             // anti-whale (also because the reflection math breaks down)
             // we have to check this twice to ensure no underflow in the reflection math
             if (_check()) {
+                // TODO: maybe do a fallback to "normal" transfers if the recipient is the pair?
                 revert ERC20InvalidReceiver(to);
             }
             return false;
