@@ -5,27 +5,31 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IERC2612} from "./interfaces/IERC2612.sol";
 import {IERC5267} from "./interfaces/IERC5267.sol";
 import {IERC6093} from "./interfaces/IERC6093.sol";
+import {IERC7674} from "./interfaces/IERC7674.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
-import {UnsafeMath} from "./lib/UnsafeMath.sol";
-import {uint512, tmp, alloc} from "./lib/512Math.sol";
 import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
+import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
+
+import {UnsafeMath} from "./lib/UnsafeMath.sol";
+import {uint512, tmp, alloc} from "./lib/512Math.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 
-contract FU is IERC2612, IERC5267, IERC6093 {
+contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     using UnsafeMath for uint256;
     using ChecksumAddress for address;
 
     // TODO: use a user-defined type to separate shares-denominated values from balance-denominated values
     mapping(address => uint256) public sharesOf;
     mapping(address => uint256) public override nonces;
-    mapping(address => mapping(address => uint256)) public override allowance;
+    // TODO: use a user-defined type to separate temporary (transient) versus normal allowances
+    mapping(address => mapping(address => uint256)) internal _allowance;
     uint256 public override totalSupply;
     uint256 public totalShares;
     IUniswapV2Pair public immutable pair;
@@ -206,40 +210,74 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
-        allowance[msg.sender][spender] = amount;
+        _allowance[msg.sender][spender] = amount;
         emit Approval(msg.sender, spender, amount);
         return _success();
     }
 
-    function _checkAllowance(address owner, uint256 amount) internal view returns (bool, uint256) {
-        uint256 currentAllowance = allowance[owner][msg.sender];
-        if (~currentAllowance == 0 || currentAllowance >= amount) {
-            return (true, currentAllowance);
+    function allowance(address owner, address spender) public view returns (uint256) {
+        uint256 temporaryAllowance = _getTemporaryAllowance(owner, spender);
+        if (~temporaryAllowance == 0) {
+            return temporaryAllowance;
+        }
+        uint256 allowance_ = _allowance[owner][spender];
+        unchecked {
+            allowance_ += temporaryAllowance;
+            allowance_ = allowance_ < temporaryAllowance ? type(uint256).max : allowance_;
+        }
+        return allowance_;
+    }
+
+    function _checkAllowance(address owner, uint256 amount) internal view returns (bool, uint256, uint256) {
+        uint256 currentTempAllowance = _getTemporaryAllowance(owner, msg.sender);
+        if (currentTempAllowance >= amount) {
+            return (true, currentTempAllowance, 0);
+        }
+        uint256 currentAllowance = _allowance[owner][msg.sender];
+        unchecked {
+            if (currentAllowance >= amount - currentTempAllowance) {
+                return (true, currentTempAllowance, currentAllowance);
+            }
         }
         if (_check()) {
             revert ERC20InsufficientAllowance(msg.sender, currentAllowance, amount);
         }
-        return (false, 0);
+        return (false, 0, 0);
     }
 
-    function _spendAllowance(address owner, uint256 amount, uint256 currentAllowance) internal {
+    function _spendAllowance(address owner, uint256 amount, uint256 currentTempAllowance, uint256 currentAllowance) internal {
+        if (~currentTempAllowance == 0) {
+            return;
+        }
+        if (currentAllowance == 0) {
+            unchecked {
+                _setTemporaryAllowance(owner, msg.sender, currentTempAllowance - amount);
+            }
+            return;
+        }
+        if (currentTempAllowance != 0) {
+            unchecked {
+                amount -= currentTempAllowance;
+            }
+            _setTemporaryAllowance(owner, msg.sender, 0);
+        }
         if (~currentAllowance == 0) {
             return;
         }
         currentAllowance -= amount;
-        allowance[owner][msg.sender] = currentAllowance;
+        _allowance[owner][msg.sender] = currentAllowance;
         emit Approval(owner, msg.sender, currentAllowance);
     }
 
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
-        (bool success, uint256 currentAllowance) = _checkAllowance(from, amount);
+        (bool success, uint256 currentTempAllowance, uint256 currentAllowance) = _checkAllowance(from, amount);
         if (!success) {
             return false;
         }
         if (!_transfer(from, to, amount)) {
             return false;
         }
-        _spendAllowance(from, amount, currentAllowance);
+        _spendAllowance(from, amount, currentTempAllowance, currentAllowance);
         return _success();
     }
 
@@ -290,7 +328,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         if (signer != owner) {
             revert ERC2612InvalidSigner(signer, owner);
         }
-        allowance[owner][spender] = amount;
+        _allowance[owner][spender] = amount;
         emit Approval(owner, spender, amount);
     }
 
@@ -312,6 +350,11 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         name_ = name;
         chainId = block.chainid;
         verifyingContract = address(this);
+    }
+
+    function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
+        _setTemporaryAllowance(msg.sender, spender, amount);
+        return _success();
     }
 
     function _burn(address from, uint256 amount) internal returns (bool) {
@@ -378,26 +421,26 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     }
 
     function burnFrom(address from, uint256 amount) external returns (bool) {
-        (bool success, uint256 currentAllowance) = _checkAllowance(from, amount);
+        (bool success, uint256 currentTempAllowance, uint256 currentAllowance) = _checkAllowance(from, amount);
         if (!success) {
             return false;
         }
         if (!_burn(from, amount)) {
             return false;
         }
-        _spendAllowance(from, amount, currentAllowance);
+        _spendAllowance(from, amount, currentTempAllowance, currentAllowance);
         return _success();
     }
 
     function deliverFrom(address from, uint256 amount) external returns (bool) {
-        (bool success, uint256 currentAllowance) = _checkAllowance(from, amount);
+        (bool success, uint256 currentTempAllowance, uint256 currentAllowance) = _checkAllowance(from, amount);
         if (!success) {
             return false;
         }
         if (!_deliver(from, amount)) {
             return false;
         }
-        _spendAllowance(from, amount, currentAllowance);
+        _spendAllowance(from, amount, currentTempAllowance, currentAllowance);
         return _success();
     }
 
