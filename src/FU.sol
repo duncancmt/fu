@@ -28,7 +28,6 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     // TODO: use a user-defined type to separate shares-denominated values from balance-denominated values
     mapping(address => uint256) public sharesOf;
     mapping(address => uint256) public override nonces;
-    // TODO: use a user-defined type to separate temporary (transient) versus normal allowances
     mapping(address => mapping(address => uint256)) internal _allowance;
     uint256 public override totalSupply;
     uint256 public totalShares;
@@ -255,6 +254,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         internal
     {
         if (~currentTempAllowance == 0) {
+            // TODO: maybe remove this branch
             return;
         }
         if (currentAllowance == 0) {
