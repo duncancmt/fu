@@ -7,12 +7,6 @@ import {UnsafeMath} from "../../lib/UnsafeMath.sol";
 
 type Shares is uint256;
 
-function scale(Shares a, BasisPoints bp) pure returns (Shares) {
-    unchecked {
-        return Shares.wrap(Shares.unwrap(a) * BasisPoints.unwrap(bp));
-    }
-}
-
 library SharesUnsafeMathAdapter {
     using UnsafeMath for uint256;
 

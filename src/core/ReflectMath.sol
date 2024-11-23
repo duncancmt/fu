@@ -2,8 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
-import {Shares, scale} from "./types/Shares.sol";
+import {Shares} from "./types/Shares.sol";
 import {Balance} from "./types/Balance.sol";
+import {scale} from "./types/SharesXBasisPoints.sol";
+import {scale, castUp} from "./types/BalanceXBasisPoints.sol";
 import {BalanceXShares, tmp, alloc, cast} from "./types/BalanceXShares.sol";
 import {BalanceXShares2, tmp as tmp2, alloc as alloc2, cast} from "./types/BalanceXShares2.sol";
 
@@ -53,12 +55,9 @@ library ReflectMath {
         // TODO use divMulti to compute beforeToBalance and beforeFromBalance (can't use it for after because newTotalShares might change)
         Balance beforeToBalance = tmp().omul(toShares, totalSupply).div(totalShares);
         Balance afterToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
-        Balance expectedAfterToBalanceLo = beforeToBalance + amount
-            - Balance.wrap((Balance.unwrap(amount) * BasisPoints.unwrap(feeRate)).unsafeDivUp(BasisPoints.unwrap(BASIS)));
-        Balance expectedAfterToBalanceHi = beforeToBalance
-            + Balance.wrap(
-                (Balance.unwrap(amount) * BasisPoints.unwrap(BASIS - feeRate)).unsafeDivUp(BasisPoints.unwrap(BASIS))
-            );
+        Balance expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, feeRate));
+        Balance expectedAfterToBalanceHi = beforeToBalance + castUp(scale(amount, BASIS - feeRate));
+
         {
             bool condition = afterToBalance < expectedAfterToBalanceLo;
             newToShares = newToShares.inc(condition);
