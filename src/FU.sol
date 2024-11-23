@@ -61,7 +61,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         require(msg.value >= 1 ether);
         require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
-        pair = pairFor(WETH, IERC20(address(this)));
+        pair = pairFor(WETH, this);
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
 
         (bool success,) = address(WETH).call{value: msg.value}("");
