@@ -33,7 +33,8 @@ library Settings {
     */
 
     uint256 internal constant INITIAL_SHARES_RATIO = INITIAL_SHARES / INITIAL_SUPPLY;
-    uint256 internal constant MIN_SHARES_RATIO = 351; // below this, ReflectMath breaks down
+    uint256 internal constant MIN_SHARES_RATIO = 10000; // below this, ReflectMath breaks down
+    // bisecting: lo = 10000; hi =
 
     uint256 internal constant CRAZY_BALANCE_BASIS = INITIAL_SUPPLY / _UNISWAPV2_MAX_BALANCE;
     uint256 internal constant ADDRESS_DIVISOR = 2 ** 160 / (CRAZY_BALANCE_BASIS + 1);

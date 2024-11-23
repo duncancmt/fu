@@ -35,39 +35,37 @@ library ReflectMath {
         // TODO: add optimized multidiv method to 512Math
         newFromShares = n1.div(d);
         newToShares = n2.div(d);
-        console.log("    fromShares", fromShares);
-        console.log(" newFromShares", newFromShares);
-        console.log("      toShares", toShares);
-        console.log("   newToShares", newToShares);
+        // console.log("    fromShares", fromShares);
+        // console.log(" newFromShares", newFromShares);
+        // console.log("      toShares", toShares);
+        // console.log("   newToShares", newToShares);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
-        console.log("   totalShares", totalShares);
-        console.log("newTotalShares", newTotalShares);
+        // console.log("   totalShares", totalShares);
+        // console.log("newTotalShares", newTotalShares);
 
         // Fixup rounding error
         console.log("===");
         uint256 beforeToBalance = tmp().omul(toShares, totalSupply).div(totalShares);
         uint256 afterToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
-        uint256 expectedAfterToBalance = beforeToBalance + amount * (feeBasis - feeRate) / feeBasis;
+        uint256 expectedAfterToBalanceLo = beforeToBalance + amount - (amount * feeRate).unsafeDivUp(feeBasis);
+        uint256 expectedAfterToBalanceHi = beforeToBalance + (amount * (feeBasis - feeRate)).unsafeDivUp(feeBasis);
         {
-            bool condition = afterToBalance < expectedAfterToBalance;
+            bool condition = afterToBalance < expectedAfterToBalanceLo;
             newToShares = newToShares.unsafeInc(condition);
             newTotalShares = newTotalShares.unsafeInc(condition);
         }
-        /*
-        if (afterToBalance > expectedAfterToBalance) {
-            console.log("toBalance too high");
-            uint256 decr = tmp().omul(afterToBalance - expectedAfterToBalance, newTotalShares).div(totalSupply);
-            newToShares -= decr;
-            newTotalShares -= decr;
+        {
+            bool condition = afterToBalance > expectedAfterToBalanceHi;
+            newToShares = newToShares.unsafeDec(condition);
+            newTotalShares = newTotalShares.unsafeDec(condition);
         }
-        */
 
-        console.log("===");
+        // console.log("===");
         uint256 beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
         uint256 afterFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
         uint256 expectedAfterFromBalance = beforeFromBalance - amount;
-        console.log("  actual fromBalance", afterFromBalance);
-        console.log("expected fromBalance", expectedAfterFromBalance);
+        // console.log("  actual fromBalance", afterFromBalance);
+        // console.log("expected fromBalance", expectedAfterFromBalance);
         {
             bool condition = afterFromBalance > expectedAfterFromBalance;
             newFromShares = newFromShares.unsafeDec(condition);

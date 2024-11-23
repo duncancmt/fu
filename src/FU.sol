@@ -22,6 +22,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     using UnsafeMath for uint256;
     using ChecksumAddress for address;
 
+    // TODO: use a user-defined type to separate shares-denominated values from balance-denominated values
     mapping(address => uint256) public sharesOf;
     mapping(address => uint256) public override nonces;
     mapping(address => mapping(address => uint256)) public override allowance;
@@ -58,6 +59,8 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         } catch {
             require(pair == FACTORY.getPair(WETH, IERC20(address(this))));
         }
+        // TODO: there is a significant risk that `pair` will become a whale. We should add a
+        // provision for fixing that
         pair.mint(DEAD);
     }
 
@@ -92,16 +95,16 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         return (shares, cachedTotalShares);
     }
 
-    function _balanceOf(address account) internal view returns (uint256, uint256, uint256, uint256) {
-        (uint256 shares, uint256 cachedTotalShares) = _loadAccount(account);
-        uint256 cachedTotalSupply = totalSupply;
-        uint256 balance;
+    function _scaleDown(uint256 shares, address account, uint256 totalSupply_, uint256 totalShares_)
+        internal
+        pure
+        returns (uint256)
+    {
         unchecked {
-            balance = tmp().omul(shares, cachedTotalSupply * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)).div(
-                cachedTotalShares * Settings.CRAZY_BALANCE_BASIS
+            return tmp().omul(shares, totalSupply_ * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)).div(
+                totalShares_ * Settings.CRAZY_BALANCE_BASIS
             );
         }
-        return (balance, shares, cachedTotalSupply, cachedTotalShares);
     }
 
     function _scaleUp(uint256 balance, address account) internal pure returns (uint256) {
@@ -110,6 +113,13 @@ contract FU is IERC2612, IERC5267, IERC6093 {
             // unnecessary. Checking for division by zero is required.
             return balance * Settings.CRAZY_BALANCE_BASIS / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR);
         }
+    }
+
+    function _balanceOf(address account) internal view returns (uint256, uint256, uint256, uint256) {
+        (uint256 shares, uint256 cachedTotalShares) = _loadAccount(account);
+        uint256 cachedTotalSupply = totalSupply;
+        uint256 balance = _scaleDown(shares, account, cachedTotalSupply, cachedTotalShares);
+        return (balance, shares, cachedTotalSupply, cachedTotalShares);
     }
 
     function balanceOf(address account) external view override returns (uint256) {
@@ -134,10 +144,9 @@ contract FU is IERC2612, IERC5267, IERC6093 {
             && cachedToShares < cachedTotalShares / Settings.ANTI_WHALE_DIVISOR
         ) {
             if (amount <= fromBalance) {
-                uint256 cachedFeeRate = fee();
                 (uint256 newFromShares, uint256 newToShares, uint256 newTotalShares) = ReflectMath.getTransferShares(
                     _scaleUp(amount, from),
-                    cachedFeeRate,
+                    fee(),
                     cachedTotalSupply,
                     cachedTotalShares,
                     cachedFromShares,
@@ -151,10 +160,14 @@ contract FU is IERC2612, IERC5267, IERC6093 {
 
                 if (newToShares < newTotalShares / Settings.ANTI_WHALE_DIVISOR) {
                     // All effects go here
-                    {
-                        uint256 transferAmount = amount * (ReflectMath.feeBasis - cachedFeeRate) / ReflectMath.feeBasis;
+                    unchecked {
+                        // Take note of the `to`/`from` mismatch here. We're converting `to`'s
+                        // balance into units as if it were held by `from`
+                        uint256 transferAmount = _scaleDown(newToShares, from, cachedTotalSupply, newTotalShares)
+                            - _scaleDown(cachedToShares, from, cachedTotalSupply, cachedTotalShares);
+                        uint256 burnAmount = amount - transferAmount;
                         emit Transfer(from, to, transferAmount);
-                        emit Transfer(from, address(0), amount - transferAmount);
+                        emit Transfer(from, address(0), burnAmount);
                     }
                     sharesOf[from] = newFromShares;
                     sharesOf[to] = newToShares;
