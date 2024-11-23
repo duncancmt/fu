@@ -27,8 +27,8 @@ library Settings {
     uint256 internal constant INITIAL_SHARES = INITIAL_SUPPLY << 32;
 
     uint256 internal constant INITIAL_SHARES_RATIO = INITIAL_SHARES / INITIAL_SUPPLY;
-    uint256 internal constant MIN_SHARES_RATIO = 336; // below this, ReflectMath breaks down
-    // bisecting: lo = 320; hi = 352
+    uint256 internal constant MIN_SHARES_RATIO = 512; // below this, ReflectMath breaks down
+    // bisecting: lo = ; hi = 
 
     // Alternative
     /*
