@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.28;
 
 library ChecksumAddress {
     /// Adapted from Solady https://github.com/Vectorized/solady/blob/1dd8967b93b379ca6cf384640e0715e55ef08e3d/src/utils/g/LibString.sol#L334

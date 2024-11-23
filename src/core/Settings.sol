@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.28;
 
 import {uint512, tmp, alloc} from "../lib/512Math.sol";
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
