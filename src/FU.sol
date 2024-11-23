@@ -174,69 +174,81 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function _transfer(address from, address to, Balance amount) internal returns (bool) {
+        if (from == to) {
+            if (_check()) {
+                revert ERC20InvalidReceiver(to);
+            }
+            return false;
+        }
+        if (uint256(uint160(to)) < Settings.ADDRESS_DIVISOR) {
+            // "efficient" addresses can't hold tokens because they have zero multiplier
+            if (_check()) {
+                // TODO: maybe do a fallback to "normal" transfers if the recipient is the pair?
+                revert ERC20InvalidReceiver(to);
+            }
+            return false;
+        }
+
         (Balance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
             _balanceOf(from);
         Shares cachedToShares = _sharesOf[to];
-        if (
-            // "efficient" addresses can't hold tokens because they have zero multiplier
-            uint256(uint160(to)) >= Settings.ADDRESS_DIVISOR
+
+        if (cachedToShares < cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
             // anti-whale (also because the reflection math breaks down)
             // we have to check this twice to ensure no underflow in the reflection math
-            && cachedToShares < cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR)
-        ) {
-            if (amount <= fromBalance) {
-                (Shares newFromShares, Shares newToShares, Shares newTotalShares) = ReflectMath.getTransferShares(
-                    _scaleUp(amount, from),
-                    _fee(),
-                    cachedTotalSupply,
-                    cachedTotalShares,
-                    cachedFromShares,
-                    cachedToShares
-                );
-                if (amount == fromBalance) {
-                    // Burn any dust left over if `from` is sending the whole balance
-                    newTotalShares = newTotalShares - newFromShares;
-                    newFromShares = Shares.wrap(0);
-                }
+            if (_check()) {
+                revert ERC20InvalidReceiver(to);
+            }
+            return false;
+        }
 
-                if (newToShares < newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
-                    // All effects go here
-                    unchecked {
-                        // Take note of the `to`/`from` mismatch here. We're converting `to`'s
-                        // balance into units as if it were held by `from`
-                        Balance transferAmount = _scaleDown(newToShares, from, cachedTotalSupply, newTotalShares)
-                            - _scaleDown(cachedToShares, from, cachedTotalSupply, cachedTotalShares);
-                        Balance burnAmount = amount - transferAmount;
-                        emit Transfer(from, to, transferAmount.toExternal());
-                        emit Transfer(from, address(0), burnAmount.toExternal());
-                    }
-                    _sharesOf[from] = newFromShares;
-                    _sharesOf[to] = newToShares;
-                    _totalShares = newTotalShares;
-
-                    {
-                        address pair_ = address(pair);
-                        if (!(from == pair_ || to == pair_)) {
-                            IUniswapV2Pair(pair_).sync();
-                        }
-                    }
-
-                    return true;
-                } else if (_check()) {
-                    // TODO: maybe make this a new error? It's not exactly an
-                    // invalid recipient, it's an invalid (too high) transfer
-                    // amount
-                    revert ERC20InvalidReceiver(to);
-                }
-            } else if (_check()) {
+        if (amount > fromBalance) {
+            if (_check()) {
                 revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
             }
-        } else if (_check()) {
-            // TODO: maybe do a fallback to "normal" transfers if the recipient
-            // is the pair?
-            revert ERC20InvalidReceiver(to);
+            return false;
         }
-        return false;
+
+        (Shares newFromShares, Shares newToShares, Shares newTotalShares) = ReflectMath.getTransferShares(
+            _scaleUp(amount, from), _fee(), cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+        );
+        if (amount == fromBalance) {
+            // Burn any dust left over if `from` is sending the whole balance
+            newTotalShares = newTotalShares - newFromShares;
+            newFromShares = Shares.wrap(0);
+        }
+
+        if (newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
+            if (_check()) {
+                // TODO: maybe make this a new error? It's not exactly an invalid recipient, it's an
+                // invalid (too high) transfer amount
+                revert ERC20InvalidReceiver(to);
+            }
+            return false;
+        }
+
+        // All effects go here
+        unchecked {
+            // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
+            // units as if it were held by `from`
+            Balance transferAmount = _scaleDown(newToShares, from, cachedTotalSupply, newTotalShares)
+                - _scaleDown(cachedToShares, from, cachedTotalSupply, cachedTotalShares);
+            Balance burnAmount = amount - transferAmount;
+            emit Transfer(from, to, transferAmount.toExternal());
+            emit Transfer(from, address(0), burnAmount.toExternal());
+        }
+        _sharesOf[from] = newFromShares;
+        _sharesOf[to] = newToShares;
+        _totalShares = newTotalShares;
+
+        {
+            address pair_ = address(pair);
+            if (!(from == pair_ || to == pair_)) {
+                IUniswapV2Pair(pair_).sync();
+            }
+        }
+
+        return true;
     }
 
     function transfer(address to, uint256 amount) external override returns (bool) {
@@ -399,27 +411,29 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
 
     function _burn(address from, Balance amount) internal returns (bool) {
         (Balance balance, Shares shares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
-        if (amount <= balance) {
-            if (amount == balance) {
-                cachedTotalShares = cachedTotalShares - shares;
-                shares = Shares.wrap(0);
-            } else {
-                // TODO: Use BalanceXShares
-                uint512 p = alloc().omul(Balance.unwrap(amount), Shares.unwrap(shares));
-                Shares burnShares = Shares.wrap(p.div(Balance.unwrap(balance)));
-                burnShares = burnShares.inc(tmp().omul(Shares.unwrap(burnShares), Balance.unwrap(balance)) < p);
-                shares = shares - burnShares;
-                cachedTotalShares = cachedTotalShares - burnShares;
+        if (amount > balance) {
+            if (_check()) {
+                revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
             }
-            _sharesOf[from] = shares;
-            _totalSupply = cachedTotalSupply - _scaleUp(amount, from);
-            _totalShares = cachedTotalShares;
-            emit Transfer(from, address(0), amount.toExternal());
-            return true;
-        } else if (_check()) {
-            revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
+            return false;
         }
-        return false;
+
+        if (amount == balance) {
+            cachedTotalShares = cachedTotalShares - shares;
+            shares = Shares.wrap(0);
+        } else {
+            // TODO: Use BalanceXShares
+            uint512 p = alloc().omul(Balance.unwrap(amount), Shares.unwrap(shares));
+            Shares burnShares = Shares.wrap(p.div(Balance.unwrap(balance)));
+            burnShares = burnShares.inc(tmp().omul(Shares.unwrap(burnShares), Balance.unwrap(balance)) < p);
+            shares = shares - burnShares;
+            cachedTotalShares = cachedTotalShares - burnShares;
+        }
+        _sharesOf[from] = shares;
+        _totalSupply = cachedTotalSupply - _scaleUp(amount, from);
+        _totalShares = cachedTotalShares;
+        emit Transfer(from, address(0), amount.toExternal());
+        return true;
     }
 
     function burn(uint256 amount) external returns (bool) {
@@ -431,25 +445,26 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
 
     function _deliver(address from, Balance amount) internal returns (bool) {
         (Balance balance, Shares shares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
-        if (amount <= balance) {
-            if (amount == balance) {
-                cachedTotalShares = cachedTotalShares - shares;
-                shares = Shares.wrap(0);
-            } else {
-                (shares, cachedTotalShares) =
-                    ReflectMath.getDeliverShares(_scaleUp(amount, from), cachedTotalSupply, cachedTotalShares, shares);
+        if (amount > balance) {
+            if (_check()) {
+                revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
             }
-            _sharesOf[from] = shares;
-            _totalShares = cachedTotalShares;
-            emit Transfer(from, address(0), amount.toExternal());
-
-            pair.sync();
-
-            return true;
-        } else if (_check()) {
-            revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
+            return false;
         }
-        return false;
+        if (amount == balance) {
+            cachedTotalShares = cachedTotalShares - shares;
+            shares = Shares.wrap(0);
+        } else {
+            (shares, cachedTotalShares) =
+                ReflectMath.getDeliverShares(_scaleUp(amount, from), cachedTotalSupply, cachedTotalShares, shares);
+        }
+        _sharesOf[from] = shares;
+        _totalShares = cachedTotalShares;
+        emit Transfer(from, address(0), amount.toExternal());
+
+        pair.sync();
+
+        return true;
     }
 
     function deliver(uint256 amount) external returns (bool) {
