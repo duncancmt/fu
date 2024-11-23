@@ -22,6 +22,7 @@ contract FU is IERC2612, IERC5267, IERC6093 {
     using UnsafeMath for uint256;
     using ChecksumAddress for address;
 
+    // TODO: use a user-defined type to separate shares-denominated values from balance-denominated values
     mapping(address => uint256) public sharesOf;
     mapping(address => uint256) public override nonces;
     mapping(address => mapping(address => uint256)) public override allowance;
@@ -58,6 +59,8 @@ contract FU is IERC2612, IERC5267, IERC6093 {
         } catch {
             require(pair == FACTORY.getPair(WETH, IERC20(address(this))));
         }
+        // TODO: there is a significant risk that `pair` will become a whale. We should add a
+        // provision for fixing that
         pair.mint(DEAD);
     }
 
