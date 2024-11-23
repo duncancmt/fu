@@ -14,6 +14,9 @@ import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 
+import {Shares} from "./core/Shares.sol";
+import {Balance} from "./core/Balance.sol";
+
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {uint512, tmp, alloc} from "./lib/512Math.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
@@ -26,12 +29,24 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     using ChecksumAddress for address;
 
     // TODO: use a user-defined type to separate shares-denominated values from balance-denominated values
-    mapping(address => uint256) public sharesOf;
+    mapping(address => Shares) internal _sharesOf;
     mapping(address => uint256) public override nonces;
     mapping(address => mapping(address => uint256)) internal _allowance;
-    uint256 public override totalSupply;
-    uint256 public totalShares;
+    Balance internal _totalSupply;
+    Shares internal _totalShares;
     IUniswapV2Pair public immutable pair;
+
+    function sharesOf(address account) external view returns (uint256) {
+        return Shares.unwrap(_sharesOf[account]);
+    }
+
+    function totalSupply() external view override returns (uint256) {
+        return _totalSupply.toExternal();
+    }
+
+    function totalShares() external view returns (uint256) {
+        return Shares.unwrap(_totalShares);
+    }
 
     // This mapping is actually in transient storage. It's placed here so that
     // solc reserves a slot for it during storage layout generation. Solc 0.8.28
@@ -50,12 +65,12 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         require(success);
         require(WETH.transfer(address(pair), msg.value));
 
-        totalSupply = Settings.INITIAL_SUPPLY;
-        totalShares = Settings.INITIAL_SHARES;
+        _totalSupply = Settings.INITIAL_SUPPLY;
+        _totalShares = Settings.INITIAL_SHARES;
         _mintShares(DEAD, Settings.oneTokenInShares());
-        _mintShares(address(pair), totalShares / Settings.INITIAL_LIQUIDITY_DIVISOR);
+        _mintShares(address(pair), _totalShares / Settings.INITIAL_LIQUIDITY_DIVISOR);
         {
-            uint256 toMint = totalShares - sharesOf[DEAD] - sharesOf[address(pair)];
+            uint256 toMint = _totalShares - _sharesOf[DEAD] - _sharesOf[address(pair)];
             uint256 toMintEach = toMint / initialHolders.length;
             _mintShares(initialHolders[0], toMint - toMintEach * (initialHolders.length - 1));
             for (uint256 i = 1; i < initialHolders.length; i++) {
@@ -68,14 +83,19 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         } catch {
             require(pair == FACTORY.getPair(WETH, IERC20(address(this))));
         }
-        // TODO: there is a significant risk that `pair` will become a whale. We should add a
-        // provision for fixing that
+        // TODO: there is a significant risk that `pair` will become a
+        // "whale". We should add a provision for fixing that
         pair.mint(DEAD);
     }
 
-    function _mintShares(address to, uint256 shares) internal {
-        uint256 newShares = (sharesOf[to] += shares);
-        emit Transfer(address(0), to, tmp().omul(newShares, totalSupply).div(totalShares));
+    function _mintShares(address to, Shares shares) internal {
+        uint256 newShares = (_sharesOf[to] += shares);
+        emit Transfer(
+            address(0),
+            to,
+            // TODO: Use BalanceXShares
+            tmp().omul(Shares.unwrap(newShares), Balance.unwrap(_totalSupply)).div(Shares.unwrap(_totalShares))
+        );
     }
 
     function _check() internal view returns (bool) {
@@ -91,11 +111,11 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return true;
     }
 
-    function _loadAccount(address account) internal view returns (uint256, uint256) {
-        uint256 shares = sharesOf[account];
-        uint256 cachedTotalShares = totalShares;
+    function _loadAccount(address account) internal view returns (Shares, Shares) {
+        Shares shares = _sharesOf[account];
+        Shares cachedTotalShares = _totalShares;
         unchecked {
-            uint256 whaleLimit = cachedTotalShares / Settings.ANTI_WHALE_DIVISOR - 1;
+            Shares whaleLimit = cachedTotalShares / Settings.ANTI_WHALE_DIVISOR - Shares.wrap(1);
             if (shares > whaleLimit) {
                 cachedTotalShares -= (shares - whaleLimit);
                 shares = whaleLimit;
@@ -104,36 +124,39 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return (shares, cachedTotalShares);
     }
 
-    function _scaleDown(uint256 shares, address account, uint256 totalSupply_, uint256 totalShares_)
+    function _scaleDown(Shares shares, address account, Balance totalSupply_, Shares totalShares_)
         internal
         pure
-        returns (uint256)
+        returns (Balance)
     {
         unchecked {
-            return tmp().omul(shares, totalSupply_ * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)).div(
-                totalShares_ * Settings.CRAZY_BALANCE_BASIS
+            return Balance.wrap(
+                tmp().omul(
+                    Shares.unwrap(shares),
+                    Balance.unwrap(totalSupply_) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)
+                ).div(Shares.unwrap(totalShares_) * Settings.CRAZY_BALANCE_BASIS)
             );
         }
     }
 
-    function _scaleUp(uint256 balance, address account) internal pure returns (uint256) {
+    function _scaleUp(Balance balance, address account) internal pure returns (Balance) {
         unchecked {
             // Checking for overflow in the multiplication is
             // unnecessary. Checking for division by zero is required.
-            return balance * Settings.CRAZY_BALANCE_BASIS / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR);
+            return Balance.wrap(Balance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR));
         }
     }
 
-    function _balanceOf(address account) internal view returns (uint256, uint256, uint256, uint256) {
-        (uint256 shares, uint256 cachedTotalShares) = _loadAccount(account);
-        uint256 cachedTotalSupply = totalSupply;
-        uint256 balance = _scaleDown(shares, account, cachedTotalSupply, cachedTotalShares);
+    function _balanceOf(address account) internal view returns (Balance, Shares, Balance, Shares) {
+        (Shares shares, Shares cachedTotalShares) = _loadAccount(account);
+        Balance cachedTotalSupply = _totalSupply;
+        Balance balance = _scaleDown(shares, account, cachedTotalSupply, cachedTotalShares);
         return (balance, shares, cachedTotalSupply, cachedTotalShares);
     }
 
     function balanceOf(address account) external view override returns (uint256) {
-        (uint256 balance,,,) = _balanceOf(account);
-        return balance;
+        (Balance balance,,,) = _balanceOf(account);
+        return balance.toExternal();
     }
 
     function fee() public view returns (uint256) {
@@ -141,10 +164,10 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         revert("unimplemented");
     }
 
-    function _transfer(address from, address to, uint256 amount) internal returns (bool) {
-        (uint256 fromBalance, uint256 cachedFromShares, uint256 cachedTotalSupply, uint256 cachedTotalShares) =
+    function _transfer(address from, address to, Balance amount) internal returns (bool) {
+        (Balance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
             _balanceOf(from);
-        uint256 cachedToShares = sharesOf[to];
+        Shares cachedToShares = _sharesOf[to];
         if (
             // "efficient" addresses can't hold tokens because they have zero multiplier
             uint256(uint160(to)) >= Settings.ADDRESS_DIVISOR
@@ -153,7 +176,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             && cachedToShares < cachedTotalShares / Settings.ANTI_WHALE_DIVISOR
         ) {
             if (amount <= fromBalance) {
-                (uint256 newFromShares, uint256 newToShares, uint256 newTotalShares) = ReflectMath.getTransferShares(
+                (Shares newFromShares, Shares newToShares, Shares newTotalShares) = ReflectMath.getTransferShares(
                     _scaleUp(amount, from),
                     fee(),
                     cachedTotalSupply,
@@ -172,15 +195,15 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
                     unchecked {
                         // Take note of the `to`/`from` mismatch here. We're converting `to`'s
                         // balance into units as if it were held by `from`
-                        uint256 transferAmount = _scaleDown(newToShares, from, cachedTotalSupply, newTotalShares)
+                        Balance transferAmount = _scaleDown(newToShares, from, cachedTotalSupply, newTotalShares)
                             - _scaleDown(cachedToShares, from, cachedTotalSupply, cachedTotalShares);
-                        uint256 burnAmount = amount - transferAmount;
-                        emit Transfer(from, to, transferAmount);
-                        emit Transfer(from, address(0), burnAmount);
+                        Balance burnAmount = amount - transferAmount;
+                        emit Transfer(from, to, transferAmount.toExternal());
+                        emit Transfer(from, address(0), burnAmount.toExternal());
                     }
-                    sharesOf[from] = newFromShares;
-                    sharesOf[to] = newToShares;
-                    totalShares = newTotalShares;
+                    _sharesOf[from] = newFromShares;
+                    _sharesOf[to] = newToShares;
+                    _totalShares = newTotalShares;
 
                     {
                         address pair_ = address(pair);
@@ -197,7 +220,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
                     revert ERC20InvalidReceiver(to);
                 }
             } else if (_check()) {
-                revert ERC20InsufficientBalance(from, fromBalance, amount);
+                revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
             }
         } else if (_check()) {
             // TODO: maybe do a fallback to "normal" transfers if the recipient
@@ -208,7 +231,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function transfer(address to, uint256 amount) external override returns (bool) {
-        if (!_transfer(msg.sender, to, amount)) {
+        if (!_transfer(msg.sender, to, Balance.wrap(amount))) {
             return false;
         }
         return _success();
@@ -282,7 +305,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         if (!success) {
             return false;
         }
-        if (!_transfer(from, to, amount)) {
+        if (!_transfer(from, to, Balance.wrap(amount))) {
             return false;
         }
         _spendAllowance(from, amount, currentTempAllowance, currentAllowance);
@@ -365,41 +388,42 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return _success();
     }
 
-    function _burn(address from, uint256 amount) internal returns (bool) {
-        (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
+    function _burn(address from, Balance amount) internal returns (bool) {
+        (Balance balance, Shares shares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
             if (amount == balance) {
                 cachedTotalShares -= shares;
                 shares = 0;
             } else {
-                uint512 p = alloc().omul(amount, shares);
-                uint256 burnShares = p.div(balance);
-                if (tmp().omul(burnShares, balance) < p) {
+                // TODO: Use BalanceXShares
+                uint512 p = alloc().omul(Balance.unwrap(amount), Shares.unwrap(shares));
+                Shares burnShares = Shares.wrap(p.div(Balance.unwrap(balance)));
+                if (tmp().omul(Shares.unwrap(burnShares), Balance.unwrap(balance)) < p) {
                     burnShares++;
                 }
                 shares -= burnShares;
                 cachedTotalShares -= burnShares;
             }
-            sharesOf[from] = shares;
-            totalSupply = cachedTotalSupply - _scaleUp(amount, from);
-            totalShares = cachedTotalShares;
-            emit Transfer(from, address(0), amount);
+            _sharesOf[from] = shares;
+            _totalSupply = cachedTotalSupply - _scaleUp(amount, from);
+            _totalShares = cachedTotalShares;
+            emit Transfer(from, address(0), amount.toExternal());
             return true;
         } else if (_check()) {
-            revert ERC20InsufficientBalance(from, balance, amount);
+            revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
         }
         return false;
     }
 
     function burn(uint256 amount) external returns (bool) {
-        if (!_burn(msg.sender, amount)) {
+        if (!_burn(msg.sender, Balance.wrap(amount))) {
             return false;
         }
         return _success();
     }
 
-    function _deliver(address from, uint256 amount) internal returns (bool) {
-        (uint256 balance, uint256 shares, uint256 cachedTotalSupply, uint256 cachedTotalShares) = _balanceOf(from);
+    function _deliver(address from, Balance amount) internal returns (bool) {
+        (Balance balance, Shares shares, Balance cachedTotalSupply, Balance cachedTotalShares) = _balanceOf(from);
         if (amount <= balance) {
             if (amount == balance) {
                 cachedTotalShares -= shares;
@@ -408,15 +432,15 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
                 (shares, cachedTotalShares) =
                     ReflectMath.getDeliverShares(_scaleUp(amount, from), cachedTotalSupply, cachedTotalShares, shares);
             }
-            sharesOf[from] = shares;
-            totalShares = cachedTotalShares;
-            emit Transfer(from, address(0), amount);
+            _sharesOf[from] = shares;
+            _totalShares = cachedTotalShares;
+            emit Transfer(from, address(0), amount.toExternal());
 
             pair.sync();
 
             return true;
         } else if (_check()) {
-            revert ERC20InsufficientBalance(from, balance, amount);
+            revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
         }
         return false;
     }
@@ -433,7 +457,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         if (!success) {
             return false;
         }
-        if (!_burn(from, amount)) {
+        if (!_burn(from, Balance.wrap(amount))) {
             return false;
         }
         _spendAllowance(from, amount, currentTempAllowance, currentAllowance);
@@ -445,7 +469,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         if (!success) {
             return false;
         }
-        if (!_deliver(from, amount)) {
+        if (!_deliver(from, Balance.wrap(amount))) {
             return false;
         }
         _spendAllowance(from, amount, currentTempAllowance, currentAllowance);
@@ -453,7 +477,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function punishWhale(address whale) external returns (bool) {
-        (sharesOf[whale], totalShares) = _loadAccount(whale);
+        (_sharesOf[whale], _totalShares) = _loadAccount(whale);
         IUniswapV2Pair pair_ = pair;
         if (whale != address(pair_)) {
             pair_.sync();

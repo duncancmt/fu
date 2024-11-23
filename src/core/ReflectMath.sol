@@ -1,38 +1,46 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {BasisPoints, BASIS} from "./BasisPoints.sol";
+import {Shares, scale} from "./Shares.sol";
+import {Balance} from "./Balance.sol";
+import {BalanceXShares, tmp, alloc, cast} from "./BalanceXShares.sol";
+import {BalanceXShares2, tmp as tmp2, alloc as alloc2, cast} from "./BalanceXShares2.sol";
+
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
-import {uint512, tmp, alloc} from "../lib/512Math.sol";
+import {uint512, tmp as baseTmp, alloc as baseAlloc} from "../lib/512Math.sol";
 
 import {console} from "@forge-std/console.sol";
 
 library ReflectMath {
     using UnsafeMath for uint256;
 
-    uint256 internal constant feeBasis = 10_000;
-
     function getTransferShares(
-        uint256 amount,
-        uint256 feeRate,
-        uint256 totalSupply,
-        uint256 totalShares,
-        uint256 fromShares,
-        uint256 toShares
-    ) internal view returns (uint256 newFromShares, uint256 newToShares, uint256 newTotalShares) {
-        uint256 uninvolvedShares = totalShares - fromShares - toShares;
-        uint512 t1 = alloc().omul(fromShares, totalSupply);
-        uint512 t2 = alloc().omul(amount, totalShares);
-        uint512 t3 = alloc().osub(t1, t2);
-        uint512 n1 = alloc().omul(t3, uninvolvedShares * feeBasis);
-        uint512 t4 = alloc().omul(totalSupply, uninvolvedShares * feeBasis);
-        uint512 t5 = alloc().omul(amount * feeRate, totalShares);
-        uint512 d = alloc().oadd(t4, t5);
-        uint512 t6 = alloc().omul(amount * (feeBasis - feeRate), totalShares);
-        uint512 t7 = alloc().omul(toShares, totalSupply * feeBasis);
-        uint512 t8 = alloc().oadd(t6, t7);
-        uint512 n2 = alloc().omul(t8, uninvolvedShares);
+        Balance amount,
+        BasisPoints feeRate,
+        Balance totalSupply,
+        Shares totalShares,
+        Shares fromShares,
+        Shares toShares
+    ) internal view returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
+        // TODO: introduce a SharesXBasisPoints type
+        Shares uninvolvedShares = totalShares - fromShares - toShares;
+        BalanceXShares t1 = alloc().omul(fromShares, totalSupply);
+        BalanceXShares t2 = alloc().omul(amount, totalShares);
+        BalanceXShares t3 = alloc().osub(t1, t2);
+        BalanceXShares2 n1 = alloc2().omul(t3, scale(uninvolvedShares, BASIS));
+        BalanceXShares t4 = alloc().omul(totalSupply, scale(uninvolvedShares, BASIS));
+        BalanceXShares t5 = alloc().omul(amount, scale(totalShares, feeRate));
+        BalanceXShares d = alloc().oadd(t4, t5);
+        BalanceXShares t6 = alloc().omul(amount, scale(totalShares, BASIS - feeRate));
+        BalanceXShares t7 = alloc().omul(scale(toShares, BASIS), totalSupply);
+        BalanceXShares t8 = alloc().oadd(t6, t7);
+        BalanceXShares2 n2 = alloc2().omul(t8, uninvolvedShares);
 
-        (newFromShares, newToShares) = n1.divMulti(n2, d);
+        {
+            (uint256 x, uint256 y) = cast(n1).divMulti(cast(n2), cast(d));
+            (newFromShares, newToShares) = (Shares.wrap(x), Shares.wrap(y));
+        }
         // console.log("    fromShares", fromShares);
         // console.log(" newFromShares", newFromShares);
         // console.log("      toShares", toShares);
@@ -44,60 +52,60 @@ library ReflectMath {
         // Fixup rounding error
         console.log("===");
         // TODO use divMulti to compute beforeToBalance and beforeFromBalance (can't use it for after because newTotalShares might change)
-        uint256 beforeToBalance = tmp().omul(toShares, totalSupply).div(totalShares);
-        uint256 afterToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
-        uint256 expectedAfterToBalanceLo = beforeToBalance + amount - (amount * feeRate).unsafeDivUp(feeBasis);
-        uint256 expectedAfterToBalanceHi = beforeToBalance + (amount * (feeBasis - feeRate)).unsafeDivUp(feeBasis);
+        Balance beforeToBalance = tmp().omul(toShares, totalSupply).div(totalShares);
+        Balance afterToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
+        Balance expectedAfterToBalanceLo = beforeToBalance + amount - Balance.wrap((Balance.unwrap(amount) * BasisPoints.unwrap(feeRate)).unsafeDivUp(BasisPoints.unwrap(BASIS)));
+        Balance expectedAfterToBalanceHi = beforeToBalance + Balance.wrap((Balance.unwrap(amount) * BasisPoints.unwrap(BASIS - feeRate)).unsafeDivUp(BasisPoints.unwrap(BASIS)));
         {
             bool condition = afterToBalance < expectedAfterToBalanceLo;
-            newToShares = newToShares.unsafeInc(condition);
-            newTotalShares = newTotalShares.unsafeInc(condition);
+            newToShares = newToShares.inc(condition);
+            newTotalShares = newTotalShares.inc(condition);
         }
         {
             bool condition = afterToBalance > expectedAfterToBalanceHi;
-            newToShares = newToShares.unsafeDec(condition);
-            newTotalShares = newTotalShares.unsafeDec(condition);
+            newToShares = newToShares.dec(condition);
+            newTotalShares = newTotalShares.dec(condition);
         }
 
         // console.log("===");
-        uint256 beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
-        uint256 afterFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
-        uint256 expectedAfterFromBalance = beforeFromBalance - amount;
+        Balance beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
+        Balance afterFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
+        Balance expectedAfterFromBalance = beforeFromBalance - amount;
         // console.log("  actual fromBalance", afterFromBalance);
         // console.log("expected fromBalance", expectedAfterFromBalance);
         {
             bool condition = afterFromBalance > expectedAfterFromBalance;
-            newFromShares = newFromShares.unsafeDec(condition);
-            newTotalShares = newTotalShares.unsafeDec(condition);
+            newFromShares = newFromShares.dec(condition);
+            newTotalShares = newTotalShares.dec(condition);
         }
         {
             bool condition = afterFromBalance < expectedAfterFromBalance;
-            newFromShares = newFromShares.unsafeInc(condition);
-            newTotalShares = newTotalShares.unsafeInc(condition);
+            newFromShares = newFromShares.inc(condition);
+            newTotalShares = newTotalShares.inc(condition);
         }
     }
 
-    function getDeliverShares(uint256 amount, uint256 totalSupply, uint256 totalShares, uint256 fromShares)
+    function getDeliverShares(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
         internal
         view
-        returns (uint256 newFromShares, uint256 newTotalShares)
+        returns (Shares newFromShares, Shares newTotalShares)
     {
-        uint512 t1 = alloc().omul(fromShares, totalSupply);
-        uint512 t2 = alloc().omul(amount, totalShares);
-        uint512 t3 = alloc().osub(t1, t2);
-        uint512 n = alloc().omul(t3, totalShares - fromShares);
-        uint512 t4 = alloc().omul(totalSupply, totalShares - fromShares);
-        uint512 d = alloc().oadd(t4, t2);
+        BalanceXShares t1 = alloc().omul(fromShares, totalSupply);
+        BalanceXShares t2 = alloc().omul(amount, totalShares);
+        BalanceXShares t3 = alloc().osub(t1, t2);
+        BalanceXShares2 n = alloc2().omul(t3, totalShares - fromShares);
+        BalanceXShares t4 = alloc().omul(totalSupply, totalShares - fromShares);
+        BalanceXShares d = alloc().oadd(t4, t2);
 
         newFromShares = n.div(d);
         newTotalShares = totalShares - (fromShares - newFromShares);
 
         // Fixup rounding error
-        uint256 beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
-        uint256 afterFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
-        uint256 expectedAfterFromBalance = beforeFromBalance - amount;
+        Balance beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
+        Balance afterFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
+        Balance expectedAfterFromBalance = beforeFromBalance - amount;
         bool condition = afterFromBalance < expectedAfterFromBalance;
-        newFromShares = newFromShares.unsafeInc(condition);
-        newTotalShares = newTotalShares.unsafeInc(condition);
+        newFromShares = newFromShares.inc(condition);
+        newTotalShares = newTotalShares.inc(condition);
     }
 }

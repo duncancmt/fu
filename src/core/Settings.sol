@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {ReflectMath} from "./ReflectMath.sol";
+
+import {BasisPoints, BASIS} from "./BasisPoints.sol";
+import {Shares} from "./Shares.sol";
+
 import {uint512, tmp, alloc} from "../lib/512Math.sol";
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
-import {ReflectMath} from "./ReflectMath.sol";
 
 library Settings {
     using UnsafeMath for uint256;
@@ -13,11 +17,11 @@ library Settings {
     // it near to INITIAL_LIQUIDITY_DIVISOR will cause unexpected reverts.
     // TODO: verify that it's still possible to `deliver` without serious issue
     // even when the balance is well above the limit
-    uint256 internal constant ANTI_WHALE_DIVISOR = 4;
+    Shares internal constant ANTI_WHALE_DIVISOR = Shares.wrap(4);
 
-    uint256 internal constant MIN_FEE = 1;
+    BasisPoints internal constant MIN_FEE = BasisPoints.wrap(1);
     // A fee above `ReflectMath.feeBasis / 2` makes ReflectMath break down
-    uint256 internal constant MAX_FEE = ReflectMath.feeBasis / 2;
+    BasisPoints internal constant MAX_FEE = BasisPoints.wrap(BasisPoints.unwrap(BASIS) / 2);
 
     uint256 private constant _UNISWAPV2_MAX_BALANCE = type(uint112).max;
 
