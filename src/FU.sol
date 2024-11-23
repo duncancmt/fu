@@ -34,6 +34,12 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     uint256 public totalShares;
     IUniswapV2Pair public immutable pair;
 
+    // This mapping is actually in transient storage. It's placed here so that
+    // solc reserves a slot for it during storage layout generation. It is
+    // ultimately manipulated by the TransientStorageLayout base contract (in
+    // assembly)
+    mapping(address => mapping(address => uint256)) private _temporaryAllowance;
+
     constructor(address[] memory initialHolders) payable {
         require(msg.value >= 1 ether);
         require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
@@ -215,8 +221,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return _success();
     }
 
-    function allowance(address owner, address spender) public view returns (uint256) {
-        uint256 temporaryAllowance = _getTemporaryAllowance(owner, spender);
+    function allowance(address owner, address spender) external view returns (uint256) {
+        uint256 temporaryAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, spender);
         if (~temporaryAllowance == 0) {
             return temporaryAllowance;
         }
@@ -229,7 +235,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function _checkAllowance(address owner, uint256 amount) internal view returns (bool, uint256, uint256) {
-        uint256 currentTempAllowance = _getTemporaryAllowance(owner, msg.sender);
+        uint256 currentTempAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, msg.sender);
         if (currentTempAllowance >= amount) {
             return (true, currentTempAllowance, 0);
         }
@@ -245,13 +251,15 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return (false, 0, 0);
     }
 
-    function _spendAllowance(address owner, uint256 amount, uint256 currentTempAllowance, uint256 currentAllowance) internal {
+    function _spendAllowance(address owner, uint256 amount, uint256 currentTempAllowance, uint256 currentAllowance)
+        internal
+    {
         if (~currentTempAllowance == 0) {
             return;
         }
         if (currentAllowance == 0) {
             unchecked {
-                _setTemporaryAllowance(owner, msg.sender, currentTempAllowance - amount);
+                _setTemporaryAllowance(_temporaryAllowance, owner, msg.sender, currentTempAllowance - amount);
             }
             return;
         }
@@ -259,7 +267,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             unchecked {
                 amount -= currentTempAllowance;
             }
-            _setTemporaryAllowance(owner, msg.sender, 0);
+            _setTemporaryAllowance(_temporaryAllowance, owner, msg.sender, 0);
         }
         if (~currentAllowance == 0) {
             return;
@@ -353,7 +361,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
-        _setTemporaryAllowance(msg.sender, spender, amount);
+        _setTemporaryAllowance(_temporaryAllowance, msg.sender, spender, amount);
         return _success();
     }
 
