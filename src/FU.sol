@@ -35,9 +35,9 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     IUniswapV2Pair public immutable pair;
 
     // This mapping is actually in transient storage. It's placed here so that
-    // solc reserves a slot for it during storage layout generation. It is
-    // ultimately manipulated by the TransientStorageLayout base contract (in
-    // assembly)
+    // solc reserves a slot for it during storage layout generation. Solc 0.8.28
+    // doesn't support declaring mappings in transient storage. It is ultimately
+    // manipulated by the TransientStorageLayout base contract (in assembly)
     mapping(address => mapping(address => uint256)) private _temporaryAllowance;
 
     constructor(address[] memory initialHolders) payable {
