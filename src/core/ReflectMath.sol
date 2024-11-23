@@ -32,9 +32,7 @@ library ReflectMath {
         uint512 t8 = alloc().oadd(t6, t7);
         uint512 n2 = alloc().omul(t8, uninvolvedShares);
 
-        // TODO: add optimized multidiv method to 512Math
-        newFromShares = n1.div(d);
-        newToShares = n2.div(d);
+        (newFromShares, newToShares) = n1.divMulti(n2, d);
         // console.log("    fromShares", fromShares);
         // console.log(" newFromShares", newFromShares);
         // console.log("      toShares", toShares);
@@ -45,6 +43,7 @@ library ReflectMath {
 
         // Fixup rounding error
         console.log("===");
+        // TODO use divMulti to compute beforeToBalance and beforeFromBalance (can't use it for after because newTotalShares might change)
         uint256 beforeToBalance = tmp().omul(toShares, totalSupply).div(totalShares);
         uint256 afterToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
         uint256 expectedAfterToBalanceLo = beforeToBalance + amount - (amount * feeRate).unsafeDivUp(feeBasis);
