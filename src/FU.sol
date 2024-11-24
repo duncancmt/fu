@@ -12,14 +12,14 @@ import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
 import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
+import {CrazyBalance, fromExternal, CrazyBalanceArithmetic} from "./core/CrazyBalance.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 
-import {BasisPoints} from "./core/types/BasisPoints.sol";
+import {BasisPoints, BASIS} from "./core/types/BasisPoints.sol";
 import {Shares} from "./core/types/Shares.sol";
-import {Balance, fromExternal} from "./core/types/Balance.sol";
+import {Balance} from "./core/types/Balance.sol";
 
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
-import {uint512, tmp, alloc} from "./lib/512Math.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
@@ -29,6 +29,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     using UnsafeMath for uint256;
     using ChecksumAddress for address;
     using {fromExternal} for uint256;
+    using CrazyBalanceArithmetic for Shares;
+    using CrazyBalanceArithmetic for CrazyBalance;
 
     // TODO: use a user-defined type to separate shares-denominated values from balance-denominated values
     mapping(address => Shares) internal _sharesOf;
@@ -39,7 +41,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     IUniswapV2Pair public immutable pair;
 
     function totalSupply() external view override returns (uint256) {
-        return _totalSupply.toExternal();
+        return Balance.unwrap(_totalSupply);
     }
 
     // TODO: maybe we shouldn't expose these two functions? They're an abstraction leak
@@ -96,8 +98,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         emit Transfer(
             address(0),
             to,
-            // TODO: Use BalanceXShares
-            tmp().omul(Shares.unwrap(newShares), Balance.unwrap(_totalSupply)).div(Shares.unwrap(_totalShares))
+            newShares.toCrazyBalance(address(type(uint160).max), _totalSupply, _totalShares).toExternal()
         );
     }
 
@@ -114,22 +115,6 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return true;
     }
 
-
-    function _scaleDown(Shares shares, address account, Balance totalSupply_, Shares totalShares_)
-        internal
-        pure
-        returns (Balance)
-    {
-        unchecked {
-            return Balance.wrap(
-                tmp().omul(
-                    Shares.unwrap(shares),
-                    Balance.unwrap(totalSupply_) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)
-                ).div(Shares.unwrap(totalShares_) * Settings.CRAZY_BALANCE_BASIS)
-            );
-        }
-    }
-
     function _applyWhaleLimit(Shares shares, Shares totalShares_) internal pure returns (Shares, Shares) {
         Shares whaleLimit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - Shares.wrap(1);
         if (shares > whaleLimit) {
@@ -138,27 +123,19 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         }
     }
 
-    function _scaleUp(Balance balance, address account) internal pure returns (Balance) {
-        unchecked {
-            // Checking for overflow in the multiplication is unnecessary. Checking for division by
-            // zero is required.
-            return Balance.wrap(Balance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR));
-        }
-    }
-
     function _loadAccount(address account) internal view returns (Shares, Shares) {
         return _applyWhaleLimit(_sharesOf[account], _totalShares);
     }
 
-    function _balanceOf(address account) internal view returns (Balance, Shares, Balance, Shares) {
+    function _balanceOf(address account) internal view returns (CrazyBalance, Shares, Balance, Shares) {
         (Shares shares, Shares cachedTotalShares) = _loadAccount(account);
         Balance cachedTotalSupply = _totalSupply;
-        Balance balance = _scaleDown(shares, account, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance balance = shares.toCrazyBalance(account, cachedTotalSupply, cachedTotalShares);
         return (balance, shares, cachedTotalSupply, cachedTotalShares);
     }
 
     function balanceOf(address account) external view override returns (uint256) {
-        (Balance balance,,,) = _balanceOf(account);
+        (CrazyBalance balance,,,) = _balanceOf(account);
         return balance.toExternal();
     }
 
@@ -171,7 +148,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return BasisPoints.unwrap(_fee());
     }
 
-    function _transfer(address from, address to, Balance amount) internal returns (bool) {
+    function _transfer(address from, address to, CrazyBalance amount) internal returns (bool) {
         if (from == to) {
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
@@ -192,7 +169,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             return false;
         }
 
-        (Balance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
+        (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
             _balanceOf(from);
         Shares cachedToShares = _sharesOf[to];
         address pair_ = address(pair);
@@ -219,7 +196,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         BasisPoints feeRate = _fee();
         // TODO: use shares version of getTransferShares when amount == fromBalance
         (Shares newFromShares, Shares newToShares, Shares newTotalShares) = ReflectMath.getTransferShares(
-            _scaleUp(amount, from), feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+            amount == fromBalance ? cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares) : amount.toBalance(from),
+            feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
         );
         if (amount == fromBalance) {
             // Burn any dust left over if `from` is sending the whole balance
@@ -240,28 +218,29 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             }
 
         // === EFFECTS ARE ALLOWED ONLY FROM HERE DOWN ===
-            Balance oldPairBalance = _scaleDown(cachedToShares, pair_, cachedTotalSupply, cachedTotalShares);
+            CrazyBalance oldPairBalance = cachedToShares.toCrazyBalance(pair_, cachedTotalSupply, cachedTotalShares);
             (cachedToShares, cachedTotalShares, cachedTotalSupply) =
-                ReflectMath.getBurnShares(castUp(scale(amount, BASIS - feeRate)), cachedTotalSupply, cachedTotalShares, cachedToShares);
+                ReflectMath.getBurnShares(amount.toBalance(from, BASIS - feeRate), cachedTotalSupply, cachedTotalShares, cachedToShares);
 
-            emit Transfer(to, address(0), (oldPairBalance - _scaleDown(newToShares, pair_, cachedTotalSupply, newTotalShares)).toExternal());
+            emit Transfer(to, address(0), (oldPairBalance - newToShares.toCrazyBalance(pair_, cachedTotalSupply, newTotalShares)).toExternal());
             _sharesOf[to] = cachedToShares;
             _totalShares = cachedTotalShares;
             _totalSupply = cachedTotalSupply;
 
             IUniswapV2Pair(pair_).sync();
             // TODO: use shares version of getTransferShares when amount == fromBalance
-            (Shares newFromShares, Shares newToShares, Shares newTotalShares) = ReflectMath.getTransferShares(
-                _scaleUp(amount, from), feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+            (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
+                amount == fromBalance ? cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares) : amount.toBalance(from),
+                feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
             );
         }
 
         {
             // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
             // units as if it were held by `from`
-            Balance transferAmount = _scaleDown(newToShares, from, cachedTotalSupply, newTotalShares)
-                - _scaleDown(cachedToShares, from, cachedTotalSupply, cachedTotalShares);
-            Balance burnAmount = amount - transferAmount;
+            // TODO: this first `toCrazyBalance` could probably be combined/computed with `ReflectMath.getTransferShares`
+            CrazyBalance transferAmount = newToShares.toCrazyBalance(from, cachedTotalSupply, newTotalShares) - cachedToShares.toCrazyBalance(from, cachedTotalSupply, cachedTotalShares);
+            CrazyBalance burnAmount = amount - transferAmount;
             emit Transfer(from, to, transferAmount.toExternal());
             emit Transfer(from, address(0), burnAmount.toExternal());
         }
@@ -434,8 +413,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return _success();
     }
 
-    function _burn(address from, Balance amount) internal returns (bool) {
-        (Balance balance, Shares shares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
+    function _burn(address from, CrazyBalance amount) internal returns (bool) {
+        (CrazyBalance balance, Shares shares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
         if (amount > balance) {
             if (_check()) {
                 revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
@@ -444,20 +423,22 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         }
 
         if (amount == balance) {
+            // The amount to be deducted from `_totalSupply` is *NOT* the same as
+            // `amount.toBalance(from)`. That would not correctly account for dust that is below the
+            // "crazy balance" scaling factor for `from`. We have to explicitly recompute the
+            // un-crazy balance of `from` and deduct *THAT* instead.
+            cachedTotalSupply = cachedTotalSupply - shares.toBalance(cachedTotalSupply, cachedTotalShares);
             cachedTotalShares = cachedTotalShares - shares;
             shares = Shares.wrap(0);
         } else {
-            // TODO: Use BalanceXShares
-            uint512 p = alloc().omul(Balance.unwrap(amount), Shares.unwrap(shares));
-            Shares burnShares = Shares.wrap(p.div(Balance.unwrap(balance)));
-            burnShares = burnShares.inc(tmp().omul(Shares.unwrap(burnShares), Balance.unwrap(balance)) < p);
-            shares = shares - burnShares;
-            cachedTotalShares = cachedTotalShares - burnShares;
+            (shares, cachedTotalShares, cachedTotalSupply) =
+                ReflectMath.getBurnShares(amount.toBalance(from), cachedTotalSupply, cachedTotalShares, shares);
         }
         _sharesOf[from] = shares;
-        _totalSupply = cachedTotalSupply - _scaleUp(amount, from);
         _totalShares = cachedTotalShares;
+        _totalSupply = cachedTotalSupply;
         emit Transfer(from, address(0), amount.toExternal());
+
         return true;
     }
 
@@ -468,8 +449,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return _success();
     }
 
-    function _deliver(address from, Balance amount) internal returns (bool) {
-        (Balance balance, Shares shares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
+    function _deliver(address from, CrazyBalance amount) internal returns (bool) {
+        (CrazyBalance balance, Shares shares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
         if (amount > balance) {
             if (_check()) {
                 revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
@@ -481,7 +462,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             shares = Shares.wrap(0);
         } else {
             (shares, cachedTotalShares) =
-                ReflectMath.getDeliverShares(_scaleUp(amount, from), cachedTotalSupply, cachedTotalShares, shares);
+                ReflectMath.getDeliverShares(amount.toBalance(from), cachedTotalSupply, cachedTotalShares, shares);
         }
         _sharesOf[from] = shares;
         _totalShares = cachedTotalShares;

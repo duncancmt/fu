@@ -3,18 +3,6 @@ pragma solidity ^0.8.28;
 
 type Balance is uint256;
 
-library BalanceAccessors {
-    function toExternal(Balance x) internal pure returns (uint256) {
-        return Balance.unwrap(x);
-    }
-}
-
-function fromExternal(uint256 x) pure returns (Balance) {
-    return Balance.wrap(x);
-}
-
-using BalanceAccessors for Balance global;
-
 function __add(Balance a, Balance b) pure returns (Balance) {
     unchecked {
         return Balance.wrap(Balance.unwrap(a) + Balance.unwrap(b));
