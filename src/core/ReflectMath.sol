@@ -6,7 +6,7 @@ import {Shares} from "./types/Shares.sol";
 import {Balance} from "./types/Balance.sol";
 import {scale} from "./types/SharesXBasisPoints.sol";
 import {scale, castUp} from "./types/BalanceXBasisPoints.sol";
-import {BalanceXShares, tmp, alloc} from "./types/BalanceXShares.sol";
+import {BalanceXShares, tmp, alloc, SharesToBalance} from "./types/BalanceXShares.sol";
 import {BalanceXShares2, tmp as tmp2, alloc as alloc2} from "./types/BalanceXShares2.sol";
 import {BalanceXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "./types/BalanceXBasisPointsXShares.sol";
 import {BalanceXBasisPointsXShares2, tmp as tmp4, alloc as alloc4} from "./types/BalanceXBasisPointsXShares2.sol";
@@ -17,6 +17,7 @@ import {console} from "@forge-std/console.sol";
 
 library ReflectMath {
     using UnsafeMath for uint256;
+    using SharesToBalance for Shares;
 
     // TODO: reorder arguments for clarity/consistency
     function getTransferShares(
@@ -60,8 +61,8 @@ library ReflectMath {
         // Fixup rounding error
         console.log("===");
         // TODO use divMulti to compute beforeToBalance and beforeFromBalance (can't use it for after because newTotalShares might change)
-        Balance beforeToBalance = tmp().omul(toShares, totalSupply).div(totalShares);
-        Balance afterToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
+        Balance beforeToBalance = toShares.toBalance(totalSupply, totalShares);
+        Balance afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
         Balance expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, feeRate));
         Balance expectedAfterToBalanceHi = beforeToBalance + castUp(scale(amount, BASIS - feeRate));
 
@@ -77,8 +78,8 @@ library ReflectMath {
         }
 
         // console.log("===");
-        Balance beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
-        Balance afterFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
+        Balance beforeFromBalance = fromShares.toBalance(totalSupply, totalShares);
+        Balance afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
         Balance expectedAfterFromBalance = beforeFromBalance - amount;
         // console.log("  actual fromBalance", afterFromBalance);
         // console.log("expected fromBalance", expectedAfterFromBalance);

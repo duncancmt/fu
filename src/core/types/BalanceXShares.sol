@@ -77,3 +77,9 @@ function __ge(BalanceXShares a, BalanceXShares b) pure returns (bool) {
 }
 
 using {__eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __ge as >=} for BalanceXShares global;
+
+library SharesToBalance {
+    function toBalance(Shares shares, Balance totalSupply, Shares totalShares) internal pure returns (Balance) {
+        return tmp().omul(shares, totalSupply).div(totalShares);
+    }
+}

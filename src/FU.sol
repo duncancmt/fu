@@ -18,6 +18,7 @@ import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 import {BasisPoints, BASIS} from "./core/types/BasisPoints.sol";
 import {Shares} from "./core/types/Shares.sol";
 import {Balance} from "./core/types/Balance.sol";
+import {SharesToBalance} from "./core/types/BalanceXShares.sol";
 
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
@@ -29,6 +30,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     using UnsafeMath for uint256;
     using ChecksumAddress for address;
     using {fromExternal} for uint256;
+    using SharesToBalance for Shares;
     using CrazyBalanceArithmetic for Shares;
     using CrazyBalanceArithmetic for CrazyBalance;
 

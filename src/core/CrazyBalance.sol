@@ -6,10 +6,9 @@ import {Settings} from "./Settings.sol";
 import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
 import {Shares} from "./types/Shares.sol";
 import {Balance} from "./types/Balance.sol";
-import {tmp} from "./types/BalanceXShares.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
-import {tmp as baseTmp} from "../lib/512Math.sol";
+import {tmp} from "../lib/512Math.sol";
 
 type CrazyBalance is uint256;
 
@@ -82,16 +81,12 @@ library CrazyBalanceArithmetic {
     {
         unchecked {
             return CrazyBalance.wrap(
-                baseTmp().omul(
+                tmp().omul(
                     Shares.unwrap(shares),
                     Balance.unwrap(totalSupply) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)
                 ).div(Shares.unwrap(totalShares) * Settings.CRAZY_BALANCE_BASIS)
             );
         }
-    }
-
-    function toBalance(Shares shares, Balance totalSupply, Shares totalShares) internal pure returns (Balance) {
-        return tmp().omul(shares, totalSupply).div(totalShares);
     }
 
     function toBalance(CrazyBalance balance, address account) internal pure returns (Balance) {
