@@ -28,7 +28,6 @@ library ReflectMath {
         Shares fromShares,
         Shares toShares
     ) internal view returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
-        // TODO: introduce a SharesXBasisPoints type
         Shares uninvolvedShares = totalShares - fromShares - toShares;
         BalanceXShares t1 = alloc().omul(fromShares, totalSupply);
         BalanceXShares t2 = alloc().omul(amount, totalShares);
@@ -44,22 +43,15 @@ library ReflectMath {
 
         newFromShares = n1.div(d);
         newToShares = n2.div(d);
+        // TODO: implement divMulti for BalanceXBasisPointsXShares2 / BalanceXBasisPointsXShares
         /*
         {
             (uint256 x, uint256 y) = cast(n1).divMulti(cast(n2), cast(d));
             (newFromShares, newToShares) = (Shares.wrap(x), Shares.wrap(y));
         }
         */
-        // console.log("    fromShares", fromShares);
-        // console.log(" newFromShares", newFromShares);
-        // console.log("      toShares", toShares);
-        // console.log("   newToShares", newToShares);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
-        // console.log("   totalShares", totalShares);
-        // console.log("newTotalShares", newTotalShares);
 
-        // Fixup rounding error
-        console.log("===");
         // TODO use divMulti to compute beforeToBalance and beforeFromBalance (can't use it for after because newTotalShares might change)
         Balance beforeToBalance = toShares.toBalance(totalSupply, totalShares);
         Balance afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
@@ -77,12 +69,9 @@ library ReflectMath {
             newTotalShares = newTotalShares.dec(condition);
         }
 
-        // console.log("===");
         Balance beforeFromBalance = fromShares.toBalance(totalSupply, totalShares);
         Balance afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
         Balance expectedAfterFromBalance = beforeFromBalance - amount;
-        // console.log("  actual fromBalance", afterFromBalance);
-        // console.log("expected fromBalance", expectedAfterFromBalance);
         {
             bool condition = afterFromBalance > expectedAfterFromBalance;
             newFromShares = newFromShares.dec(condition);
