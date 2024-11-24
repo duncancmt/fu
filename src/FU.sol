@@ -196,8 +196,14 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         BasisPoints feeRate = _fee();
         // TODO: use shares version of getTransferShares when amount == fromBalance
         (Shares newFromShares, Shares newToShares, Shares newTotalShares) = ReflectMath.getTransferShares(
-            amount == fromBalance ? cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares) : amount.toBalance(from),
-            feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+            amount == fromBalance
+                ? cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares)
+                : amount.toBalance(from),
+            feeRate,
+            cachedTotalSupply,
+            cachedTotalShares,
+            cachedFromShares,
+            cachedToShares
         );
         if (amount == fromBalance) {
             // Burn any dust left over if `from` is sending the whole balance
@@ -219,10 +225,15 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
 
         // === EFFECTS ARE ALLOWED ONLY FROM HERE DOWN ===
             CrazyBalance oldPairBalance = cachedToShares.toCrazyBalance(pair_, cachedTotalSupply, cachedTotalShares);
-            (cachedToShares, cachedTotalShares, cachedTotalSupply) =
-                ReflectMath.getBurnShares(amount.toBalance(from, BASIS - feeRate), cachedTotalSupply, cachedTotalShares, cachedToShares);
+            (cachedToShares, cachedTotalShares, cachedTotalSupply) = ReflectMath.getBurnShares(
+                amount.toBalance(from, BASIS - feeRate), cachedTotalSupply, cachedTotalShares, cachedToShares
+            );
 
-            emit Transfer(to, address(0), (oldPairBalance - newToShares.toCrazyBalance(pair_, cachedTotalSupply, newTotalShares)).toExternal());
+            emit Transfer(
+                to,
+                address(0),
+                (oldPairBalance - newToShares.toCrazyBalance(pair_, cachedTotalSupply, newTotalShares)).toExternal()
+            );
             _sharesOf[to] = cachedToShares;
             _totalShares = cachedTotalShares;
             _totalSupply = cachedTotalSupply;
@@ -230,8 +241,14 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             IUniswapV2Pair(pair_).sync();
             // TODO: use shares version of getTransferShares when amount == fromBalance
             (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                amount == fromBalance ? cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares) : amount.toBalance(from),
-                feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                amount == fromBalance
+                    ? cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares)
+                    : amount.toBalance(from),
+                feeRate,
+                cachedTotalSupply,
+                cachedTotalShares,
+                cachedFromShares,
+                cachedToShares
             );
         }
 
@@ -239,7 +256,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
             // units as if it were held by `from`
             // TODO: this first `toCrazyBalance` could probably be combined/computed with `ReflectMath.getTransferShares`
-            CrazyBalance transferAmount = newToShares.toCrazyBalance(from, cachedTotalSupply, newTotalShares) - cachedToShares.toCrazyBalance(from, cachedTotalSupply, cachedTotalShares);
+            CrazyBalance transferAmount = newToShares.toCrazyBalance(from, cachedTotalSupply, newTotalShares)
+                - cachedToShares.toCrazyBalance(from, cachedTotalSupply, cachedTotalShares);
             CrazyBalance burnAmount = amount - transferAmount;
             emit Transfer(from, to, transferAmount.toExternal());
             emit Transfer(from, address(0), burnAmount.toExternal());

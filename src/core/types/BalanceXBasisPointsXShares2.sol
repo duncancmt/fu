@@ -27,19 +27,35 @@ function tmp() pure returns (BalanceXBasisPointsXShares2) {
 }
 
 library BalanceXBasisPointsXShares2Arithmetic {
-    function oadd(BalanceXBasisPointsXShares2 r, BalanceXBasisPointsXShares2 x, BalanceXBasisPointsXShares2 y) internal pure returns (BalanceXBasisPointsXShares2) {
+    function oadd(BalanceXBasisPointsXShares2 r, BalanceXBasisPointsXShares2 x, BalanceXBasisPointsXShares2 y)
+        internal
+        pure
+        returns (BalanceXBasisPointsXShares2)
+    {
         return cast(cast(r).oadd(cast(x), cast(y)));
     }
 
-    function osub(BalanceXBasisPointsXShares2 r, BalanceXBasisPointsXShares2 x, BalanceXBasisPointsXShares2 y) internal pure returns (BalanceXBasisPointsXShares2) {
+    function osub(BalanceXBasisPointsXShares2 r, BalanceXBasisPointsXShares2 x, BalanceXBasisPointsXShares2 y)
+        internal
+        pure
+        returns (BalanceXBasisPointsXShares2)
+    {
         return cast(cast(r).osub(cast(x), cast(y)));
     }
 
-    function omul(BalanceXBasisPointsXShares2 r, BalanceXBasisPointsXShares x, Shares s) internal pure returns (BalanceXBasisPointsXShares2) {
+    function omul(BalanceXBasisPointsXShares2 r, BalanceXBasisPointsXShares x, Shares s)
+        internal
+        pure
+        returns (BalanceXBasisPointsXShares2)
+    {
         return cast(cast(r).omul(cast2(x), Shares.unwrap(s)));
     }
 
-    function omul(BalanceXBasisPointsXShares2 r, BalanceXShares x, SharesXBasisPoints y) internal pure returns (BalanceXBasisPointsXShares2) {
+    function omul(BalanceXBasisPointsXShares2 r, BalanceXShares x, SharesXBasisPoints y)
+        internal
+        pure
+        returns (BalanceXBasisPointsXShares2)
+    {
         return cast(cast(r).omul(cast1(x), SharesXBasisPoints.unwrap(y)));
     }
 

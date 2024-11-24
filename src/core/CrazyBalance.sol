@@ -62,13 +62,24 @@ function __ge(CrazyBalance a, CrazyBalance b) pure returns (bool) {
 }
 
 using {
-    __add as +, __sub as -, __eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __ge as >=
+    __add as +,
+    __sub as -,
+    __eq as ==,
+    __lt as <,
+    __gt as >,
+    __ne as !=,
+    __le as <=,
+    __ge as >=
 } for CrazyBalance global;
 
 library CrazyBalanceArithmetic {
     using UnsafeMath for uint256;
 
-    function toCrazyBalance(Shares shares, address account, Balance totalSupply, Shares totalShares) internal pure returns (CrazyBalance) {
+    function toCrazyBalance(Shares shares, address account, Balance totalSupply, Shares totalShares)
+        internal
+        pure
+        returns (CrazyBalance)
+    {
         unchecked {
             return CrazyBalance.wrap(
                 baseTmp().omul(
@@ -96,7 +107,10 @@ library CrazyBalanceArithmetic {
 
     function toBalance(CrazyBalance balance, address account, BasisPoints proportion) internal pure returns (Balance) {
         unchecked {
-            return Balance.wrap((CrazyBalance.unwrap(balance) * BasisPoints.unwrap(proportion) * Settings.CRAZY_BALANCE_BASIS).unsafeDivUp(BasisPoints.unwrap(BASIS) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)));
+            return Balance.wrap(
+                (CrazyBalance.unwrap(balance) * BasisPoints.unwrap(proportion) * Settings.CRAZY_BALANCE_BASIS)
+                    .unsafeDivUp(BasisPoints.unwrap(BASIS) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR))
+            );
         }
     }
 }
