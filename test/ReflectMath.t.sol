@@ -7,7 +7,7 @@ import {ReflectMath} from "src/core/ReflectMath.sol";
 import {BasisPoints, BASIS} from "src/core/types/BasisPoints.sol";
 import {Shares} from "src/core/types/Shares.sol";
 import {Balance} from "src/core/types/Balance.sol";
-import {BalanceXShares, tmp, alloc} from "src/core/types/BalanceXShares.sol";
+import {BalanceXShares, tmp, alloc, SharesToBalance} from "src/core/types/BalanceXShares.sol";
 import {BalanceXBasisPoints, scale, castUp} from "src/core/types/BalanceXBasisPoints.sol";
 
 import {UnsafeMath} from "src/lib/UnsafeMath.sol";
@@ -18,6 +18,7 @@ import {console} from "@forge-std/console.sol";
 
 contract ReflectMathTest is Test {
     using UnsafeMath for uint256;
+    using SharesToBalance for Shares;
 
     function _oneTokenInShares(Balance totalSupply, Shares totalShares) internal pure returns (Shares) {
         BalanceXShares tmp1 = alloc().omul(Balance.wrap(10 ** Settings.DECIMALS), totalShares);
@@ -31,9 +32,8 @@ contract ReflectMathTest is Test {
         Balance totalSupply,
         Shares totalShares,
         Shares fromShares,
-        Balance amount,
         uint256 sharesRatio
-    ) internal pure returns (Balance, Shares, Shares, Balance, Balance) {
+    ) internal pure returns (Balance, Shares, Shares, Balance) {
         totalSupply = Balance.wrap(
             bound(Balance.unwrap(totalSupply), 10 ** Settings.DECIMALS + 1, Balance.unwrap(Settings.INITIAL_SUPPLY))
         );
@@ -57,10 +57,21 @@ contract ReflectMathTest is Test {
             )
         );
 
-        Balance fromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
+        Balance fromBalance = fromShares.toBalance(totalSupply, totalShares);
         assertGt(Balance.unwrap(fromBalance), 0);
-        amount = Balance.wrap(bound(Balance.unwrap(amount), 1, Balance.unwrap(fromBalance)));
+        return (totalSupply, totalShares, fromShares, fromBalance);
+    }
 
+    function _boundCommon(
+        Balance totalSupply,
+        Shares totalShares,
+        Shares fromShares,
+        Balance amount,
+        uint256 sharesRatio
+    ) internal pure returns (Balance, Shares, Shares, Balance, Balance) {
+        Balance fromBalance;
+        (totalSupply, totalShares, fromShares, fromBalance) = _boundCommon(totalSupply, totalShares, fromShares, sharesRatio);
+        amount = Balance.wrap(bound(Balance.unwrap(amount), 1, Balance.unwrap(fromBalance)));
         return (totalSupply, totalShares, fromShares, fromBalance, amount);
     }
 
@@ -95,7 +106,7 @@ contract ReflectMathTest is Test {
             )
         );
         vm.assume(fromShares + toShares < totalShares.div(2));
-        Balance toBalance = tmp().omul(toShares, totalSupply).div(totalShares);
+        Balance toBalance = toShares.toBalance(totalSupply, totalShares);
 
         // console.log("===");
         // console.log("totalSupply", totalSupply);
@@ -116,8 +127,8 @@ contract ReflectMathTest is Test {
             "shares delta"
         );
 
-        Balance newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
-        Balance newToBalance = tmp().omul(newToShares, totalSupply).div(newTotalShares);
+        Balance newFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
+        Balance newToBalance = newToShares.toBalance(totalSupply, newTotalShares);
         Balance expectedNewFromBalance = fromBalance - amount;
         Balance expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - feeRate));
         Balance expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, feeRate));
@@ -126,6 +137,54 @@ contract ReflectMathTest is Test {
         // TODO: tighten these bounds to exact equality
         assertGe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance lower");
         assertLe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceHi), "newToBalance upper");
+    }
+
+    function testTransferAll(
+        Balance totalSupply,
+        Shares totalShares,
+        Shares fromShares,
+        Shares toShares,
+        BasisPoints feeRate/*,
+        uint256 sharesRatio*/
+    ) external view {
+        Balance fromBalance;
+        (totalSupply, totalShares, fromShares, fromBalance) =
+            _boundCommon(totalSupply, totalShares, fromShares, /* sharesRatio */ 0);
+        feeRate = BasisPoints.wrap(
+            uint16(
+                bound(
+                    BasisPoints.unwrap(feeRate),
+                    BasisPoints.unwrap(Settings.MIN_FEE),
+                    BasisPoints.unwrap(Settings.MAX_FEE)
+                )
+            )
+        );
+
+        toShares = Shares.wrap(
+            bound(
+                Shares.unwrap(toShares),
+                0,
+                Shares.unwrap(totalShares - _oneTokenInShares(totalSupply, totalShares) - fromShares)
+            )
+        );
+        vm.assume(fromShares + toShares < totalShares.div(2));
+        Balance toBalance = toShares.toBalance(totalSupply, totalShares);
+
+        (Shares newToShares, Shares newTotalShares) =
+            ReflectMath.getTransferShares(feeRate, totalSupply, totalShares, fromShares, toShares);
+
+        assertGe(Shares.unwrap(newToShares), Shares.unwrap(toShares), "to shares decreased");
+        assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
+        assertEq(
+            Shares.unwrap(totalShares - newTotalShares),
+            Shares.unwrap(fromShares + toShares - newToShares),
+            "shares delta"
+        );
+
+        Balance newToBalance = newToShares.toBalance(totalSupply, newTotalShares);
+        Balance expectedNewToBalance = toBalance + fromBalance - castUp(scale(fromBalance, feeRate));
+        //Balance expectedNewToBalance = toBalance + cast(scale(fromBalance, BASIS - feeRate));
+        assertEq(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalance), "newToBalance");
     }
 
     function testDeliver(
@@ -145,7 +204,7 @@ contract ReflectMathTest is Test {
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares));
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares));
 
-        Balance newFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
+        Balance newFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
         Balance expectedNewFromBalance = fromBalance - amount;
 
         assertEq(
