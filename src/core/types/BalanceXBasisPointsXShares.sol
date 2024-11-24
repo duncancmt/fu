@@ -32,7 +32,7 @@ library BalanceXBasisPointsXSharesArithmetic {
         pure
         returns (BalanceXBasisPointsXShares)
     {
-        return cast(cast(r).osub(cast(x), cast(y)));
+        return cast(cast(r).oadd(cast(x), cast(y)));
     }
 
     function osub(BalanceXBasisPointsXShares r, BalanceXBasisPointsXShares x, BalanceXBasisPointsXShares y)

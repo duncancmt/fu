@@ -26,7 +26,7 @@ function tmp() pure returns (BalanceXShares) {
 
 library BalanceXSharesArithmetic {
     function oadd(BalanceXShares r, BalanceXShares x, BalanceXShares y) internal pure returns (BalanceXShares) {
-        return cast(cast(r).osub(cast(x), cast(y)));
+        return cast(cast(r).oadd(cast(x), cast(y)));
     }
 
     function osub(BalanceXShares r, BalanceXShares x, BalanceXShares y) internal pure returns (BalanceXShares) {

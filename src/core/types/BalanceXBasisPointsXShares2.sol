@@ -28,7 +28,7 @@ function tmp() pure returns (BalanceXBasisPointsXShares2) {
 
 library BalanceXBasisPointsXShares2Arithmetic {
     function oadd(BalanceXBasisPointsXShares2 r, BalanceXBasisPointsXShares2 x, BalanceXBasisPointsXShares2 y) internal pure returns (BalanceXBasisPointsXShares2) {
-        return cast(cast(r).osub(cast(x), cast(y)));
+        return cast(cast(r).oadd(cast(x), cast(y)));
     }
 
     function osub(BalanceXBasisPointsXShares2 r, BalanceXBasisPointsXShares2 x, BalanceXBasisPointsXShares2 y) internal pure returns (BalanceXBasisPointsXShares2) {
