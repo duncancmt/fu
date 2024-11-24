@@ -233,7 +233,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             emit Transfer(
                 to,
                 address(0),
-                (oldPairBalance - newToShares.toCrazyBalance(pair_, cachedTotalSupply, newTotalShares)).toExternal()
+                (oldPairBalance - cachedToShares.toCrazyBalance(pair_, cachedTotalSupply, cachedTotalShares)).toExternal()
             );
             _sharesOf[to] = cachedToShares;
             _totalShares = cachedTotalShares;
