@@ -123,6 +123,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             totalShares_ = totalShares_ - (shares - whaleLimit);
             shares = whaleLimit;
         }
+        return (shares, totalShares_);
     }
 
     function _loadAccount(address account) internal view returns (Shares, Shares) {
@@ -475,6 +476,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             }
             return false;
         }
+
         if (amount == balance) {
             cachedTotalShares = cachedTotalShares - shares;
             shares = Shares.wrap(0);
@@ -482,6 +484,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             (shares, cachedTotalShares) =
                 ReflectMath.getDeliverShares(amount.toBalance(from), cachedTotalSupply, cachedTotalShares, shares);
         }
+
         _sharesOf[from] = shares;
         _totalShares = cachedTotalShares;
         emit Transfer(from, address(0), amount.toExternal());
