@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-type BasisPoints is uint16;
+/// This type is given as `uint256` for efficiency, but it is capped at 10_000
+/// (14 bits).
+type BasisPoints is uint256;
 
 BasisPoints constant BASIS = BasisPoints.wrap(10_000);
 

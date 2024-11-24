@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+/// This type is given as `uint256` for efficiency, but it is capped at `type(uint144).max`.
 type Balance is uint256;
 
 function __add(Balance a, Balance b) pure returns (Balance) {
