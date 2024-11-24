@@ -110,4 +110,12 @@ library ReflectMath {
         newFromShares = newFromShares.inc(condition);
         newTotalShares = newTotalShares.inc(condition);
     }
+
+    function getBurnShares(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
+        internal
+        view
+        returns (Shares newFromShares, Shares newTotalShares, Balance newTotalSupply)
+    {
+        revert("unimplemented");
+    }
 }

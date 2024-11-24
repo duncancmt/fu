@@ -86,8 +86,6 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         } catch {
             require(pair == FACTORY.getPair(WETH, IERC20(address(this))));
         }
-        // TODO: there is a significant risk that `pair` will become a
-        // "whale". We should add a provision for fixing that
         pair.mint(DEAD);
     }
 
@@ -116,18 +114,6 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return true;
     }
 
-    function _loadAccount(address account) internal view returns (Shares, Shares) {
-        Shares shares = _sharesOf[account];
-        Shares cachedTotalShares = _totalShares;
-        unchecked {
-            Shares whaleLimit = cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - Shares.wrap(1);
-            if (shares > whaleLimit) {
-                cachedTotalShares = cachedTotalShares - (shares - whaleLimit);
-                shares = whaleLimit;
-            }
-        }
-        return (shares, cachedTotalShares);
-    }
 
     function _scaleDown(Shares shares, address account, Balance totalSupply_, Shares totalShares_)
         internal
@@ -144,12 +130,24 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         }
     }
 
+    function _applyWhaleLimit(Shares shares, Shares totalShares_) internal pure returns (Shares, Shares) {
+        Shares whaleLimit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - Shares.wrap(1);
+        if (shares > whaleLimit) {
+            totalShares_ = totalShares_ - (shares - whaleLimit);
+            shares = whaleLimit;
+        }
+    }
+
     function _scaleUp(Balance balance, address account) internal pure returns (Balance) {
         unchecked {
             // Checking for overflow in the multiplication is unnecessary. Checking for division by
             // zero is required.
             return Balance.wrap(Balance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR));
         }
+    }
+
+    function _loadAccount(address account) internal view returns (Shares, Shares) {
+        return _applyWhaleLimit(_sharesOf[account], _totalShares);
     }
 
     function _balanceOf(address account) internal view returns (Balance, Shares, Balance, Shares) {
@@ -197,12 +195,15 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         (Balance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
             _balanceOf(from);
         Shares cachedToShares = _sharesOf[to];
+        address pair_ = address(pair);
+        if (to == pair_) {
+            (cachedToShares, cachedTotalShares) = _applyWhaleLimit(cachedToShares, cachedTotalShares);
+        }
 
-        if (cachedToShares < cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
+        if (cachedToShares >= cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
             // anti-whale (also because the reflection math breaks down)
             // we have to check this twice to ensure no underflow in the reflection math
             if (_check()) {
-                // TODO: maybe do a fallback to "normal" transfers if the recipient is the pair?
                 revert ERC20InvalidReceiver(to);
             }
             return false;
@@ -215,26 +216,47 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             return false;
         }
 
+        BasisPoints feeRate = _fee();
+        // TODO: use shares version of getTransferShares when amount == fromBalance
         (Shares newFromShares, Shares newToShares, Shares newTotalShares) = ReflectMath.getTransferShares(
-            _scaleUp(amount, from), _fee(), cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+            _scaleUp(amount, from), feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
         );
         if (amount == fromBalance) {
             // Burn any dust left over if `from` is sending the whole balance
+            // TODO: add an overload of getTransferShares that takes a shares argument instead of an amount argument
+            // TODO: if we didn't do the above, then the ordering of this modification with the anti-whale check (and attendant modification of `pair_`'s balance) would be wrong
             newTotalShares = newTotalShares - newFromShares;
             newFromShares = Shares.wrap(0);
         }
 
         if (newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
-            if (_check()) {
-                // TODO: maybe make this a new error? It's not exactly an invalid recipient, it's an
-                // invalid (too high) transfer amount
-                revert ERC20InvalidReceiver(to);
+            if (to != pair_) {
+                if (_check()) {
+                    // TODO: maybe make this a new error? It's not exactly an invalid recipient, it's an
+                    // invalid (too high) transfer amount
+                    revert ERC20InvalidReceiver(to);
+                }
+                return false;
             }
-            return false;
+
+        // === EFFECTS ARE ALLOWED ONLY FROM HERE DOWN ===
+            Balance oldPairBalance = _scaleDown(cachedToShares, pair_, cachedTotalSupply, cachedTotalShares);
+            (cachedToShares, cachedTotalShares, cachedTotalSupply) =
+                ReflectMath.getBurnShares(castUp(scale(amount, BASIS - feeRate)), cachedTotalSupply, cachedTotalShares, cachedToShares);
+
+            emit Transfer(to, address(0), (oldPairBalance - _scaleDown(newToShares, pair_, cachedTotalSupply, newTotalShares)).toExternal());
+            _sharesOf[to] = cachedToShares;
+            _totalShares = cachedTotalShares;
+            _totalSupply = cachedTotalSupply;
+
+            IUniswapV2Pair(pair_).sync();
+            // TODO: use shares version of getTransferShares when amount == fromBalance
+            (Shares newFromShares, Shares newToShares, Shares newTotalShares) = ReflectMath.getTransferShares(
+                _scaleUp(amount, from), feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+            );
         }
 
-        // All effects go here
-        unchecked {
+        {
             // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
             // units as if it were held by `from`
             Balance transferAmount = _scaleDown(newToShares, from, cachedTotalSupply, newTotalShares)
@@ -247,11 +269,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         _sharesOf[to] = newToShares;
         _totalShares = newTotalShares;
 
-        {
-            address pair_ = address(pair);
-            if (!(from == pair_ || to == pair_)) {
-                IUniswapV2Pair(pair_).sync();
-            }
+        if (!(from == pair_ || to == pair_)) {
+            IUniswapV2Pair(pair_).sync();
         }
 
         return true;
@@ -504,6 +523,9 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return _success();
     }
 
+    // TODO: a better solution would be to maintain a list of whales and keeping them under the
+    // limit. This doesn't present a DoS vulnerability because the definition of a whale is a
+    // proportion of the total shares, thus the maximum number of whales is that proportion
     function punishWhale(address whale) external returns (bool) {
         (_sharesOf[whale], _totalShares) = _loadAccount(whale);
         IUniswapV2Pair pair_ = pair;
