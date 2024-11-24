@@ -201,16 +201,13 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         Shares newToShares;
         Shares newTotalShares;
         if (amount == fromBalance) {
-            (newToShares, newTotalShares) = ReflectMath.getTransferShares(feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+            (newToShares, newTotalShares) = ReflectMath.getTransferShares(
+                feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+            );
             newFromShares = Shares.wrap(0);
         } else {
             (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                amount.toBalance(from),
-                feeRate,
-                cachedTotalSupply,
-                cachedTotalShares,
-                cachedFromShares,
-                cachedToShares
+                amount.toBalance(from), feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
             );
         }
 
@@ -242,7 +239,9 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             IUniswapV2Pair(pair_).sync();
 
             if (amount == fromBalance) {
-                (newToShares, newTotalShares) = ReflectMath.getTransferShares(feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+                (newToShares, newTotalShares) = ReflectMath.getTransferShares(
+                    feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                );
                 newFromShares = Shares.wrap(0);
             } else {
                 (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(

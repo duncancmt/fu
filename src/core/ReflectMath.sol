@@ -94,7 +94,8 @@ library ReflectMath {
         Shares toShares
     ) internal pure returns (Shares newToShares, Shares newTotalShares) {
         Shares uninvolvedShares = totalShares - fromShares - toShares;
-        Shares2XBasisPoints n = alloc5().omul(scale(fromShares, (BASIS - feeRate)) + scale(toShares, BASIS), uninvolvedShares);
+        Shares2XBasisPoints n =
+            alloc5().omul(scale(fromShares, (BASIS - feeRate)) + scale(toShares, BASIS), uninvolvedShares);
         SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, feeRate);
         newToShares = n.div(d);
         newTotalShares = totalShares + (newToShares - toShares) - fromShares;
