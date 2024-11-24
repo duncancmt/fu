@@ -296,7 +296,11 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return _allowance[owner][spender].saturatingAdd(temporaryAllowance).toExternal();
     }
 
-    function _checkAllowance(address owner, CrazyBalance amount) internal view returns (bool, CrazyBalance, CrazyBalance) {
+    function _checkAllowance(address owner, CrazyBalance amount)
+        internal
+        view
+        returns (bool, CrazyBalance, CrazyBalance)
+    {
         CrazyBalance currentTempAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, msg.sender);
         if (currentTempAllowance >= amount) {
             return (true, currentTempAllowance, ZERO);
@@ -311,9 +315,12 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         return (false, ZERO, ZERO);
     }
 
-    function _spendAllowance(address owner, CrazyBalance amount, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance)
-        internal
-    {
+    function _spendAllowance(
+        address owner,
+        CrazyBalance amount,
+        CrazyBalance currentTempAllowance,
+        CrazyBalance currentAllowance
+    ) internal {
         if (currentTempAllowance.isMax()) {
             // TODO: maybe remove this branch
             return;
@@ -335,7 +342,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
-        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) = _checkAllowance(from, amount.fromExternal());
+        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
+            _checkAllowance(from, amount.fromExternal());
         if (!success) {
             return false;
         }
@@ -490,7 +498,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function burnFrom(address from, uint256 amount) external returns (bool) {
-        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) = _checkAllowance(from, amount.fromExternal());
+        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
+            _checkAllowance(from, amount.fromExternal());
         if (!success) {
             return false;
         }
@@ -502,7 +511,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function deliverFrom(address from, uint256 amount) external returns (bool) {
-        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) = _checkAllowance(from, amount.fromExternal());
+        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
+            _checkAllowance(from, amount.fromExternal());
         if (!success) {
             return false;
         }
