@@ -5,7 +5,7 @@ import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
 import {Shares} from "./types/Shares.sol";
 import {Balance} from "./types/Balance.sol";
 import {scale} from "./types/SharesXBasisPoints.sol";
-import {scale, castUp} from "./types/BalanceXBasisPoints.sol";
+import {scale, cast, castUp} from "./types/BalanceXBasisPoints.sol";
 import {BalanceXShares, tmp, alloc, SharesToBalance} from "./types/BalanceXShares.sol";
 import {BalanceXShares2, tmp as tmp2, alloc as alloc2} from "./types/BalanceXShares2.sol";
 import {BalanceXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "./types/BalanceXBasisPointsXShares.sol";
@@ -99,6 +99,43 @@ library ReflectMath {
         SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, feeRate);
         newToShares = n.div(d);
         newTotalShares = totalShares + (newToShares - toShares) - fromShares;
+
+        /*
+        // Fixup rounding error
+        // TODO: use divMulti
+        Balance beforeFromBalance = fromShares.toBalance(totalSupply, totalShares);
+        Balance beforeToBalance = toShares.toBalance(totalSupply, totalShares);
+        Balance afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
+        Balance expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, feeRate));
+        //Balance expectedAfterToBalance = beforeToBalance + cast(scale(beforeFromBalance, BASIS - feeRate));
+
+        console.log("       fromBalance", Balance.unwrap(beforeFromBalance));
+        console.log("         toBalance", Balance.unwrap(afterToBalance));
+        console.log("expected toBalance", Balance.unwrap(expectedAfterToBalance));
+
+        {
+            bool condition = afterToBalance > expectedAfterToBalance;
+            if (condition) {
+                console.log("round down");
+            }
+            console.log(Shares.unwrap(newToShares));
+            console.log(Shares.unwrap(newTotalShares));
+            newToShares = newToShares.dec(condition);
+            newTotalShares = newTotalShares.dec(condition);
+            console.log(Shares.unwrap(newToShares));
+            console.log(Shares.unwrap(newTotalShares));
+        }
+        {
+            bool condition = afterToBalance < expectedAfterToBalance;
+            if (condition) {
+                console.log("round up");
+            }
+            newToShares = newToShares.inc(condition);
+            newTotalShares = newTotalShares.inc(condition);
+        }
+        */
+
+        console.log("     new toBalance", Balance.unwrap(newToShares.toBalance(totalSupply, newTotalShares)));
     }
 
     function getDeliverShares(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)

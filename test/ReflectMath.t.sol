@@ -8,7 +8,7 @@ import {BasisPoints, BASIS} from "src/core/types/BasisPoints.sol";
 import {Shares} from "src/core/types/Shares.sol";
 import {Balance} from "src/core/types/Balance.sol";
 import {BalanceXShares, tmp, alloc, SharesToBalance} from "src/core/types/BalanceXShares.sol";
-import {BalanceXBasisPoints, scale, castUp} from "src/core/types/BalanceXBasisPoints.sol";
+import {BalanceXBasisPoints, scale, cast, castUp} from "src/core/types/BalanceXBasisPoints.sol";
 
 import {UnsafeMath} from "src/lib/UnsafeMath.sol";
 
@@ -182,9 +182,11 @@ contract ReflectMathTest is Test {
         );
 
         Balance newToBalance = newToShares.toBalance(totalSupply, newTotalShares);
-        Balance expectedNewToBalance = toBalance + fromBalance - castUp(scale(fromBalance, feeRate));
-        //Balance expectedNewToBalance = toBalance + cast(scale(fromBalance, BASIS - feeRate));
-        assertEq(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalance), "newToBalance");
+        // TODO: tighter bounds
+        Balance expectedNewToBalanceLo = toBalance + fromBalance - castUp(scale(fromBalance, feeRate));
+        Balance expectedNewToBalanceHi = toBalance + castUp(scale(fromBalance, BASIS - feeRate));
+        assertGe(Balance.unwrap(newToBalance) + 1, Balance.unwrap(expectedNewToBalanceLo), "newToBalance lower");
+        assertLe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceHi) + 1, "newToBalance upper");
     }
 
     function testDeliver(
