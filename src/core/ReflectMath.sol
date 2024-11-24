@@ -6,8 +6,10 @@ import {Shares} from "./types/Shares.sol";
 import {Balance} from "./types/Balance.sol";
 import {scale} from "./types/SharesXBasisPoints.sol";
 import {scale, castUp} from "./types/BalanceXBasisPoints.sol";
-import {BalanceXShares, tmp, alloc, cast} from "./types/BalanceXShares.sol";
-import {BalanceXShares2, tmp as tmp2, alloc as alloc2, cast} from "./types/BalanceXShares2.sol";
+import {BalanceXShares, tmp, alloc} from "./types/BalanceXShares.sol";
+import {BalanceXShares2, tmp as tmp2, alloc as alloc2} from "./types/BalanceXShares2.sol";
+import {BalanceXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "./types/BalanceXBasisPointsXShares.sol";
+import {BalanceXBasisPointsXShares2, tmp as tmp4, alloc as alloc4} from "./types/BalanceXBasisPointsXShares2.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
@@ -16,6 +18,7 @@ import {console} from "@forge-std/console.sol";
 library ReflectMath {
     using UnsafeMath for uint256;
 
+    // TODO: reorder arguments for clarity/consistency
     function getTransferShares(
         Balance amount,
         BasisPoints feeRate,
@@ -29,19 +32,23 @@ library ReflectMath {
         BalanceXShares t1 = alloc().omul(fromShares, totalSupply);
         BalanceXShares t2 = alloc().omul(amount, totalShares);
         BalanceXShares t3 = alloc().osub(t1, t2);
-        BalanceXShares2 n1 = alloc2().omul(t3, scale(uninvolvedShares, BASIS));
-        BalanceXShares t4 = alloc().omul(totalSupply, scale(uninvolvedShares, BASIS));
-        BalanceXShares t5 = alloc().omul(amount, scale(totalShares, feeRate));
-        BalanceXShares d = alloc().oadd(t4, t5);
-        BalanceXShares t6 = alloc().omul(amount, scale(totalShares, BASIS - feeRate));
-        BalanceXShares t7 = alloc().omul(scale(toShares, BASIS), totalSupply);
-        BalanceXShares t8 = alloc().oadd(t6, t7);
-        BalanceXShares2 n2 = alloc2().omul(t8, uninvolvedShares);
+        BalanceXBasisPointsXShares2 n1 = alloc4().omul(t3, scale(uninvolvedShares, BASIS));
+        BalanceXBasisPointsXShares t4 = alloc3().omul(totalSupply, scale(uninvolvedShares, BASIS));
+        BalanceXBasisPointsXShares t5 = alloc3().omul(amount, scale(totalShares, feeRate));
+        BalanceXBasisPointsXShares d = alloc3().oadd(t4, t5);
+        BalanceXBasisPointsXShares t6 = alloc3().omul(amount, scale(totalShares, BASIS - feeRate));
+        BalanceXBasisPointsXShares t7 = alloc3().omul(scale(toShares, BASIS), totalSupply);
+        BalanceXBasisPointsXShares t8 = alloc3().oadd(t6, t7);
+        BalanceXBasisPointsXShares2 n2 = alloc4().omul(t8, uninvolvedShares);
 
+        newFromShares = n1.div(d);
+        newToShares = n2.div(d);
+        /*
         {
             (uint256 x, uint256 y) = cast(n1).divMulti(cast(n2), cast(d));
             (newFromShares, newToShares) = (Shares.wrap(x), Shares.wrap(y));
         }
+        */
         // console.log("    fromShares", fromShares);
         // console.log(" newFromShares", newFromShares);
         // console.log("      toShares", toShares);
