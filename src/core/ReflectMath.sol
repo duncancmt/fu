@@ -10,6 +10,8 @@ import {BalanceXShares, tmp, alloc, SharesToBalance} from "./types/BalanceXShare
 import {BalanceXShares2, tmp as tmp2, alloc as alloc2} from "./types/BalanceXShares2.sol";
 import {BalanceXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "./types/BalanceXBasisPointsXShares.sol";
 import {BalanceXBasisPointsXShares2, tmp as tmp4, alloc as alloc4} from "./types/BalanceXBasisPointsXShares2.sol";
+import {SharesXBasisPoints} from "./types/SharesXBasisPoints.sol";
+import {Shares2XBasisPoints, tmp as tmp5, alloc as alloc5} from "./types/Shares2XBasisPoints.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
@@ -82,6 +84,20 @@ library ReflectMath {
             newFromShares = newFromShares.inc(condition);
             newTotalShares = newTotalShares.inc(condition);
         }
+    }
+
+    function getTransferShares(
+        BasisPoints feeRate,
+        Balance totalSupply,
+        Shares totalShares,
+        Shares fromShares,
+        Shares toShares
+    ) internal pure returns (Shares newToShares, Shares newTotalShares) {
+        Shares uninvolvedShares = totalShares - fromShares - toShares;
+        Shares2XBasisPoints n = alloc5().omul(scale(fromShares, (BASIS - feeRate)) + scale(toShares, BASIS), uninvolvedShares);
+        SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, feeRate);
+        newToShares = n.div(d);
+        newTotalShares = totalShares + (newToShares - toShares) - fromShares;
     }
 
     function getDeliverShares(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)

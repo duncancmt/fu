@@ -196,23 +196,21 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         }
 
         BasisPoints feeRate = _fee();
-        // TODO: use shares version of getTransferShares when amount == fromBalance
-        (Shares newFromShares, Shares newToShares, Shares newTotalShares) = ReflectMath.getTransferShares(
-            amount == fromBalance
-                ? cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares)
-                : amount.toBalance(from),
-            feeRate,
-            cachedTotalSupply,
-            cachedTotalShares,
-            cachedFromShares,
-            cachedToShares
-        );
+        Shares newFromShares;
+        Shares newToShares;
+        Shares newTotalShares;
         if (amount == fromBalance) {
-            // Burn any dust left over if `from` is sending the whole balance
-            // TODO: add an overload of getTransferShares that takes a shares argument instead of an amount argument
-            // TODO: if we didn't do the above, then the ordering of this modification with the anti-whale check (and attendant modification of `pair_`'s balance) would be wrong
-            newTotalShares = newTotalShares - newFromShares;
+            (newToShares, newTotalShares) = ReflectMath.getTransferShares(feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
             newFromShares = Shares.wrap(0);
+        } else {
+            (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
+                amount.toBalance(from),
+                feeRate,
+                cachedTotalSupply,
+                cachedTotalShares,
+                cachedFromShares,
+                cachedToShares
+            );
         }
 
         if (newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
@@ -241,17 +239,20 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             _totalSupply = cachedTotalSupply;
 
             IUniswapV2Pair(pair_).sync();
-            // TODO: use shares version of getTransferShares when amount == fromBalance
-            (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                amount == fromBalance
-                    ? cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares)
-                    : amount.toBalance(from),
-                feeRate,
-                cachedTotalSupply,
-                cachedTotalShares,
-                cachedFromShares,
-                cachedToShares
-            );
+
+            if (amount == fromBalance) {
+                (newToShares, newTotalShares) = ReflectMath.getTransferShares(feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares);
+                newFromShares = Shares.wrap(0);
+            } else {
+                (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
+                    amount.toBalance(from),
+                    feeRate,
+                    cachedTotalSupply,
+                    cachedTotalShares,
+                    cachedFromShares,
+                    cachedToShares
+                );
+            }
         }
 
         {
