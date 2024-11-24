@@ -16,6 +16,10 @@ library CrazyBalanceAccessors {
     function toExternal(CrazyBalance x) internal pure returns (uint256) {
         return CrazyBalance.unwrap(x);
     }
+
+    function isMax(CrazyBalance x) internal pure returns (bool) {
+        return ~CrazyBalance.unwrap(x) == 0;
+    }
 }
 
 function fromExternal(uint256 x) pure returns (CrazyBalance) {
@@ -23,6 +27,8 @@ function fromExternal(uint256 x) pure returns (CrazyBalance) {
 }
 
 using CrazyBalanceAccessors for CrazyBalance global;
+
+CrazyBalance constant ZERO = CrazyBalance.wrap(0);
 
 function __add(CrazyBalance a, CrazyBalance b) pure returns (CrazyBalance) {
     unchecked {
@@ -73,6 +79,11 @@ using {
 
 library CrazyBalanceArithmetic {
     using UnsafeMath for uint256;
+
+    function saturatingAdd(CrazyBalance x, CrazyBalance y) internal pure returns (CrazyBalance) {
+        x = x + y;
+        return x < y ? CrazyBalance.wrap(type(uint256).max) : x;
+    }
 
     function toCrazyBalance(Shares shares, address account, Balance totalSupply, Shares totalShares)
         internal

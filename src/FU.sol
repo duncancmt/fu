@@ -12,7 +12,7 @@ import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
 import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
-import {CrazyBalance, fromExternal, CrazyBalanceArithmetic} from "./core/CrazyBalance.sol";
+import {CrazyBalance, fromExternal, ZERO, CrazyBalanceArithmetic} from "./core/CrazyBalance.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 
 import {BasisPoints, BASIS} from "./core/types/BasisPoints.sol";
@@ -37,7 +37,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     // TODO: use a user-defined type to separate shares-denominated values from balance-denominated values
     mapping(address => Shares) internal _sharesOf;
     mapping(address => uint256) public override nonces;
-    mapping(address => mapping(address => uint256)) internal _allowance;
+    mapping(address => mapping(address => CrazyBalance)) internal _allowance;
     Balance internal _totalSupply;
     Shares internal _totalShares;
     IUniswapV2Pair public immutable pair;
@@ -59,7 +59,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     // solc reserves a slot for it during storage layout generation. Solc 0.8.28
     // doesn't support declaring mappings in transient storage. It is ultimately
     // manipulated by the TransientStorageLayout base contract (in assembly)
-    mapping(address => mapping(address => uint256)) private _temporaryAllowance;
+    mapping(address => mapping(address => CrazyBalance)) private _temporaryAllowance;
 
     constructor(address[] memory initialHolders) payable {
         require(msg.value >= 1 ether);
@@ -283,77 +283,66 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
-        _allowance[msg.sender][spender] = amount;
+        _allowance[msg.sender][spender] = amount.fromExternal();
         emit Approval(msg.sender, spender, amount);
         return _success();
     }
 
     function allowance(address owner, address spender) external view returns (uint256) {
-        uint256 temporaryAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, spender);
-        if (~temporaryAllowance == 0) {
-            return temporaryAllowance;
+        CrazyBalance temporaryAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, spender);
+        if (temporaryAllowance.isMax()) {
+            return temporaryAllowance.toExternal();
         }
-        uint256 allowance_ = _allowance[owner][spender];
-        unchecked {
-            allowance_ += temporaryAllowance;
-            allowance_ = allowance_ < temporaryAllowance ? type(uint256).max : allowance_;
-        }
-        return allowance_;
+        return _allowance[owner][spender].saturatingAdd(temporaryAllowance).toExternal();
     }
 
-    function _checkAllowance(address owner, uint256 amount) internal view returns (bool, uint256, uint256) {
-        uint256 currentTempAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, msg.sender);
+    function _checkAllowance(address owner, CrazyBalance amount) internal view returns (bool, CrazyBalance, CrazyBalance) {
+        CrazyBalance currentTempAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, msg.sender);
         if (currentTempAllowance >= amount) {
-            return (true, currentTempAllowance, 0);
+            return (true, currentTempAllowance, ZERO);
         }
-        uint256 currentAllowance = _allowance[owner][msg.sender];
-        unchecked {
-            if (currentAllowance >= amount - currentTempAllowance) {
-                return (true, currentTempAllowance, currentAllowance);
-            }
+        CrazyBalance currentAllowance = _allowance[owner][msg.sender];
+        if (currentAllowance >= amount - currentTempAllowance) {
+            return (true, currentTempAllowance, currentAllowance);
         }
         if (_check()) {
-            revert ERC20InsufficientAllowance(msg.sender, currentAllowance, amount);
+            revert ERC20InsufficientAllowance(msg.sender, currentAllowance.toExternal(), amount.toExternal());
         }
-        return (false, 0, 0);
+        return (false, ZERO, ZERO);
     }
 
-    function _spendAllowance(address owner, uint256 amount, uint256 currentTempAllowance, uint256 currentAllowance)
+    function _spendAllowance(address owner, CrazyBalance amount, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance)
         internal
     {
-        if (~currentTempAllowance == 0) {
+        if (currentTempAllowance.isMax()) {
             // TODO: maybe remove this branch
             return;
         }
-        if (currentAllowance == 0) {
-            unchecked {
-                _setTemporaryAllowance(_temporaryAllowance, owner, msg.sender, currentTempAllowance - amount);
-            }
+        if (currentAllowance == ZERO) {
+            _setTemporaryAllowance(_temporaryAllowance, owner, msg.sender, currentTempAllowance - amount);
             return;
         }
-        if (currentTempAllowance != 0) {
-            unchecked {
-                amount -= currentTempAllowance;
-            }
-            _setTemporaryAllowance(_temporaryAllowance, owner, msg.sender, 0);
+        if (currentTempAllowance != ZERO) {
+            amount = amount - currentTempAllowance;
+            _setTemporaryAllowance(_temporaryAllowance, owner, msg.sender, ZERO);
         }
-        if (~currentAllowance == 0) {
+        if (currentAllowance.isMax()) {
             return;
         }
-        currentAllowance -= amount;
+        currentAllowance = currentAllowance - amount;
         _allowance[owner][msg.sender] = currentAllowance;
-        emit Approval(owner, msg.sender, currentAllowance);
+        emit Approval(owner, msg.sender, currentAllowance.toExternal());
     }
 
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
-        (bool success, uint256 currentTempAllowance, uint256 currentAllowance) = _checkAllowance(from, amount);
+        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) = _checkAllowance(from, amount.fromExternal());
         if (!success) {
             return false;
         }
         if (!_transfer(from, to, amount.fromExternal())) {
             return false;
         }
-        _spendAllowance(from, amount, currentTempAllowance, currentAllowance);
+        _spendAllowance(from, amount.fromExternal(), currentTempAllowance, currentAllowance);
         return _success();
     }
 
@@ -404,7 +393,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         if (signer != owner) {
             revert ERC2612InvalidSigner(signer, owner);
         }
-        _allowance[owner][spender] = amount;
+        _allowance[owner][spender] = amount.fromExternal();
         emit Approval(owner, spender, amount);
     }
 
@@ -429,7 +418,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
-        _setTemporaryAllowance(_temporaryAllowance, msg.sender, spender, amount);
+        _setTemporaryAllowance(_temporaryAllowance, msg.sender, spender, amount.fromExternal());
         return _success();
     }
 
@@ -501,26 +490,26 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function burnFrom(address from, uint256 amount) external returns (bool) {
-        (bool success, uint256 currentTempAllowance, uint256 currentAllowance) = _checkAllowance(from, amount);
+        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) = _checkAllowance(from, amount.fromExternal());
         if (!success) {
             return false;
         }
         if (!_burn(from, amount.fromExternal())) {
             return false;
         }
-        _spendAllowance(from, amount, currentTempAllowance, currentAllowance);
+        _spendAllowance(from, amount.fromExternal(), currentTempAllowance, currentAllowance);
         return _success();
     }
 
     function deliverFrom(address from, uint256 amount) external returns (bool) {
-        (bool success, uint256 currentTempAllowance, uint256 currentAllowance) = _checkAllowance(from, amount);
+        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) = _checkAllowance(from, amount.fromExternal());
         if (!success) {
             return false;
         }
         if (!_deliver(from, amount.fromExternal())) {
             return false;
         }
-        _spendAllowance(from, amount, currentTempAllowance, currentAllowance);
+        _spendAllowance(from, amount.fromExternal(), currentTempAllowance, currentAllowance);
         return _success();
     }
 
