@@ -42,9 +42,9 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     using {toVotes} for Shares;
     using LibCheckpoints for mapping(address account => Checkpoint[]);
 
-    mapping(address => Shares) internal _sharesOf;
-    mapping(address => uint256) public override(IERC2612, IERC5805) nonces;
-    mapping(address => mapping(address => CrazyBalance)) internal _allowance;
+    mapping(address account => Shares) internal _sharesOf;
+    mapping(address account => uint256) public override(IERC2612, IERC5805) nonces;
+    mapping(address owner => mapping(address spender => CrazyBalance)) internal _allowance;
     Balance internal _totalSupply;
     Shares internal _totalShares;
     mapping(address account => address) public override delegates;
@@ -70,7 +70,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     // solc reserves a slot for it during storage layout generation. Solc 0.8.28
     // doesn't support declaring mappings in transient storage. It is ultimately
     // manipulated by the TransientStorageLayout base contract (in assembly)
-    mapping(address => mapping(address => CrazyBalance)) private _temporaryAllowance;
+    mapping(address owner => mapping(address spender => CrazyBalance)) private _temporaryAllowance;
 
     constructor(address[] memory initialHolders) payable {
         require(msg.value >= 1 ether);
