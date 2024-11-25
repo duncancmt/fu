@@ -29,12 +29,11 @@ contract ReflectMathTest is Boilerplate, Test {
         return oneTokenInShares;
     }
 
-    function _boundCommon(
-        Balance totalSupply,
-        Shares totalShares,
-        Shares fromShares,
-        uint256 sharesRatio
-    ) internal pure returns (Balance, Shares, Shares, Balance) {
+    function _boundCommon(Balance totalSupply, Shares totalShares, Shares fromShares, uint256 sharesRatio)
+        internal
+        pure
+        returns (Balance, Shares, Shares, Balance)
+    {
         totalSupply = Balance.wrap(
             bound(Balance.unwrap(totalSupply), 10 ** Settings.DECIMALS + 1, Balance.unwrap(Settings.INITIAL_SUPPLY))
         );
@@ -71,7 +70,8 @@ contract ReflectMathTest is Boilerplate, Test {
         uint256 sharesRatio
     ) internal pure returns (Balance, Shares, Shares, Balance, Balance) {
         Balance fromBalance;
-        (totalSupply, totalShares, fromShares, fromBalance) = _boundCommon(totalSupply, totalShares, fromShares, sharesRatio);
+        (totalSupply, totalShares, fromShares, fromBalance) =
+            _boundCommon(totalSupply, totalShares, fromShares, sharesRatio);
         amount = Balance.wrap(bound(Balance.unwrap(amount), 1, Balance.unwrap(fromBalance)));
         return (totalSupply, totalShares, fromShares, fromBalance, amount);
     }
