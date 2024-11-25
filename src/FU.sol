@@ -12,11 +12,13 @@ import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
 import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
-import {CrazyBalance, fromExternal, ZERO, CrazyBalanceArithmetic} from "./core/CrazyBalance.sol";
+import {CrazyBalance, fromExternal, ZERO as ZERO_BALANCE, CrazyBalanceArithmetic} from "./core/CrazyBalance.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 
+// TODO: move all user-defined types into ./types (instead of ./core/types)
 import {BasisPoints, BASIS} from "./core/types/BasisPoints.sol";
-import {Shares} from "./core/types/Shares.sol";
+import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./core/types/Shares.sol";
+// TODO: rename Balance to Tokens (pretty big refactor)
 import {Balance} from "./core/types/Balance.sol";
 import {SharesToBalance} from "./core/types/BalanceXShares.sol";
 
@@ -122,7 +124,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function _applyWhaleLimit(Shares shares, Shares totalShares_) internal pure returns (Shares, Shares) {
-        Shares whaleLimit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - Shares.wrap(1);
+        Shares whaleLimit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         if (shares > whaleLimit) {
             totalShares_ = totalShares_ - (shares - whaleLimit);
             shares = whaleLimit;
@@ -207,7 +209,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             (newToShares, newTotalShares) = ReflectMath.getTransferShares(
                 feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
             );
-            newFromShares = Shares.wrap(0);
+            newFromShares = ZERO_SHARES;
         } else {
             (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
                 amount.toBalance(from), feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
@@ -245,7 +247,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
                 (newToShares, newTotalShares) = ReflectMath.getTransferShares(
                     feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
                 );
-                newFromShares = Shares.wrap(0);
+                newFromShares = ZERO_SHARES;
             } else {
                 (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
                     amount.toBalance(from),
@@ -307,7 +309,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     {
         CrazyBalance currentTempAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, msg.sender);
         if (currentTempAllowance >= amount) {
-            return (true, currentTempAllowance, ZERO);
+            return (true, currentTempAllowance, ZERO_BALANCE);
         }
         CrazyBalance currentAllowance = _allowance[owner][msg.sender];
         if (currentAllowance >= amount - currentTempAllowance) {
@@ -316,7 +318,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         if (_check()) {
             revert ERC20InsufficientAllowance(msg.sender, currentAllowance.toExternal(), amount.toExternal());
         }
-        return (false, ZERO, ZERO);
+        return (false, ZERO_BALANCE, ZERO_BALANCE);
     }
 
     function _spendAllowance(
@@ -329,13 +331,13 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             // TODO: maybe remove this branch
             return;
         }
-        if (currentAllowance == ZERO) {
+        if (currentAllowance == ZERO_BALANCE) {
             _setTemporaryAllowance(_temporaryAllowance, owner, msg.sender, currentTempAllowance - amount);
             return;
         }
-        if (currentTempAllowance != ZERO) {
+        if (currentTempAllowance != ZERO_BALANCE) {
             amount = amount - currentTempAllowance;
-            _setTemporaryAllowance(_temporaryAllowance, owner, msg.sender, ZERO);
+            _setTemporaryAllowance(_temporaryAllowance, owner, msg.sender, ZERO_BALANCE);
         }
         if (currentAllowance.isMax()) {
             return;
@@ -450,7 +452,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             // un-crazy balance of `from` and deduct *THAT* instead.
             cachedTotalSupply = cachedTotalSupply - shares.toBalance(cachedTotalSupply, cachedTotalShares);
             cachedTotalShares = cachedTotalShares - shares;
-            shares = Shares.wrap(0);
+            shares = ZERO_SHARES;
         } else {
             (shares, cachedTotalShares, cachedTotalSupply) =
                 ReflectMath.getBurnShares(amount.toBalance(from), cachedTotalSupply, cachedTotalShares, shares);
@@ -483,7 +485,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
 
         if (amount == balance) {
             cachedTotalShares = cachedTotalShares - shares;
-            shares = Shares.wrap(0);
+            shares = ZERO_SHARES;
         } else {
             (shares, cachedTotalShares) =
                 ReflectMath.getDeliverShares(amount.toBalance(from), cachedTotalSupply, cachedTotalShares, shares);

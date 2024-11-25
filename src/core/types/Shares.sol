@@ -8,6 +8,9 @@ import {UnsafeMath} from "../../lib/UnsafeMath.sol";
 /// This type is given as `uint256` for efficiency, but it is capped at `type(uint1176).max`.
 type Shares is uint256;
 
+Shares constant ZERO = Shares.wrap(0);
+Shares constant ONE = Shares.wrap(1);
+
 library SharesUnsafeMathAdapter {
     using UnsafeMath for uint256;
 
