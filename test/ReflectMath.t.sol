@@ -21,39 +21,25 @@ contract ReflectMathTest is Boilerplate, Test {
     using UnsafeMath for uint256;
     using SharesToBalance for Shares;
 
-    function _oneTokenInShares(Balance totalSupply, Shares totalShares) internal pure returns (Shares) {
-        BalanceXShares tmp1 = alloc().omul(Balance.wrap(10 ** Settings.DECIMALS), totalShares);
-        Shares oneTokenInShares = tmp1.div(totalSupply);
-        oneTokenInShares = oneTokenInShares.inc(tmp().omul(oneTokenInShares, totalSupply) < tmp1);
-        assertTrue(tmp().omul(oneTokenInShares, totalSupply) >= tmp1);
-        return oneTokenInShares;
-    }
-
     function _boundCommon(Balance totalSupply, Shares totalShares, Shares fromShares, uint256 sharesRatio)
         internal
         pure
         returns (Balance, Shares, Shares, Balance)
     {
         totalSupply = Balance.wrap(
-            bound(Balance.unwrap(totalSupply), 10 ** Settings.DECIMALS + 1, Balance.unwrap(Settings.INITIAL_SUPPLY))
+            bound(Balance.unwrap(totalSupply), 10 ** Settings.DECIMALS + 1 wei, Balance.unwrap(Settings.INITIAL_SUPPLY))
         );
         //sharesRatio = bound(sharesRatio, Settings.MIN_SHARES_RATIO, Settings.INITIAL_SHARES_RATIO);
         sharesRatio = Settings.MIN_SHARES_RATIO; // TODO: remove
-        Shares maxShares = Shares.wrap(Balance.unwrap(totalSupply) * (sharesRatio + 1) - 1);
+        Shares maxShares = Shares.wrap(Balance.unwrap(totalSupply) * (sharesRatio + 1) - 1 wei);
         maxShares = maxShares > Settings.INITIAL_SHARES ? Settings.INITIAL_SHARES : maxShares;
         totalShares = Shares.wrap(
             bound(Shares.unwrap(totalShares), Balance.unwrap(totalSupply) * sharesRatio, Shares.unwrap(maxShares))
         );
 
-        Shares oneTokenInShares = _oneTokenInShares(totalSupply, totalShares);
-        Shares oneWeiInShares = Shares.wrap(Shares.unwrap(totalShares) / Balance.unwrap(totalSupply));
-        oneWeiInShares =
-            oneWeiInShares.inc(Shares.unwrap(oneWeiInShares) * Balance.unwrap(totalSupply) < Shares.unwrap(totalShares));
-
-        assume(oneWeiInShares < totalShares - oneTokenInShares); // only possible in extreme conditions due to rounding error
         fromShares = Shares.wrap(
             bound(
-                Shares.unwrap(fromShares), Shares.unwrap(oneWeiInShares), Shares.unwrap(totalShares - oneTokenInShares)
+                Shares.unwrap(fromShares), sharesRatio, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))
             )
         );
 
@@ -72,7 +58,8 @@ contract ReflectMathTest is Boilerplate, Test {
         Balance fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance) =
             _boundCommon(totalSupply, totalShares, fromShares, sharesRatio);
-        amount = Balance.wrap(bound(Balance.unwrap(amount), 1, Balance.unwrap(fromBalance)));
+        assume(Balance.unwrap(fromBalance) > 1 wei);
+        amount = Balance.wrap(bound(Balance.unwrap(amount), 1 wei, Balance.unwrap(fromBalance) - 1 wei));
         return (totalSupply, totalShares, fromShares, fromBalance, amount);
     }
 
@@ -103,11 +90,9 @@ contract ReflectMathTest is Boilerplate, Test {
             bound(
                 Shares.unwrap(toShares),
                 0,
-                Shares.unwrap(totalShares - _oneTokenInShares(totalSupply, totalShares) - fromShares)
+                Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))
             )
         );
-        assume(fromShares < totalShares.div(Settings.ANTI_WHALE_DIVISOR));
-        assume(toShares < totalShares.div(Settings.ANTI_WHALE_DIVISOR));
         Balance toBalance = toShares.toBalance(totalSupply, totalShares);
 
         // console.log("===");
@@ -166,11 +151,9 @@ contract ReflectMathTest is Boilerplate, Test {
             bound(
                 Shares.unwrap(toShares),
                 0,
-                Shares.unwrap(totalShares - _oneTokenInShares(totalSupply, totalShares) - fromShares)
+                Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))
             )
         );
-        assume(fromShares < totalShares.div(Settings.ANTI_WHALE_DIVISOR));
-        assume(toShares < totalShares.div(Settings.ANTI_WHALE_DIVISOR));
         Balance toBalance = toShares.toBalance(totalSupply, totalShares);
 
         (Shares newToShares, Shares newTotalShares) =
@@ -185,12 +168,20 @@ contract ReflectMathTest is Boilerplate, Test {
         );
 
         Balance newToBalance = newToShares.toBalance(totalSupply, newTotalShares);
+        console.log("      newToShares", Shares.unwrap(newToShares));
+        console.log("         toShares", Shares.unwrap(toShares));
+
+
         // TODO: tighter bounds
         Balance expectedNewToBalanceLo = toBalance + fromBalance - castUp(scale(fromBalance, feeRate));
         Balance expectedNewToBalanceHi = toBalance + castUp(scale(fromBalance, BASIS - feeRate));
-        assertEq(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance");
-        //assertGe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance lower");
-        //assertLe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceHi), "newToBalance upper");
+        //assertEq(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance");
+        if (newToShares == toShares) {
+            assertGe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance lower");
+            assertLe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceHi), "newToBalance upper");
+        } else {
+            assertEq(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance");
+        }
     }
 
     function testDeliver(

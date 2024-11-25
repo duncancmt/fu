@@ -107,6 +107,7 @@ library ReflectMath {
         newTotalShares = n.div(d);
         newToShares = toShares + fromShares - (totalShares - newTotalShares);
 
+        console.log("           feeRate", BasisPoints.unwrap(feeRate));
         console.log("       totalSupply", Balance.unwrap(totalSupply));
         console.log("       totalShares", Shares.unwrap(totalShares));
         console.log("        fromShares", Shares.unwrap(fromShares));
@@ -122,7 +123,8 @@ library ReflectMath {
         Balance expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, feeRate));
         //Balance expectedAfterToBalance = beforeToBalance + cast(scale(beforeFromBalance, BASIS - feeRate));
 
-        console.log("       fromBalance", Balance.unwrap(beforeFromBalance));
+        console.log("before fromBalance", Balance.unwrap(beforeFromBalance));
+        console.log("  before toBalance", Balance.unwrap(beforeToBalance));
         console.log("         toBalance", Balance.unwrap(afterToBalance));
         console.log("expected toBalance", Balance.unwrap(expectedAfterToBalance));
 
@@ -138,7 +140,7 @@ library ReflectMath {
             newTotalShares = newTotalShares.inc(condition);
         }
         */
-        for (uint256 i; afterToBalance > expectedAfterToBalance && i < 128; i++) {
+        for (uint256 i; afterToBalance > expectedAfterToBalance && i < 3; i++) {
             console.log("round down");
             Shares decr = Shares.wrap((Balance.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(Balance.unwrap(totalSupply)));
             console.log("decr", Shares.unwrap(decr));
@@ -164,7 +166,8 @@ library ReflectMath {
             newTotalShares = newTotalShares.inc(condition);
         }
 
-        console.log("     new toBalance", Balance.unwrap(newToShares.toBalance(totalSupply, newTotalShares)));
+        console.log("    new toBalance", Balance.unwrap(newToShares.toBalance(totalSupply, newTotalShares)));
+        console.log("===");
     }
 
     function getDeliverShares(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
