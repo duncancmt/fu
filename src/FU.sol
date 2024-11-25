@@ -15,7 +15,7 @@ import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
 import {CrazyBalance, toCrazyBalance, ZERO as ZERO_BALANCE, CrazyBalanceArithmetic} from "./core/CrazyBalance.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
-import {Checkpoint, LibCheckpoints} from "./core/Checkpoints.sol";
+import {Checkpoints, LibCheckpoints} from "./core/Checkpoints.sol";
 
 // TODO: move all user-defined types into ./types (instead of ./core/types)
 import {BasisPoints, BASIS} from "./core/types/BasisPoints.sol";
@@ -23,7 +23,7 @@ import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./core/types/Shares
 // TODO: rename Balance to Tokens (pretty big refactor)
 import {Balance} from "./core/types/Balance.sol";
 import {SharesToBalance} from "./core/types/BalanceXShares.sol";
-import {toVotes} from "./core/types/Votes.sol";
+import {Votes, toVotes} from "./core/types/Votes.sol";
 
 import {Math} from "./lib/Math.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
@@ -38,14 +38,14 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     using CrazyBalanceArithmetic for Shares;
     using CrazyBalanceArithmetic for CrazyBalance;
     using {toVotes} for Shares;
-    using LibCheckpoints for mapping(address account => Checkpoint[]);
+    using LibCheckpoints for Checkpoints;
 
     mapping(address account => Shares) internal _sharesOf;
     Balance internal _totalSupply;
     Shares internal _totalShares;
     mapping(address owner => mapping(address spender => CrazyBalance)) internal _allowance;
     mapping(address account => address) public override delegates;
-    mapping(address account => Checkpoint[]) internal _checkpoints;
+    Checkpoints _checkpoints;
     mapping(address account => uint256) public override(IERC2612, IERC5805) nonces;
 
     function totalSupply() external view override returns (uint256) {
@@ -285,11 +285,12 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         _sharesOf[to] = newToShares;
         _totalShares = newTotalShares;
 
-        if (from != address(pair)) {
-            _checkpoints.sub(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
-        }
-        if (to != address(pair)) {
-            _checkpoints.add(delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), clock());
+        if (from == address(pair)) {
+            _checkpoints.mint(delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), clock());
+        } else if (to == address(pair)) {
+            _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
+        } else {
+            _checkpoints.transfer(delegates[from], delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
         }
 
         // TODO: golf this with the above checks
@@ -462,18 +463,26 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     // slither-disable-next-line naming-convention
     string public constant override CLOCK_MODE = "mode=timestamp&epoch=1970-01-01T00%3A00%3A00Z&quantum=86400";
 
-    /*
-    function getVotes(address account) external view override returns (uint256 votingWeight);
-    function getPastVotes(address account, uint256 timepoint) external view returns (uint256 votingWeight);
-    */
+    function getVotes(address account) external view override returns (uint256 votingWeight) {
+        revert("unimplemented");
+    }
+    function getPastVotes(address account, uint256 timepoint) external view override returns (uint256 votingWeight) {
+        revert("unimplemented");
+    }
+    function getTotalVotes() external view returns (uint256) {
+        revert("unimplemented");
+    }
+    function getPastTotalVotes(uint256 timepoint) external view returns (uint256) {
+        revert("unimplemented");
+    }
 
     function _delegate(address delegator, address delegatee) internal {
         Shares shares = _sharesOf[delegator];
         address oldDelegatee = delegates[delegator];
         emit DelegateChanged(delegator, oldDelegatee, delegatee);
-        _checkpoints.sub(oldDelegatee, shares.toVotes(), clock());
         delegates[delegator] = delegatee;
-        _checkpoints.add(delegatee, shares.toVotes(), clock());
+        Votes votes = shares.toVotes();
+        _checkpoints.transfer(oldDelegatee, delegatee, votes, votes, clock());
     }
 
     function delegate(address delegatee) external {
@@ -540,7 +549,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         _totalSupply = newTotalSupply;
         emit Transfer(from, address(0), amount.toExternal());
 
-        _checkpoints.sub(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
+        _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
 
         pair.sync();
 
@@ -577,7 +586,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         _totalShares = newTotalShares;
         emit Transfer(from, address(0), amount.toExternal());
 
-        _checkpoints.sub(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
+        _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
 
         pair.sync();
 
@@ -628,7 +637,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         _totalShares = newTotalShares;
 
         if (whale != address(pair)) {
-            _checkpoints.sub(delegates[whale], cachedWhaleShares.toVotes() - newWhaleShares.toVotes(), clock());
+            _checkpoints.burn(delegates[whale], cachedWhaleShares.toVotes() - newWhaleShares.toVotes(), clock());
             pair.sync();
         }
 
