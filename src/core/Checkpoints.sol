@@ -119,7 +119,7 @@ library LibCheckpoints {
     function _mint(Checkpoints storage checkpoints, address to, Votes incr, uint48 clock) private {
         _mint(checkpoints, incr, clock);
         Checkpoint[] storage arr = checkpoints.each[to];
-        (Votes oldValue, uint256 len) = _get(checkpoints.each[to], clock);
+        (Votes oldValue, uint256 len) = _get(arr, clock);
         Votes newValue = oldValue + incr;
         _set(arr, clock, newValue, len);
         emit IERC5805.DelegateVotesChanged(to, Votes.unwrap(oldValue), Votes.unwrap(newValue));
@@ -134,7 +134,7 @@ library LibCheckpoints {
     function _burn(Checkpoints storage checkpoints, address from, Votes decr, uint48 clock) private {
         _burn(checkpoints, decr, clock);
         Checkpoint[] storage arr = checkpoints.each[from];
-        (Votes oldValue, uint256 len) = _get(checkpoints.each[from], clock);
+        (Votes oldValue, uint256 len) = _get(arr, clock);
         Votes newValue = oldValue - decr;
         _set(arr, clock, newValue, len);
         emit IERC5805.DelegateVotesChanged(from, Votes.unwrap(oldValue), Votes.unwrap(newValue));

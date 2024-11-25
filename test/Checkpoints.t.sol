@@ -15,6 +15,7 @@ contract CheckpointsTest is Boilerplate, Test {
         uint48 key;
         Votes value;
     }
+
     Shadow[] internal total;
     mapping(address => Shadow[]) internal each;
     Checkpoints internal dut;
@@ -140,9 +141,9 @@ contract CheckpointsTest is Boilerplate, Test {
             }
             for (uint256 j; j < each[actor].length; j++) {
                 Shadow storage expected = each[actor][j];
-                Votes actual = dut.getTotal(expected.key);
+                Votes actual = dut.get(actor, expected.key);
                 assertEq(Votes.unwrap(actual), Votes.unwrap(expected.value));
-                actual = dut.getTotal(expected.key + 1);
+                actual = dut.get(actor, expected.key + 1);
                 assertEq(Votes.unwrap(actual), Votes.unwrap(expected.value));
             }
         }
