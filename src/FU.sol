@@ -41,12 +41,12 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     using LibCheckpoints for mapping(address account => Checkpoint[]);
 
     mapping(address account => Shares) internal _sharesOf;
-    mapping(address account => uint256) public override(IERC2612, IERC5805) nonces;
-    mapping(address owner => mapping(address spender => CrazyBalance)) internal _allowance;
     Balance internal _totalSupply;
     Shares internal _totalShares;
+    mapping(address owner => mapping(address spender => CrazyBalance)) internal _allowance;
     mapping(address account => address) public override delegates;
     mapping(address account => Checkpoint[]) internal _checkpoints;
+    mapping(address account => uint256) public override(IERC2612, IERC5805) nonces;
 
     function totalSupply() external view override returns (uint256) {
         return Balance.unwrap(_totalSupply);
