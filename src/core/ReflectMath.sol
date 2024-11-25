@@ -5,7 +5,7 @@ import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
 import {Shares} from "./types/Shares.sol";
 import {Balance} from "./types/Balance.sol";
 import {scale} from "./types/SharesXBasisPoints.sol";
-import {scale, cast, castUp} from "./types/BalanceXBasisPoints.sol";
+import {scale, castUp} from "./types/BalanceXBasisPoints.sol";
 import {BalanceXShares, tmp, alloc, SharesToBalance} from "./types/BalanceXShares.sol";
 import {BalanceXShares2, tmp as tmp2, alloc as alloc2} from "./types/BalanceXShares2.sol";
 import {BalanceXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "./types/BalanceXBasisPointsXShares.sol";

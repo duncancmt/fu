@@ -372,6 +372,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
 
     uint8 public constant override decimals = Settings.DECIMALS;
 
+    // slither-disable-next-line naming-convention
     function DOMAIN_SEPARATOR() public view override returns (bytes32) {
         return keccak256(
             abi.encode(

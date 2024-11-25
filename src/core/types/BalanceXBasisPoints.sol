@@ -15,10 +15,6 @@ function scale(Balance s, BasisPoints bp) pure returns (BalanceXBasisPoints) {
     }
 }
 
-function cast(BalanceXBasisPoints sbp) pure returns (Balance) {
-    return Balance.wrap(BalanceXBasisPoints.unwrap(sbp) / BasisPoints.unwrap(BASIS));
-}
-
 function castUp(BalanceXBasisPoints sbp) pure returns (Balance) {
     return Balance.wrap(UnsafeMath.unsafeDivUp(BalanceXBasisPoints.unwrap(sbp), BasisPoints.unwrap(BASIS)));
 }
