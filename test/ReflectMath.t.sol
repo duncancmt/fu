@@ -84,7 +84,7 @@ contract ReflectMathTest is Boilerplate, Test {
         Balance amount,
         BasisPoints feeRate/*,
         uint256 sharesRatio*/
-    ) public view {
+    ) public view virtual {
         Balance fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, /* sharesRatio */ 0);
@@ -147,7 +147,7 @@ contract ReflectMathTest is Boilerplate, Test {
         Shares toShares,
         BasisPoints feeRate/*,
         uint256 sharesRatio*/
-    ) public pure {
+    ) public pure virtual {
         Balance fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance) =
             _boundCommon(totalSupply, totalShares, fromShares, /* sharesRatio */ 0);
@@ -196,7 +196,7 @@ contract ReflectMathTest is Boilerplate, Test {
         Shares fromShares,
         Balance amount/*,
         uint256 sharesRatio*/
-    ) public view {
+    ) public view virtual {
         Balance fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, /* sharesRatio */ 0);

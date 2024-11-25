@@ -100,7 +100,6 @@ library ReflectMath {
         newToShares = n.div(d);
         newTotalShares = totalShares + (newToShares - toShares) - fromShares;
 
-        /*
         // Fixup rounding error
         // TODO: use divMulti
         Balance beforeFromBalance = fromShares.toBalance(totalSupply, totalShares);
@@ -113,17 +112,15 @@ library ReflectMath {
         console.log("         toBalance", Balance.unwrap(afterToBalance));
         console.log("expected toBalance", Balance.unwrap(expectedAfterToBalance));
 
-        {
-            bool condition = afterToBalance > expectedAfterToBalance;
-            if (condition) {
-                console.log("round down");
+        if (afterToBalance > expectedAfterToBalance) {
+            console.log("round down");
+            Shares decr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Balance.unwrap(totalSupply)));
+            newToShares = newToShares - decr;
+            newTotalShares = newTotalShares - decr;
+            if (newToShares < toShares) {
+                newTotalShares = newTotalShares + (toShares - newToShares);
+                newToShares = toShares;
             }
-            console.log(Shares.unwrap(newToShares));
-            console.log(Shares.unwrap(newTotalShares));
-            newToShares = newToShares.dec(condition);
-            newTotalShares = newTotalShares.dec(condition);
-            console.log(Shares.unwrap(newToShares));
-            console.log(Shares.unwrap(newTotalShares));
         }
         {
             bool condition = afterToBalance < expectedAfterToBalance;
@@ -133,7 +130,6 @@ library ReflectMath {
             newToShares = newToShares.inc(condition);
             newTotalShares = newTotalShares.inc(condition);
         }
-        */
 
         console.log("     new toBalance", Balance.unwrap(newToShares.toBalance(totalSupply, newTotalShares)));
     }

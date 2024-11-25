@@ -11,7 +11,40 @@ import {Boilerplate, MedusaBoilerplate} from "./Boilerplate.sol";
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
 
 contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
-    function testTransfer_(
+    function testTransfer(
+        Balance,
+        Shares,
+        Shares,
+        Shares,
+        Balance,
+        BasisPoints/*,
+        uint256*/
+    ) public view override {
+        return;
+    }
+
+    function testTransferAll(
+        Balance,
+        Shares,
+        Shares,
+        Shares,
+        BasisPoints/*,
+        uint256*/
+    ) public pure override {
+        return;
+    }
+
+    function testDeliver(
+        Balance,
+        Shares,
+        Shares,
+        Balance/*,
+        uint256*/
+    ) public view override {
+        return;
+    }
+
+    function medusa_testTransfer(
         Balance totalSupply,
         Shares totalShares,
         Shares fromShares,
@@ -24,7 +57,7 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         assert(!failed());
     }
 
-    function testTransferAll_(
+    function medusa_testTransferAll(
         Balance totalSupply,
         Shares totalShares,
         Shares fromShares,
@@ -36,7 +69,7 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         assert(!failed());
     }
 
-    function testDeliver_(
+    function medusa_testDeliver(
         Balance totalSupply,
         Shares totalShares,
         Shares fromShares,
