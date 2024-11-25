@@ -180,6 +180,14 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
 
         (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
             _balanceOf(from);
+
+        if (amount > fromBalance) {
+            if (_check()) {
+                revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
+            }
+            return false;
+        }
+
         Shares cachedToShares = _sharesOf[to];
         if (to == address(pair)) {
             (cachedToShares, cachedTotalShares) = _applyWhaleLimit(cachedToShares, cachedTotalShares);
@@ -190,13 +198,6 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             // we have to check this twice to ensure no underflow in the reflection math
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
-            }
-            return false;
-        }
-
-        if (amount > fromBalance) {
-            if (_check()) {
-                revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
             }
             return false;
         }
