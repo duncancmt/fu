@@ -91,6 +91,7 @@ library CrazyBalanceArithmetic {
         returns (CrazyBalance)
     {
         unchecked {
+            // slither-disable-next-line divide-before-multiply
             return CrazyBalance.wrap(
                 tmp().omul(
                     Shares.unwrap(shares),
@@ -113,6 +114,7 @@ library CrazyBalanceArithmetic {
 
     function toBalance(CrazyBalance balance, address account, BasisPoints proportion) internal pure returns (Balance) {
         unchecked {
+            // slither-disable-next-line divide-before-multiply
             return Balance.wrap(
                 (CrazyBalance.unwrap(balance) * BasisPoints.unwrap(proportion) * Settings.CRAZY_BALANCE_BASIS)
                     .unsafeDivUp(BasisPoints.unwrap(BASIS) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR))

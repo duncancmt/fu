@@ -1,66 +1,23 @@
-## Foundry
+# Goals
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+# Features
 
-Foundry consists of:
+# Testing
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Install some tools
 
-## Documentation
+[Install Foundry](https://book.getfoundry.sh/getting-started/installation)
 
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
+Install analysis tools from Crytic (Trail of Bits)
 ```shell
-$ forge build
+python3 -m pip install --user crytic-compile
+python3 -m pip install --user slither-analyzer
 ```
 
-### Test
+## Run some tests
 
 ```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+forge test -vvv --fuzz-seed "$(python3 -c 'import secrets; print(secrets.randbelow(2**64))')"
+./medusa fuzz # or use your system `medusa`
+slither .
 ```

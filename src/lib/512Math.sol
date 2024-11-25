@@ -1333,6 +1333,7 @@ library Lib512MathArithmetic {
             // most-significant bits into an index. We then index the lookup
             // table (bytewise) by the deBruijn symbol to obtain the bitwise
             // inverse of its logarithm.
+            // slither-disable-next-line incorrect-shift
             r :=
                 xor(
                     r,

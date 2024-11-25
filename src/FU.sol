@@ -20,6 +20,7 @@ import {Shares} from "./core/types/Shares.sol";
 import {Balance} from "./core/types/Balance.sol";
 import {SharesToBalance} from "./core/types/BalanceXShares.sol";
 
+import {Math} from "./lib/Math.sol";
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 
@@ -40,6 +41,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     mapping(address => mapping(address => CrazyBalance)) internal _allowance;
     Balance internal _totalSupply;
     Shares internal _totalShares;
+    /// @custom:security non-reentrant
     IUniswapV2Pair public immutable pair;
 
     function totalSupply() external view override returns (uint256) {
@@ -68,6 +70,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         pair = pairFor(WETH, this);
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
 
+        // slither-disable-next-line low-level-calls
         (bool success,) = address(WETH).call{value: msg.value}("");
         require(success);
         require(WETH.transfer(address(pair), msg.value));
@@ -78,6 +81,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         _mintShares(address(pair), _totalShares.div(Settings.INITIAL_LIQUIDITY_DIVISOR));
         {
             Shares toMint = _totalShares - _sharesOf[DEAD] - _sharesOf[address(pair)];
+            // slither-disable-next-line divide-before-multiply
             Shares toMintEach = toMint.div(initialHolders.length);
             _mintShares(initialHolders[0], toMint - toMintEach.mul(initialHolders.length - 1));
             for (uint256 i = 1; i < initialHolders.length; i++) {
@@ -90,7 +94,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         } catch {
             require(pair == FACTORY.getPair(WETH, IERC20(address(this))));
         }
-        pair.mint(DEAD);
+        require(pair.mint(address(0)) >= Math.sqrt(Balance.unwrap(Settings.INITIAL_SUPPLY.div(Settings.INITIAL_LIQUIDITY_DIVISOR)) * 1 ether) - 1_000);
     }
 
     function _mintShares(address to, Shares shares) internal {
@@ -105,7 +109,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     }
 
     function _check() internal view returns (bool) {
-        return uint256(blockhash(block.number.unsafeDec())) & 1 == 0;
+        return block.prevrandao & 1 == 0;
     }
 
     function _success() internal view returns (bool) {
@@ -175,8 +179,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
             _balanceOf(from);
         Shares cachedToShares = _sharesOf[to];
-        address pair_ = address(pair);
-        if (to == pair_) {
+        if (to == address(pair)) {
             (cachedToShares, cachedTotalShares) = _applyWhaleLimit(cachedToShares, cachedTotalShares);
         }
 
@@ -212,7 +215,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         }
 
         if (newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
-            if (to != pair_) {
+            if (to != address(pair)) {
                 if (_check()) {
                     // TODO: maybe make this a new error? It's not exactly an invalid recipient, it's an
                     // invalid (too high) transfer amount
@@ -222,7 +225,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             }
 
         // === EFFECTS ARE ALLOWED ONLY FROM HERE DOWN ===
-            CrazyBalance oldPairBalance = cachedToShares.toCrazyBalance(pair_, cachedTotalSupply, cachedTotalShares);
+            CrazyBalance oldPairBalance = cachedToShares.toCrazyBalance(to, cachedTotalSupply, cachedTotalShares);
             (cachedToShares, cachedTotalShares, cachedTotalSupply) = ReflectMath.getBurnShares(
                 amount.toBalance(from, BASIS - feeRate), cachedTotalSupply, cachedTotalShares, cachedToShares
             );
@@ -230,13 +233,13 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
             emit Transfer(
                 to,
                 address(0),
-                (oldPairBalance - cachedToShares.toCrazyBalance(pair_, cachedTotalSupply, cachedTotalShares)).toExternal()
+                (oldPairBalance - cachedToShares.toCrazyBalance(to, cachedTotalSupply, cachedTotalShares)).toExternal()
             );
             _sharesOf[to] = cachedToShares;
             _totalShares = cachedTotalShares;
             _totalSupply = cachedTotalSupply;
 
-            IUniswapV2Pair(pair_).sync();
+            pair.sync();
 
             if (amount == fromBalance) {
                 (newToShares, newTotalShares) = ReflectMath.getTransferShares(
@@ -269,8 +272,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         _sharesOf[to] = newToShares;
         _totalShares = newTotalShares;
 
-        if (!(from == pair_ || to == pair_)) {
-            IUniswapV2Pair(pair_).sync();
+        if (!(from == address(pair) || to == address(pair))) {
+            pair.sync();
         }
 
         return true;
@@ -457,6 +460,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         _totalSupply = cachedTotalSupply;
         emit Transfer(from, address(0), amount.toExternal());
 
+        pair.sync();
+
         return true;
     }
 
@@ -531,9 +536,8 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
     // proportion of the total shares, thus the maximum number of whales is that proportion
     function punishWhale(address whale) external returns (bool) {
         (_sharesOf[whale], _totalShares) = _loadAccount(whale);
-        IUniswapV2Pair pair_ = pair;
-        if (whale != address(pair_)) {
-            pair_.sync();
+        if (whale != address(pair)) {
+            pair.sync();
         }
         return _success();
     }
