@@ -119,4 +119,11 @@ library LibCheckpoints {
             value := sload(total.slot)
         }
     }
+
+    function get(Checkpoints storage checkpoints, address account, uint48 timepoint) internal view returns (Votes value) {
+        revert("unimplemented");
+    }
+    function getTotal(Checkpoints storage checkpoints, uint48 timepoint) internal view returns (Votes value) {
+        revert("unimplemented");
+    }
 }
