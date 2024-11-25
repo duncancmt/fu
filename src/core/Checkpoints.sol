@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IERC5805} from "../interfaces/IERC5805.sol";
+
 import {Votes} from "./types/Votes.sol";
 
 struct Checkpoint {
@@ -25,7 +27,20 @@ library LibCheckpoints {
         if (to == address(0)) {
             return _burn(checkpoints, from, decr, clock);
         }
-        revert("unimplemented");
+        {
+            Checkpoint[] storage arr = checkpoints.each[from];
+            (Votes oldValue, uint256 len) = _get(arr, clock);
+            Votes newValue = oldValue - decr;
+            _set(arr, clock, newValue, len);
+            emit IERC5805.DelegateVotesChanged(from, Votes.unwrap(oldValue), Votes.unwrap(newValue));
+        }
+        {
+            Checkpoint[] storage arr = checkpoints.each[to];
+            (Votes oldValue, uint256 len) = _get(arr, clock);
+            Votes newValue = oldValue + incr;
+            _set(arr, clock, newValue, len);
+            emit IERC5805.DelegateVotesChanged(to, Votes.unwrap(oldValue), Votes.unwrap(newValue));
+        }
     }
 
     function mint(Checkpoints storage checkpoints, address to, Votes incr, uint48 clock) internal {
@@ -71,7 +86,9 @@ library LibCheckpoints {
         {
             Checkpoint[] storage arr = checkpoints.each[to];
             (Votes oldValue, uint256 len) = _get(checkpoints.each[to], clock);
-            _set(arr, clock, oldValue + incr, len);
+            Votes newValue = oldValue + incr;
+            _set(arr, clock, newValue, len);
+            emit IERC5805.DelegateVotesChanged(to, Votes.unwrap(oldValue), Votes.unwrap(newValue));
         }
     }
 
@@ -84,7 +101,9 @@ library LibCheckpoints {
         {
             Checkpoint[] storage arr = checkpoints.each[from];
             (Votes oldValue, uint256 len) = _get(checkpoints.each[from], clock);
-            _set(arr, clock, oldValue - decr, len);
+            Votes newValue = oldValue - decr;
+            _set(arr, clock, newValue, len);
+            emit IERC5805.DelegateVotesChanged(from, Votes.unwrap(oldValue), Votes.unwrap(newValue));
         }
     }
 
