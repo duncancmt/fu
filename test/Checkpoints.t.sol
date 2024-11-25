@@ -167,6 +167,56 @@ contract CheckpointsTest is Boilerplate, Test {
         }
     }
 
+    function transfer(uint256 fromActor, address to, Votes incr, Votes decr) external {
+        assume(actors.length > 0);
+        fromActor = bound(fromActor, 0, actors.length - 1);
+        address from = actors[fromActor];
+        assume(to != address(0));
+        incr = Votes.wrap(uint112(bound(Votes.unwrap(incr), 1, type(uint112).max >> 16)));
+        assume(each[from].length > 0);
+        Votes fromVotes = each[from][each[from].length - 1].value;
+        assume(Votes.unwrap(fromVotes) > 0);
+        decr = Votes.wrap(uint112(bound(Votes.unwrap(decr), 1, Votes.unwrap(fromVotes))));
+
+        dut.transfer(from, to, incr, decr, clock);
+
+        assertTrue(isRegistered[from]);
+        assertGt(each[from].length, 0);
+        assertTrue(from != address(0)); // TODO: could be `assertNotEq`, but would need support in `Boilerplate`
+
+        if (!isRegistered[to]) {
+            actors.push(to);
+            isRegistered[to] = true;
+        }
+
+        if (total[total.length - 1].key == clock) {
+            total[total.length - 1].value = total[total.length - 1].value + incr - decr;
+        } else {
+            total.push(Shadow({key: clock, value: total[total.length - 1].value + incr - decr}));
+        }
+        if (from == to) {
+            if (each[from][each[from].length - 1].key != clock) {
+                each[from].push(Shadow({key: clock, value: each[from][each[from].length - 1].value + incr - decr}));
+            } else {
+                each[from][each[from].length - 1].value = each[from][each[from].length - 1].value + incr - decr;
+            }
+        } else {
+            if (each[from][each[from].length - 1].key != clock) {
+                each[from].push(Shadow({key: clock, value: each[from][each[from].length - 1].value - decr}));
+            } else {
+                each[from][each[from].length - 1].value = each[from][each[from].length - 1].value - decr;
+            }
+
+            if (each[to].length == 0) {
+                each[to].push(Shadow({key: clock, value: incr}));
+            } else if (each[to][each[to].length - 1].key != clock) {
+                each[to].push(Shadow({key: clock, value: each[to][each[to].length - 1].value + incr}));
+            } else {
+                each[to][each[to].length - 1].value = each[to][each[to].length - 1].value + incr;
+            }
+        }
+    }
+
     function invariant_total() external view {
         if (total.length == 0) {
             return;
