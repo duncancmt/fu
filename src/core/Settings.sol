@@ -37,6 +37,8 @@ library Settings {
     uint256 internal constant CRAZY_BALANCE_BASIS = Balance.unwrap(INITIAL_SUPPLY) / _UNISWAPV2_MAX_BALANCE;
     uint256 internal constant ADDRESS_DIVISOR = 2 ** 160 / (CRAZY_BALANCE_BASIS + 1);
 
+    uint256 internal constant SHARES_TO_VOTES_DIVISOR = 2 ** 64;
+
     function oneTokenInShares() internal pure returns (Shares) {
         BalanceXShares initialSharesTimesOneToken = alloc().omul(INITIAL_SHARES, Balance.wrap(10 ** DECIMALS));
         Shares result = initialSharesTimesOneToken.div(INITIAL_SUPPLY);

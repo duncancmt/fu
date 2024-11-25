@@ -4,8 +4,8 @@ pragma solidity ^0.8.28;
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IERC2612} from "./interfaces/IERC2612.sol";
 import {IERC5267} from "./interfaces/IERC5267.sol";
+import {IERC5805} from "./interfaces/IERC5805.sol";
 import {IERC6093} from "./interfaces/IERC6093.sol";
-import {IERC6372} from "./interfaces/IERC6372.sol";
 import {IERC7674} from "./interfaces/IERC7674.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
@@ -13,8 +13,9 @@ import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
 import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
-import {CrazyBalance, fromExternal, ZERO as ZERO_BALANCE, CrazyBalanceArithmetic} from "./core/CrazyBalance.sol";
+import {CrazyBalance, toCrazyBalance, ZERO as ZERO_BALANCE, CrazyBalanceArithmetic} from "./core/CrazyBalance.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
+import {Checkpoint, LibCheckpoints} from "./core/Checkpoints.sol";
 
 // TODO: move all user-defined types into ./types (instead of ./core/types)
 import {BasisPoints, BASIS} from "./core/types/BasisPoints.sol";
@@ -22,6 +23,7 @@ import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./core/types/Shares
 // TODO: rename Balance to Tokens (pretty big refactor)
 import {Balance} from "./core/types/Balance.sol";
 import {SharesToBalance} from "./core/types/BalanceXShares.sol";
+import {toVotes} from "./core/types/Votes.sol";
 
 import {Math} from "./lib/Math.sol";
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
@@ -30,22 +32,23 @@ import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 
-contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorageLayout {
+contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorageLayout {
     using UnsafeMath for uint256;
     using ChecksumAddress for address;
-    using {fromExternal} for uint256;
+    using {toCrazyBalance} for uint256;
     using SharesToBalance for Shares;
     using CrazyBalanceArithmetic for Shares;
     using CrazyBalanceArithmetic for CrazyBalance;
+    using {toVotes} for Shares;
+    using LibCheckpoints for mapping(address account => Checkpoint[]);
 
-    // TODO: use a user-defined type to separate shares-denominated values from balance-denominated values
     mapping(address => Shares) internal _sharesOf;
-    mapping(address => uint256) public override nonces;
+    mapping(address => uint256) public override(IERC2612, IERC5805) nonces;
     mapping(address => mapping(address => CrazyBalance)) internal _allowance;
     Balance internal _totalSupply;
     Shares internal _totalShares;
-    /// @custom:security non-reentrant
-    IUniswapV2Pair public immutable pair;
+    mapping(address account => address) public override delegates;
+    mapping(address account => Checkpoint[]) internal _checkpoints;
 
     function totalSupply() external view override returns (uint256) {
         return Balance.unwrap(_totalSupply);
@@ -59,6 +62,9 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorag
     function totalShares() external view returns (uint256) {
         return Shares.unwrap(_totalShares);
     }
+
+    /// @custom:security non-reentrant
+    IUniswapV2Pair public immutable pair;
 
     // This mapping is actually in transient storage. It's placed here so that
     // solc reserves a slot for it during storage layout generation. Solc 0.8.28
@@ -242,6 +248,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorag
             _sharesOf[to] = cachedToShares;
             _totalShares = cachedTotalShares;
             _totalSupply = cachedTotalSupply;
+            // pair does not delegate, so we don't need to update any votes
 
             pair.sync();
 
@@ -276,6 +283,14 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorag
         _sharesOf[to] = newToShares;
         _totalShares = newTotalShares;
 
+        if (from != address(pair)) {
+            _checkpoints.sub(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
+        }
+        if (to != address(pair)) {
+            _checkpoints.add(delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), clock());
+        }
+
+        // TODO: golf this with the above checks
         if (!(from == address(pair) || to == address(pair))) {
             pair.sync();
         }
@@ -284,14 +299,14 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorag
     }
 
     function transfer(address to, uint256 amount) external override returns (bool) {
-        if (!_transfer(msg.sender, to, amount.fromExternal())) {
+        if (!_transfer(msg.sender, to, amount.toCrazyBalance())) {
             return false;
         }
         return _success();
     }
 
     function approve(address spender, uint256 amount) external returns (bool) {
-        _allowance[msg.sender][spender] = amount.fromExternal();
+        _allowance[msg.sender][spender] = amount.toCrazyBalance();
         emit Approval(msg.sender, spender, amount);
         return _success();
     }
@@ -351,14 +366,14 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorag
 
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance(from, amount.fromExternal());
+            _checkAllowance(from, amount.toCrazyBalance());
         if (!success) {
             return false;
         }
-        if (!_transfer(from, to, amount.fromExternal())) {
+        if (!_transfer(from, to, amount.toCrazyBalance())) {
             return false;
         }
-        _spendAllowance(from, amount.fromExternal(), currentTempAllowance, currentAllowance);
+        _spendAllowance(from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
         return _success();
     }
 
@@ -410,7 +425,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorag
         if (signer != owner) {
             revert ERC2612InvalidSigner(signer, owner);
         }
-        _allowance[owner][spender] = amount.fromExternal();
+        _allowance[owner][spender] = amount.toCrazyBalance();
         emit Approval(owner, spender, amount);
     }
 
@@ -441,36 +456,48 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorag
     // slither-disable-next-line naming-convention
     string public constant override CLOCK_MODE = "mode=timestamp&epoch=1970-01-01T00%3A00%3A00Z&quantum=86400";
 
+    /*
+    function getVotes(address account) external view override returns (uint256 votingWeight);
+    function getPastVotes(address account, uint256 timepoint) external view returns (uint256 votingWeight);
+    function delegate(address delegatee) external;
+    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external;
+    */
+
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
-        _setTemporaryAllowance(_temporaryAllowance, msg.sender, spender, amount.fromExternal());
+        _setTemporaryAllowance(_temporaryAllowance, msg.sender, spender, amount.toCrazyBalance());
         return _success();
     }
 
     function _burn(address from, CrazyBalance amount) internal returns (bool) {
-        (CrazyBalance balance, Shares shares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
-        if (amount > balance) {
+        (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
+        if (amount > fromBalance) {
             if (_check()) {
-                revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
+                revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
             }
             return false;
         }
 
-        if (amount == balance) {
+        Shares newFromShares;
+        Shares newTotalShares;
+        Balance newTotalSupply;
+        if (amount == fromBalance) {
             // The amount to be deducted from `_totalSupply` is *NOT* the same as
             // `amount.toBalance(from)`. That would not correctly account for dust that is below the
             // "crazy balance" scaling factor for `from`. We have to explicitly recompute the
             // un-crazy balance of `from` and deduct *THAT* instead.
-            cachedTotalSupply = cachedTotalSupply - shares.toBalance(cachedTotalSupply, cachedTotalShares);
-            cachedTotalShares = cachedTotalShares - shares;
-            shares = ZERO_SHARES;
+            newTotalSupply = cachedTotalSupply - cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares);
+            newTotalShares = cachedTotalShares - cachedFromShares;
+            newFromShares = ZERO_SHARES;
         } else {
-            (shares, cachedTotalShares, cachedTotalSupply) =
-                ReflectMath.getBurnShares(amount.toBalance(from), cachedTotalSupply, cachedTotalShares, shares);
+            (newFromShares, newTotalShares, newTotalSupply) =
+                ReflectMath.getBurnShares(amount.toBalance(from), cachedTotalSupply, cachedTotalShares, cachedFromShares);
         }
-        _sharesOf[from] = shares;
-        _totalShares = cachedTotalShares;
-        _totalSupply = cachedTotalSupply;
+        _sharesOf[from] = newFromShares;
+        _totalShares = newTotalShares;
+        _totalSupply = newTotalSupply;
         emit Transfer(from, address(0), amount.toExternal());
+
+        _checkpoints.sub(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
 
         pair.sync();
 
@@ -478,32 +505,36 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorag
     }
 
     function burn(uint256 amount) external returns (bool) {
-        if (!_burn(msg.sender, amount.fromExternal())) {
+        if (!_burn(msg.sender, amount.toCrazyBalance())) {
             return false;
         }
         return _success();
     }
 
     function _deliver(address from, CrazyBalance amount) internal returns (bool) {
-        (CrazyBalance balance, Shares shares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
-        if (amount > balance) {
+        (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
+        if (amount > fromBalance) {
             if (_check()) {
-                revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
+                revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
             }
             return false;
         }
 
-        if (amount == balance) {
-            cachedTotalShares = cachedTotalShares - shares;
-            shares = ZERO_SHARES;
+        Shares newFromShares;
+        Shares newTotalShares;
+        if (amount == fromBalance) {
+            newTotalShares = cachedTotalShares - cachedFromShares;
+            newFromShares = ZERO_SHARES;
         } else {
-            (shares, cachedTotalShares) =
-                ReflectMath.getDeliverShares(amount.toBalance(from), cachedTotalSupply, cachedTotalShares, shares);
+            (newFromShares, newTotalShares) =
+                ReflectMath.getDeliverShares(amount.toBalance(from), cachedTotalSupply, cachedTotalShares, cachedFromShares);
         }
 
-        _sharesOf[from] = shares;
-        _totalShares = cachedTotalShares;
+        _sharesOf[from] = newFromShares;
+        _totalShares = newTotalShares;
         emit Transfer(from, address(0), amount.toExternal());
+
+        _checkpoints.sub(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
 
         pair.sync();
 
@@ -511,7 +542,7 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorag
     }
 
     function deliver(uint256 amount) external returns (bool) {
-        if (!_deliver(msg.sender, amount.fromExternal())) {
+        if (!_deliver(msg.sender, amount.toCrazyBalance())) {
             return false;
         }
         return _success();
@@ -519,27 +550,27 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorag
 
     function burnFrom(address from, uint256 amount) external returns (bool) {
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance(from, amount.fromExternal());
+            _checkAllowance(from, amount.toCrazyBalance());
         if (!success) {
             return false;
         }
-        if (!_burn(from, amount.fromExternal())) {
+        if (!_burn(from, amount.toCrazyBalance())) {
             return false;
         }
-        _spendAllowance(from, amount.fromExternal(), currentTempAllowance, currentAllowance);
+        _spendAllowance(from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
         return _success();
     }
 
     function deliverFrom(address from, uint256 amount) external returns (bool) {
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance(from, amount.fromExternal());
+            _checkAllowance(from, amount.toCrazyBalance());
         if (!success) {
             return false;
         }
-        if (!_deliver(from, amount.fromExternal())) {
+        if (!_deliver(from, amount.toCrazyBalance())) {
             return false;
         }
-        _spendAllowance(from, amount.fromExternal(), currentTempAllowance, currentAllowance);
+        _spendAllowance(from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
         return _success();
     }
 
@@ -547,10 +578,17 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorag
     // limit. This doesn't present a DoS vulnerability because the definition of a whale is a
     // proportion of the total shares, thus the maximum number of whales is that proportion
     function punishWhale(address whale) external returns (bool) {
-        (_sharesOf[whale], _totalShares) = _loadAccount(whale);
+        Shares cachedWhaleShares = _sharesOf[whale];
+        Shares cachedTotalShares = _totalShares;
+        (Shares newWhaleShares, Shares newTotalShares) = _applyWhaleLimit(cachedWhaleShares, cachedTotalShares);
+        _sharesOf[whale] = newWhaleShares;
+        _totalShares = newTotalShares;
+
         if (whale != address(pair)) {
+            _checkpoints.sub(delegates[whale], cachedWhaleShares.toVotes() - newWhaleShares.toVotes(), clock());
             pair.sync();
         }
+
         return _success();
     }
 }

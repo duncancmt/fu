@@ -22,7 +22,7 @@ library CrazyBalanceAccessors {
     }
 }
 
-function fromExternal(uint256 x) pure returns (CrazyBalance) {
+function toCrazyBalance(uint256 x) pure returns (CrazyBalance) {
     return CrazyBalance.wrap(x);
 }
 
