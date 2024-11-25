@@ -59,12 +59,24 @@ library LibCheckpoints {
         return _burn(checkpoints, from, decr, clock);
     }
 
-    function _get(Checkpoint[] storage arr, uint48 clock) private returns (Votes value, uint256 len) {
+    function _load(Checkpoint[] storage arr)
+        private
+        view
+        returns (Votes value, uint256 len, uint256 key, bytes32 slotValue)
+    {
         assembly ("memory-safe") {
-            let slotValue := sload(arr.slot)
+            slotValue := sload(arr.slot)
             len := shr(0xa0, slotValue)
             value := and(0xffffffffffffffffffffffffffff, slotValue)
-            let key := and(0xffffffffffff, shr(0x70, slotValue))
+            key := and(0xffffffffffff, shr(0x70, slotValue))
+        }
+    }
+
+    function _get(Checkpoint[] storage arr, uint48 clock) private returns (Votes value, uint256 len) {
+        uint256 key;
+        bytes32 slotValue;
+        (value, len, key, slotValue) = _load(arr);
+        assembly ("memory-safe") {
             if mul(key, gt(and(0xffffffffffff, clock), key)) {
                 mstore(0x00, arr.slot)
                 sstore(add(keccak256(0x00, 0x20), len), and(0xffffffffffffffffffffffffffffffffffffffff, slotValue))
@@ -129,15 +141,58 @@ library LibCheckpoints {
         }
     }
 
-    function get(Checkpoints storage checkpoints, address account, uint48 timepoint)
-        internal
-        view
-        returns (Votes value)
-    {
-        revert("unimplemented");
+    function _bisect(Checkpoint[] storage arr, uint256 timepoint) private view returns (Votes value) {
+        uint256 len;
+        {
+            uint256 key;
+            (value, len, key,) = _load(arr);
+            if (key <= timepoint) {
+                return value;
+            }
+        }
+        assembly ("memory-safe") {
+            mstore(0x00, arr.slot)
+            let start := keccak256(0x00, 0x20)
+            let hi := add(start, len)
+            let lo := start
+            let slotValue := sload(lo)
+            for {} true {} {
+                let key := and(0xffffffffffff, shr(0x70, slotValue))
+                if iszero(lt(timepoint, key)) { break }
+                let newLo := sub(lo, shl(0x01, sub(hi, lo)))
+                hi := lo
+                lo := newLo
+                if lt(lo, start) {
+                    lo := start
+                    slotValue := sload(lo)
+                    break
+                }
+                slotValue := sload(lo)
+            }
+            lo := add(0x01, lo)
+            for {} xor(hi, lo) {} {
+                let mid := add(shr(0x01, sub(hi, lo)), lo)
+                let newSlotValue := sload(mid)
+                let key := and(0xffffffffffff, shr(0x70, newSlotValue))
+                if lt(timepoint, key) {
+                    // down
+                    hi := mid
+                }
+                // up
+                slotValue := newSlotValue
+                lo := add(0x01, mid)
+            }
+            if iszero(lt(timepoint, and(0xffffffffffff, shr(0x70, slotValue)))) {
+                value := and(0xffffffffffffffffffffffffffff, slotValue)
+            }
+        }
     }
 
-    function getTotal(Checkpoints storage checkpoints, uint48 timepoint) internal view returns (Votes value) {
-        revert("unimplemented");
+    function get(Checkpoints storage checkpoints, address account, uint48 timepoint) internal view returns (Votes) {
+        return _bisect(checkpoints.each[account], timepoint);
+    }
+
+    function getTotal(Checkpoints storage checkpoints, uint48 timepoint) internal view returns (Votes) {
+        return _bisect(checkpoints.total, timepoint);
     }
 }
