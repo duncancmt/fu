@@ -104,6 +104,32 @@ contract CheckpointsTest is Boilerplate, Test {
         each[from].push(Shadow({key: clock, value: each[from][each[from].length - 1].value - decr}));
     }
 
+    function burn(uint256 fromActor, Votes decr) external {
+        assume(actors.length > 0);
+        fromActor = bound(fromActor, 0, actors.length - 1);
+        address from = actors[fromActor];
+        Votes fromVotes = each[from][each[from].length - 1].value;
+        assume(Votes.unwrap(fromVotes) > 0);
+        decr = Votes.wrap(uint112(bound(Votes.unwrap(decr), 1, Votes.unwrap(fromVotes))));
+
+        dut.burn(from, decr, clock);
+
+        assertTrue(isRegistered[from]);
+        assertGt(each[from].length, 0);
+        assertTrue(from != address(0)); // TODO: could be `assertNotEq`, but would need support in `Boilerplate`
+
+        if (total[total.length - 1].key == clock) {
+            total[total.length - 1].value = total[total.length - 1].value - decr;
+        } else {
+            total.push(Shadow({key: clock, value: total[total.length - 1].value - decr}));
+        }
+        if (each[from][each[from].length - 1].key != clock) {
+            each[from].push(Shadow({key: clock, value: each[from][each[from].length - 1].value - decr}));
+        } else {
+            each[from][each[from].length - 1].value = each[from][each[from].length - 1].value - decr;
+        }
+    }
+
     function transfer(uint256 fromActor, address to, Votes incr, Votes decr, uint32 elapsed) external {
         assume(actors.length > 0);
         fromActor = bound(fromActor, 0, actors.length - 1);
