@@ -103,7 +103,11 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         } catch {
             require(pair == FACTORY.getPair(WETH, IERC20(address(this))));
         }
-        require(pair.mint(address(0)) >= Math.sqrt(Balance.unwrap(Settings.INITIAL_SUPPLY.div(Settings.INITIAL_LIQUIDITY_DIVISOR)) * 1 ether) - 1_000);
+        require(
+            pair.mint(address(0))
+                >= Math.sqrt(Balance.unwrap(Settings.INITIAL_SUPPLY.div(Settings.INITIAL_LIQUIDITY_DIVISOR)) * 1 ether)
+                    - 1_000
+        );
     }
 
     function _mintShares(address to, Shares shares) internal {

@@ -142,7 +142,11 @@ library ReflectMath {
         */
         for (uint256 i; afterToBalance > expectedAfterToBalance && i < 3; i++) {
             console.log("round down");
-            Shares decr = Shares.wrap((Balance.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(Balance.unwrap(totalSupply)));
+            Shares decr = Shares.wrap(
+                (Balance.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(
+                    Balance.unwrap(totalSupply)
+                )
+            );
             console.log("decr", Shares.unwrap(decr));
             newToShares = newToShares - decr;
             newTotalShares = newTotalShares - decr;

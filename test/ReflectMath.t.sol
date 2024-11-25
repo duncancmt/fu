@@ -38,9 +38,7 @@ contract ReflectMathTest is Boilerplate, Test {
         );
 
         fromShares = Shares.wrap(
-            bound(
-                Shares.unwrap(fromShares), sharesRatio, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))
-            )
+            bound(Shares.unwrap(fromShares), sharesRatio, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR)))
         );
 
         Balance fromBalance = fromShares.toBalance(totalSupply, totalShares);
@@ -86,13 +84,8 @@ contract ReflectMathTest is Boilerplate, Test {
             )
         );
 
-        toShares = Shares.wrap(
-            bound(
-                Shares.unwrap(toShares),
-                0,
-                Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))
-            )
-        );
+        toShares =
+            Shares.wrap(bound(Shares.unwrap(toShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))));
         Balance toBalance = toShares.toBalance(totalSupply, totalShares);
 
         // console.log("===");
@@ -147,13 +140,8 @@ contract ReflectMathTest is Boilerplate, Test {
             )
         );
 
-        toShares = Shares.wrap(
-            bound(
-                Shares.unwrap(toShares),
-                0,
-                Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))
-            )
-        );
+        toShares =
+            Shares.wrap(bound(Shares.unwrap(toShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))));
         Balance toBalance = toShares.toBalance(totalSupply, totalShares);
 
         (Shares newToShares, Shares newTotalShares) =
@@ -170,7 +158,6 @@ contract ReflectMathTest is Boilerplate, Test {
         Balance newToBalance = newToShares.toBalance(totalSupply, newTotalShares);
         console.log("      newToShares", Shares.unwrap(newToShares));
         console.log("         toShares", Shares.unwrap(toShares));
-
 
         // TODO: tighter bounds
         Balance expectedNewToBalanceLo = toBalance + fromBalance - castUp(scale(fromBalance, feeRate));
