@@ -282,10 +282,6 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
         } else {
             _checkpoints.transfer(delegates[from], delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
-        }
-
-        // TODO: golf this with the above checks
-        if (!(from == address(pair) || to == address(pair))) {
             pair.sync();
         }
 
