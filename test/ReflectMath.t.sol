@@ -106,7 +106,8 @@ contract ReflectMathTest is Boilerplate, Test {
                 Shares.unwrap(totalShares - _oneTokenInShares(totalSupply, totalShares) - fromShares)
             )
         );
-        assume(fromShares + toShares < totalShares.div(2));
+        assume(fromShares < totalShares.div(Settings.ANTI_WHALE_DIVISOR));
+        assume(toShares < totalShares.div(Settings.ANTI_WHALE_DIVISOR));
         Balance toBalance = toShares.toBalance(totalSupply, totalShares);
 
         // console.log("===");
@@ -168,7 +169,8 @@ contract ReflectMathTest is Boilerplate, Test {
                 Shares.unwrap(totalShares - _oneTokenInShares(totalSupply, totalShares) - fromShares)
             )
         );
-        assume(fromShares + toShares < totalShares.div(2));
+        assume(fromShares < totalShares.div(Settings.ANTI_WHALE_DIVISOR));
+        assume(toShares < totalShares.div(Settings.ANTI_WHALE_DIVISOR));
         Balance toBalance = toShares.toBalance(totalSupply, totalShares);
 
         (Shares newToShares, Shares newTotalShares) =
@@ -186,8 +188,9 @@ contract ReflectMathTest is Boilerplate, Test {
         // TODO: tighter bounds
         Balance expectedNewToBalanceLo = toBalance + fromBalance - castUp(scale(fromBalance, feeRate));
         Balance expectedNewToBalanceHi = toBalance + castUp(scale(fromBalance, BASIS - feeRate));
-        assertGe(Balance.unwrap(newToBalance) + 1, Balance.unwrap(expectedNewToBalanceLo), "newToBalance lower");
-        assertLe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceHi) + 1, "newToBalance upper");
+        assertEq(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance");
+        //assertGe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance lower");
+        //assertLe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceHi), "newToBalance upper");
     }
 
     function testDeliver(

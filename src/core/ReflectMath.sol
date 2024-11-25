@@ -94,11 +94,25 @@ library ReflectMath {
         Shares toShares
     ) internal pure returns (Shares newToShares, Shares newTotalShares) {
         Shares uninvolvedShares = totalShares - fromShares - toShares;
+        Shares2XBasisPoints n = alloc5().omul(scale(uninvolvedShares, BASIS), totalShares);
+        SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, feeRate);
+
+        /*
         Shares2XBasisPoints n =
             alloc5().omul(scale(fromShares, (BASIS - feeRate)) + scale(toShares, BASIS), uninvolvedShares);
         SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, feeRate);
         newToShares = n.div(d);
         newTotalShares = totalShares + (newToShares - toShares) - fromShares;
+        */
+        newTotalShares = n.div(d);
+        newToShares = toShares + fromShares - (totalShares - newTotalShares);
+
+        console.log("       totalSupply", Balance.unwrap(totalSupply));
+        console.log("       totalShares", Shares.unwrap(totalShares));
+        console.log("        fromShares", Shares.unwrap(fromShares));
+        console.log("          toShares", Shares.unwrap(toShares));
+        console.log("       newToShares", Shares.unwrap(newToShares));
+        console.log("===");
 
         // Fixup rounding error
         // TODO: use divMulti
@@ -112,15 +126,34 @@ library ReflectMath {
         console.log("         toBalance", Balance.unwrap(afterToBalance));
         console.log("expected toBalance", Balance.unwrap(expectedAfterToBalance));
 
-        if (afterToBalance > expectedAfterToBalance) {
+        /*
+        {
+            bool condition = afterToBalance > expectedAfterToBalance;
+            newToShares = newToShares.dec(condition);
+            newTotalShares = newTotalShares.dec(condition);
+        }
+        {
+            bool condition = afterToBalance < expectedAfterToBalance;
+            newToShares = newToShares.inc(condition);
+            newTotalShares = newTotalShares.inc(condition);
+        }
+        */
+        for (uint256 i; afterToBalance > expectedAfterToBalance && i < 128; i++) {
             console.log("round down");
-            Shares decr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Balance.unwrap(totalSupply)));
+            Shares decr = Shares.wrap((Balance.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(Balance.unwrap(totalSupply)));
+            console.log("decr", Shares.unwrap(decr));
             newToShares = newToShares - decr;
             newTotalShares = newTotalShares - decr;
-            if (newToShares < toShares) {
+            if (newToShares <= toShares) {
+                console.log("clamp");
                 newTotalShares = newTotalShares + (toShares - newToShares);
                 newToShares = toShares;
+                afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
+                console.log("updated toBalance", Balance.unwrap(afterToBalance));
+                break;
             }
+            afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
+            console.log("updated toBalance", Balance.unwrap(afterToBalance));
         }
         {
             bool condition = afterToBalance < expectedAfterToBalance;
