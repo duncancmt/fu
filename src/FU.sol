@@ -5,6 +5,7 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IERC2612} from "./interfaces/IERC2612.sol";
 import {IERC5267} from "./interfaces/IERC5267.sol";
 import {IERC6093} from "./interfaces/IERC6093.sol";
+import {IERC6372} from "./interfaces/IERC6372.sol";
 import {IERC7674} from "./interfaces/IERC7674.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
@@ -29,7 +30,7 @@ import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 
-contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
+contract FU is IERC2612, IERC5267, IERC6093, IERC6372, IERC7674, TransientStorageLayout {
     using UnsafeMath for uint256;
     using ChecksumAddress for address;
     using {fromExternal} for uint256;
@@ -432,6 +433,13 @@ contract FU is IERC2612, IERC5267, IERC6093, IERC7674, TransientStorageLayout {
         chainId = block.chainid;
         verifyingContract = address(this);
     }
+
+    function clock() public view override returns (uint48) {
+        return uint48(block.timestamp / 86400 * 86400);
+    }
+
+    // slither-disable-next-line naming-convention
+    string public constant override CLOCK_MODE = "mode=timestamp&epoch=1970-01-01T00%3A00%3A00Z&quantum=86400";
 
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
         _setTemporaryAllowance(_temporaryAllowance, msg.sender, spender, amount.fromExternal());
