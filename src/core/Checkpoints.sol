@@ -29,6 +29,11 @@ library LibCheckpoints {
         if (to == address(0)) {
             return _burn(checkpoints, from, decr, clock);
         }
+        if (incr > decr) {
+            _mint(checkpoints, incr - decr, clock);
+        } else if (incr < decr) {
+            _burn(checkpoints, decr - incr, clock);
+        }
         {
             Checkpoint[] storage arr = checkpoints.each[from];
             (Votes oldValue, uint256 len) = _get(arr, clock);
@@ -97,34 +102,34 @@ library LibCheckpoints {
         }
     }
 
+    function _mint(Checkpoints storage checkpoints, Votes incr, uint48 clock) private {
+        Checkpoint[] storage arr = checkpoints.total;
+        (Votes oldValue, uint256 len) = _get(arr, clock);
+        _set(arr, clock, oldValue + incr, len);
+    }
+
     function _mint(Checkpoints storage checkpoints, address to, Votes incr, uint48 clock) private {
-        {
-            Checkpoint[] storage arr = checkpoints.total;
-            (Votes oldValue, uint256 len) = _get(arr, clock);
-            _set(arr, clock, oldValue + incr, len);
-        }
-        {
-            Checkpoint[] storage arr = checkpoints.each[to];
-            (Votes oldValue, uint256 len) = _get(checkpoints.each[to], clock);
-            Votes newValue = oldValue + incr;
-            _set(arr, clock, newValue, len);
-            emit IERC5805.DelegateVotesChanged(to, Votes.unwrap(oldValue), Votes.unwrap(newValue));
-        }
+        _mint(checkpoints, incr, clock);
+        Checkpoint[] storage arr = checkpoints.each[to];
+        (Votes oldValue, uint256 len) = _get(checkpoints.each[to], clock);
+        Votes newValue = oldValue + incr;
+        _set(arr, clock, newValue, len);
+        emit IERC5805.DelegateVotesChanged(to, Votes.unwrap(oldValue), Votes.unwrap(newValue));
+    }
+
+    function _burn(Checkpoints storage checkpoints, Votes decr, uint48 clock) private {
+        Checkpoint[] storage arr = checkpoints.total;
+        (Votes oldValue, uint256 len) = _get(arr, clock);
+        _set(arr, clock, oldValue - decr, len);
     }
 
     function _burn(Checkpoints storage checkpoints, address from, Votes decr, uint48 clock) private {
-        {
-            Checkpoint[] storage arr = checkpoints.total;
-            (Votes oldValue, uint256 len) = _get(arr, clock);
-            _set(arr, clock, oldValue - decr, len);
-        }
-        {
-            Checkpoint[] storage arr = checkpoints.each[from];
-            (Votes oldValue, uint256 len) = _get(checkpoints.each[from], clock);
-            Votes newValue = oldValue - decr;
-            _set(arr, clock, newValue, len);
-            emit IERC5805.DelegateVotesChanged(from, Votes.unwrap(oldValue), Votes.unwrap(newValue));
-        }
+        _burn(checkpoints, decr, clock);
+        Checkpoint[] storage arr = checkpoints.each[from];
+        (Votes oldValue, uint256 len) = _get(checkpoints.each[from], clock);
+        Votes newValue = oldValue - decr;
+        _set(arr, clock, newValue, len);
+        emit IERC5805.DelegateVotesChanged(from, Votes.unwrap(oldValue), Votes.unwrap(newValue));
     }
 
     function current(Checkpoints storage checkpoints, address account) internal view returns (Votes value) {
@@ -155,10 +160,11 @@ library LibCheckpoints {
             let start := keccak256(0x00, 0x20)
             let hi := add(start, len)
             let lo := start
-            let slotValue := sload(lo)
+            let slotValue
             for {} true {} {
+                slotValue := sload(lo)
                 let key := and(0xffffffffffff, shr(0x70, slotValue))
-                if iszero(lt(timepoint, key)) { break }
+                if iszero(gt(key, timepoint)) { break }
                 let newLo := sub(lo, shl(0x01, sub(hi, lo)))
                 hi := lo
                 lo := newLo
@@ -167,14 +173,13 @@ library LibCheckpoints {
                     slotValue := sload(lo)
                     break
                 }
-                slotValue := sload(lo)
             }
             lo := add(0x01, lo)
             for {} xor(hi, lo) {} {
                 let mid := add(shr(0x01, sub(hi, lo)), lo)
                 let newSlotValue := sload(mid)
                 let key := and(0xffffffffffff, shr(0x70, newSlotValue))
-                if lt(timepoint, key) {
+                if gt(key, timepoint) {
                     // down
                     hi := mid
                 }
@@ -182,7 +187,7 @@ library LibCheckpoints {
                 slotValue := newSlotValue
                 lo := add(0x01, mid)
             }
-            if iszero(lt(timepoint, and(0xffffffffffff, shr(0x70, slotValue)))) {
+            if iszero(gt(and(0xffffffffffff, shr(0x70, slotValue)), timepoint)) {
                 value := and(0xffffffffffffffffffffffffffff, slotValue)
             }
         }
