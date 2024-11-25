@@ -414,16 +414,19 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         if (block.timestamp > deadline) {
             revert ERC2612ExpiredSignature(deadline);
         }
-        bytes32 structHash = keccak256(
-            abi.encode(
-                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
-                owner,
-                spender,
-                amount,
-                nonces[owner]++,
-                deadline
-            )
-        );
+        bytes32 structHash;
+        unchecked {
+            structHash = keccak256(
+                abi.encode(
+                    keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                    owner,
+                    spender,
+                    amount,
+                    nonces[owner]++,
+                    deadline
+                )
+            );
+        }
         bytes32 signingHash = keccak256(abi.encodePacked(bytes2(0x1901), DOMAIN_SEPARATOR(), structHash));
         address signer = ecrecover(signingHash, v, r, s);
         if (signer != owner) {
