@@ -281,7 +281,13 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         } else if (to == address(pair)) {
             _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
         } else {
-            _checkpoints.transfer(delegates[from], delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
+            _checkpoints.transfer(
+                delegates[from],
+                delegates[to],
+                newToShares.toVotes() - cachedToShares.toVotes(),
+                cachedFromShares.toVotes() - newFromShares.toVotes(),
+                clock()
+            );
             pair.sync();
         }
 
@@ -455,12 +461,15 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     function getVotes(address account) external view override returns (uint256) {
         return _checkpoints.current(account).toExternal();
     }
+
     function getPastVotes(address account, uint256 timepoint) external view override returns (uint256 votingWeight) {
         return _checkpoints.get(account, uint48(timepoint)).toExternal();
     }
+
     function getTotalVotes() external view returns (uint256) {
         return _checkpoints.currentTotal().toExternal();
     }
+
     function getPastTotalVotes(uint256 timepoint) external view returns (uint256) {
         return _checkpoints.getTotal(uint48(timepoint)).toExternal();
     }
@@ -484,10 +493,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         }
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"),
-                delegatee,
-                nonce,
-                expiry
+                keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"), delegatee, nonce, expiry
             )
         );
         bytes32 signingHash = keccak256(abi.encodePacked(bytes2(0x1901), DOMAIN_SEPARATOR(), structHash));
@@ -510,7 +516,8 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     }
 
     function _burn(address from, CrazyBalance amount) internal returns (bool) {
-        (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
+        (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
+            _balanceOf(from);
         if (amount > fromBalance) {
             if (_check()) {
                 revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
@@ -530,8 +537,9 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             newTotalShares = cachedTotalShares - cachedFromShares;
             newFromShares = ZERO_SHARES;
         } else {
-            (newFromShares, newTotalShares, newTotalSupply) =
-                ReflectMath.getBurnShares(amount.toBalance(from), cachedTotalSupply, cachedTotalShares, cachedFromShares);
+            (newFromShares, newTotalShares, newTotalSupply) = ReflectMath.getBurnShares(
+                amount.toBalance(from), cachedTotalSupply, cachedTotalShares, cachedFromShares
+            );
         }
         _sharesOf[from] = newFromShares;
         _totalShares = newTotalShares;
@@ -553,7 +561,8 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     }
 
     function _deliver(address from, CrazyBalance amount) internal returns (bool) {
-        (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) = _balanceOf(from);
+        (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
+            _balanceOf(from);
         if (amount > fromBalance) {
             if (_check()) {
                 revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
@@ -567,8 +576,9 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             newTotalShares = cachedTotalShares - cachedFromShares;
             newFromShares = ZERO_SHARES;
         } else {
-            (newFromShares, newTotalShares) =
-                ReflectMath.getDeliverShares(amount.toBalance(from), cachedTotalSupply, cachedTotalShares, cachedFromShares);
+            (newFromShares, newTotalShares) = ReflectMath.getDeliverShares(
+                amount.toBalance(from), cachedTotalSupply, cachedTotalShares, cachedFromShares
+            );
         }
 
         _sharesOf[from] = newFromShares;

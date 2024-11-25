@@ -17,7 +17,9 @@ struct Checkpoints {
 }
 
 library LibCheckpoints {
-    function transfer(Checkpoints storage checkpoints, address from, address to, Votes incr, Votes decr, uint48 clock) internal {
+    function transfer(Checkpoints storage checkpoints, address from, address to, Votes incr, Votes decr, uint48 clock)
+        internal
+    {
         if (from == address(0)) {
             if (to == address(0)) {
                 return;
@@ -73,7 +75,13 @@ library LibCheckpoints {
 
     function _set(Checkpoint[] storage arr, uint48 clock, Votes value, uint256 len) private {
         assembly ("memory-safe") {
-            sstore(arr.slot, or(shl(0xa0, len), or(shl(0x70, and(0xffffffffffff, clock)), and(0xffffffffffffffffffffffffffff, value))))
+            sstore(
+                arr.slot,
+                or(
+                    shl(0xa0, len),
+                    or(shl(0x70, and(0xffffffffffff, clock)), and(0xffffffffffffffffffffffffffff, value))
+                )
+            )
         }
     }
 
@@ -113,6 +121,7 @@ library LibCheckpoints {
             value := sload(each.slot)
         }
     }
+
     function currentTotal(Checkpoints storage checkpoints) internal view returns (Votes value) {
         Checkpoint[] storage total = checkpoints.total;
         assembly ("memory-safe") {
@@ -120,9 +129,14 @@ library LibCheckpoints {
         }
     }
 
-    function get(Checkpoints storage checkpoints, address account, uint48 timepoint) internal view returns (Votes value) {
+    function get(Checkpoints storage checkpoints, address account, uint48 timepoint)
+        internal
+        view
+        returns (Votes value)
+    {
         revert("unimplemented");
     }
+
     function getTotal(Checkpoints storage checkpoints, uint48 timepoint) internal view returns (Votes value) {
         revert("unimplemented");
     }
