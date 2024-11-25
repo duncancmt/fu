@@ -5,10 +5,10 @@ import {Settings} from "../Settings.sol";
 
 import {Shares} from "./Shares.sol";
 
-type Votes is uint208;
+type Votes is uint112;
 
 function toVotes(Shares s) pure returns (Votes) {
-    return Votes.wrap(uint208(Shares.unwrap(s.div(Settings.SHARES_TO_VOTES_DIVISOR))));
+    return Votes.wrap(uint112(Shares.unwrap(s.div(Settings.SHARES_TO_VOTES_DIVISOR))));
 }
 
 function toExternal(Votes v) pure returns (uint256) {

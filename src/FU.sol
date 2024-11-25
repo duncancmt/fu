@@ -444,20 +444,22 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
 
     function clock() public view override returns (uint48) {
         // slither-disable-next-line divide-before-multiply
-        return uint48(block.timestamp / 86400 * 86400);
+        unchecked {
+            return uint48(block.timestamp / 86400 * 86400);
+        }
     }
 
     // slither-disable-next-line naming-convention
     string public constant override CLOCK_MODE = "mode=timestamp&epoch=1970-01-01T00%3A00%3A00Z&quantum=86400";
 
-    function getVotes(address account) external view override returns (uint256 votingWeight) {
-        revert("unimplemented");
+    function getVotes(address account) external view override returns (uint256) {
+        return _checkpoints.current(account).toExternal();
     }
     function getPastVotes(address account, uint256 timepoint) external view override returns (uint256 votingWeight) {
         revert("unimplemented");
     }
     function getTotalVotes() external view returns (uint256) {
-        revert("unimplemented");
+        return _checkpoints.currentTotal().toExternal();
     }
     function getPastTotalVotes(uint256 timepoint) external view returns (uint256) {
         revert("unimplemented");
