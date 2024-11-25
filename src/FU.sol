@@ -26,14 +26,12 @@ import {SharesToBalance} from "./core/types/BalanceXShares.sol";
 import {toVotes} from "./core/types/Votes.sol";
 
 import {Math} from "./lib/Math.sol";
-import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 
 contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorageLayout {
-    using UnsafeMath for uint256;
     using ChecksumAddress for address;
     using {toCrazyBalance} for uint256;
     using SharesToBalance for Shares;
