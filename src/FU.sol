@@ -461,13 +461,17 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     function getPastVotes(address account, uint256 timepoint) external view returns (uint256 votingWeight);
     */
 
-    function delegate(address delegatee) external {
-        Shares shares = _sharesOf[msg.sender];
-        address oldDelegatee = delegates[msg.sender];
-        emit DelegateChanged(msg.sender, oldDelegatee, delegatee);
+    function _delegate(address delegator, address delegatee) internal {
+        Shares shares = _sharesOf[delegator];
+        address oldDelegatee = delegates[delegator];
+        emit DelegateChanged(delegator, oldDelegatee, delegatee);
         _checkpoints.sub(oldDelegatee, shares.toVotes(), clock());
-        delegates[msg.sender] = delegatee;
+        delegates[delegator] = delegatee;
         _checkpoints.add(delegatee, shares.toVotes(), clock());
+    }
+
+    function delegate(address delegatee) external {
+        return _delegate(msg.sender, delegatee);
     }
 
     function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external {
@@ -493,6 +497,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
                 revert ERC5805InvalidNonce(nonce, expected);
             }
         }
+        return _delegate(signer, delegatee);
     }
 
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
