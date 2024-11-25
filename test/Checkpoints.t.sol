@@ -28,9 +28,9 @@ contract CheckpointsTest is Boilerplate, Test {
         exclusion.selectors[0] = this.setUp.selector;
         excludeSelector(exclusion);
     }
-    
+
     // TODO: mint/burn/transfer variants _without_ elapsed
-    
+
     function mint(address to, Votes incr, uint32 elapsed) external {
         assume(to != address(0));
         incr = Votes.wrap(uint112(bound(Votes.unwrap(incr), 1, type(uint112).max >> 16)));
@@ -102,11 +102,15 @@ contract CheckpointsTest is Boilerplate, Test {
         }
 
         total.push(Shadow({key: clock, value: total[total.length - 1].value + incr - decr}));
-        each[from].push(Shadow({key: clock, value: each[from][each[from].length - 1].value - decr}));
-        if (each[to].length == 0) {
-            each[to].push(Shadow({key: clock, value: incr}));
+        if (from == to) {
+            each[from].push(Shadow({key: clock, value: each[from][each[from].length - 1].value + incr - decr}));
         } else {
-            each[to].push(Shadow({key: clock, value: each[to][each[to].length - 1].value + incr}));
+            each[from].push(Shadow({key: clock, value: each[from][each[from].length - 1].value - decr}));
+            if (each[to].length == 0) {
+                each[to].push(Shadow({key: clock, value: incr}));
+            } else {
+                each[to].push(Shadow({key: clock, value: each[to][each[to].length - 1].value + incr}));
+            }
         }
     }
 
@@ -127,8 +131,20 @@ contract CheckpointsTest is Boilerplate, Test {
         }
     }
 
-    /*
     function invariant_actors() external view {
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            {
+                Votes actual = dut.get(actor, each[actor][0].key - 1);
+                assertEq(Votes.unwrap(actual), 0);
+            }
+            for (uint256 j; j < each[actor].length; j++) {
+                Shadow storage expected = each[actor][j];
+                Votes actual = dut.getTotal(expected.key);
+                assertEq(Votes.unwrap(actual), Votes.unwrap(expected.value));
+                actual = dut.getTotal(expected.key + 1);
+                assertEq(Votes.unwrap(actual), Votes.unwrap(expected.value));
+            }
+        }
     }
-    */
 }

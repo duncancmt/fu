@@ -29,6 +29,14 @@ library LibCheckpoints {
         if (to == address(0)) {
             return _burn(checkpoints, from, decr, clock);
         }
+        if (from == to) {
+            if (incr > decr) {
+                _mint(checkpoints, from, incr - decr, clock);
+            } else if (incr < decr) {
+                _burn(checkpoints, to, decr - incr, clock);
+            }
+            return;
+        }
         if (incr > decr) {
             _mint(checkpoints, incr - decr, clock);
         } else if (incr < decr) {
