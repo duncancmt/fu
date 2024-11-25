@@ -5,7 +5,7 @@
 		"timeout": 0,
 		"testLimit": 1000000,
 		"shrinkLimit": 5000,
-		"callSequenceLength": 1,
+		"callSequenceLength": 100,
 		"corpusDirectory": "",
 		"coverageEnabled": true,
 		"coverageFormats": [
@@ -75,7 +75,7 @@
 	"compilation": {
 		"platform": "crytic-compile",
 		"platformConfig": {
-			"target": "test/",
+			"target": "test/Medusa.sol",
 			"solcVersion": "",
 			"exportDirectory": "",
 			"args": []
