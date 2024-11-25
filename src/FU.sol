@@ -52,15 +52,6 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return Balance.unwrap(_totalSupply);
     }
 
-    // TODO: maybe we shouldn't expose these two functions? They're an abstraction leak
-    function sharesOf(address account) external view returns (uint256) {
-        return Shares.unwrap(_sharesOf[account]);
-    }
-
-    function totalShares() external view returns (uint256) {
-        return Shares.unwrap(_totalShares);
-    }
-
     /// @custom:security non-reentrant
     IUniswapV2Pair public immutable pair;
 
