@@ -459,9 +459,41 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     /*
     function getVotes(address account) external view override returns (uint256 votingWeight);
     function getPastVotes(address account, uint256 timepoint) external view returns (uint256 votingWeight);
-    function delegate(address delegatee) external;
-    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external;
     */
+
+    function delegate(address delegatee) external {
+        Shares shares = _sharesOf[msg.sender];
+        address oldDelegatee = delegates[msg.sender];
+        emit DelegateChanged(msg.sender, oldDelegatee, delegatee);
+        _checkpoints.sub(oldDelegatee, shares.toVotes(), clock());
+        delegates[msg.sender] = delegatee;
+        _checkpoints.add(delegatee, shares.toVotes(), clock());
+    }
+
+    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external {
+        if (block.timestamp > expiry) {
+            revert ERC5805ExpiredSignature(expiry);
+        }
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"),
+                delegatee,
+                nonce,
+                expiry
+            )
+        );
+        bytes32 signingHash = keccak256(abi.encodePacked(bytes2(0x1901), DOMAIN_SEPARATOR(), structHash));
+        address signer = ecrecover(signingHash, v, r, s);
+        if (signer == address(0)) {
+            revert ERC5805InvalidSignature();
+        }
+        unchecked {
+            uint256 expected = nonces[signer]++;
+            if (nonce != expected) {
+                revert ERC5805InvalidNonce(nonce, expected);
+            }
+        }
+    }
 
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
         _setTemporaryAllowance(_temporaryAllowance, msg.sender, spender, amount.toCrazyBalance());

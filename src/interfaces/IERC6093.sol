@@ -9,4 +9,8 @@ interface IERC6093 {
 
     error ERC2612ExpiredSignature(uint256 deadline);
     error ERC2612InvalidSigner(address signer, address owner);
+
+    error ERC5805ExpiredSignature(uint256 expiry);
+    error ERC5805InvalidSignature();
+    error ERC5805InvalidNonce(uint256 actual, uint256 expected);
 }
