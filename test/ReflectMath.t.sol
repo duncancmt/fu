@@ -13,10 +13,11 @@ import {BalanceXBasisPoints, scale, cast, castUp} from "src/core/types/BalanceXB
 import {UnsafeMath} from "src/lib/UnsafeMath.sol";
 
 import {Test} from "@forge-std/Test.sol";
+import {Boilerplate} from "./Boilerplate.sol";
 
 import {console} from "@forge-std/console.sol";
 
-contract ReflectMathTest is Test {
+contract ReflectMathTest is Boilerplate, Test {
     using UnsafeMath for uint256;
     using SharesToBalance for Shares;
 
@@ -50,7 +51,7 @@ contract ReflectMathTest is Test {
         oneWeiInShares =
             oneWeiInShares.inc(Shares.unwrap(oneWeiInShares) * Balance.unwrap(totalSupply) < Shares.unwrap(totalShares));
 
-        vm.assume(oneWeiInShares < totalShares - oneTokenInShares); // only possible in extreme conditions due to rounding error
+        assume(oneWeiInShares < totalShares - oneTokenInShares); // only possible in extreme conditions due to rounding error
         fromShares = Shares.wrap(
             bound(
                 Shares.unwrap(fromShares), Shares.unwrap(oneWeiInShares), Shares.unwrap(totalShares - oneTokenInShares)
@@ -83,7 +84,7 @@ contract ReflectMathTest is Test {
         Balance amount,
         BasisPoints feeRate/*,
         uint256 sharesRatio*/
-    ) external view {
+    ) public view {
         Balance fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, /* sharesRatio */ 0);
@@ -105,7 +106,7 @@ contract ReflectMathTest is Test {
                 Shares.unwrap(totalShares - _oneTokenInShares(totalSupply, totalShares) - fromShares)
             )
         );
-        vm.assume(fromShares + toShares < totalShares.div(2));
+        assume(fromShares + toShares < totalShares.div(2));
         Balance toBalance = toShares.toBalance(totalSupply, totalShares);
 
         // console.log("===");
@@ -146,7 +147,7 @@ contract ReflectMathTest is Test {
         Shares toShares,
         BasisPoints feeRate/*,
         uint256 sharesRatio*/
-    ) external view {
+    ) public pure {
         Balance fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance) =
             _boundCommon(totalSupply, totalShares, fromShares, /* sharesRatio */ 0);
@@ -167,7 +168,7 @@ contract ReflectMathTest is Test {
                 Shares.unwrap(totalShares - _oneTokenInShares(totalSupply, totalShares) - fromShares)
             )
         );
-        vm.assume(fromShares + toShares < totalShares.div(2));
+        assume(fromShares + toShares < totalShares.div(2));
         Balance toBalance = toShares.toBalance(totalSupply, totalShares);
 
         (Shares newToShares, Shares newTotalShares) =
@@ -195,11 +196,11 @@ contract ReflectMathTest is Test {
         Shares fromShares,
         Balance amount/*,
         uint256 sharesRatio*/
-    ) external view {
+    ) public view {
         Balance fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, /* sharesRatio */ 0);
-        vm.assume(fromShares < totalShares.div(2));
+        assume(fromShares < totalShares.div(2));
 
         (Shares newFromShares, Shares newTotalShares) =
             ReflectMath.getDeliverShares(amount, totalSupply, totalShares, fromShares);

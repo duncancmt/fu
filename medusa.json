@@ -3,16 +3,16 @@
 		"workers": 10,
 		"workerResetLimit": 50,
 		"timeout": 0,
-		"testLimit": 0,
+		"testLimit": 1000000,
 		"shrinkLimit": 5000,
-		"callSequenceLength": 100,
+		"callSequenceLength": 1,
 		"corpusDirectory": "",
 		"coverageEnabled": true,
 		"coverageFormats": [
 			"html",
 			"lcov"
 		],
-		"targetContracts": [],
+		"targetContracts": ["MedusaReflectMathTest"],
 		"predeployedContracts": {},
 		"targetContractsBalances": [],
 		"constructorArgs": {},
@@ -75,7 +75,7 @@
 	"compilation": {
 		"platform": "crytic-compile",
 		"platformConfig": {
-			"target": ".",
+			"target": "test/",
 			"solcVersion": "",
 			"exportDirectory": "",
 			"args": []
