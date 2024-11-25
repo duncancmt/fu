@@ -58,6 +58,32 @@ contract CheckpointsTest is Boilerplate, Test {
         }
     }
 
+    function mint(address to, Votes incr) external {
+        assume(to != address(0));
+        incr = Votes.wrap(uint112(bound(Votes.unwrap(incr), 1, type(uint112).max >> 16)));
+        assume(clock != 0);
+
+        dut.mint(to, incr, clock);
+
+        if (!isRegistered[to]) {
+            actors.push(to);
+            isRegistered[to] = true;
+        }
+
+        if (total[total.length - 1].key == clock) {
+            total[total.length - 1].value = total[total.length - 1].value + incr;
+        } else {
+            total.push(Shadow({key: clock, value: total[total.length - 1].value + incr}));
+        }
+        if (each[to].length == 0) {
+            each[to].push(Shadow({key: clock, value: incr}));
+        } else if (each[to][each[to].length - 1].key != clock) {
+            each[to].push(Shadow({key: clock, value: each[to][each[to].length - 1].value + incr}));
+        } else {
+            each[to][each[to].length - 1].value = each[to][each[to].length - 1].value + incr;
+        }
+    }
+
     function burn(uint256 fromActor, Votes decr, uint32 elapsed) external {
         assume(actors.length > 0);
         fromActor = bound(fromActor, 0, actors.length - 1);
