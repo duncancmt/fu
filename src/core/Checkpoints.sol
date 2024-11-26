@@ -49,14 +49,14 @@ library LibCheckpoints {
             (Votes oldValue, uint256 len) = _get(arr, clock);
             Votes newValue = oldValue - decr;
             _set(arr, clock, newValue, len);
-            emit IERC5805.DelegateVotesChanged(from, Votes.unwrap(oldValue), Votes.unwrap(newValue));
+            emit IERC5805.DelegateVotesChanged(from, oldValue.toExternal(), newValue.toExternal());
         }
         {
             Checkpoint[] storage arr = checkpoints.each[to];
             (Votes oldValue, uint256 len) = _get(arr, clock);
             Votes newValue = oldValue + incr;
             _set(arr, clock, newValue, len);
-            emit IERC5805.DelegateVotesChanged(to, Votes.unwrap(oldValue), Votes.unwrap(newValue));
+            emit IERC5805.DelegateVotesChanged(to, oldValue.toExternal(), newValue.toExternal());
         }
     }
 
@@ -124,7 +124,7 @@ library LibCheckpoints {
         (Votes oldValue, uint256 len) = _get(arr, clock);
         Votes newValue = oldValue + incr;
         _set(arr, clock, newValue, len);
-        emit IERC5805.DelegateVotesChanged(to, Votes.unwrap(oldValue), Votes.unwrap(newValue));
+        emit IERC5805.DelegateVotesChanged(to, oldValue.toExternal(), newValue.toExternal());
     }
 
     function _burn(Checkpoints storage checkpoints, Votes decr, uint48 clock) private {
@@ -139,7 +139,7 @@ library LibCheckpoints {
         (Votes oldValue, uint256 len) = _get(arr, clock);
         Votes newValue = oldValue - decr;
         _set(arr, clock, newValue, len);
-        emit IERC5805.DelegateVotesChanged(from, Votes.unwrap(oldValue), Votes.unwrap(newValue));
+        emit IERC5805.DelegateVotesChanged(from, oldValue.toExternal(), newValue.toExternal());
     }
 
     function current(Checkpoints storage checkpoints, address account) internal view returns (Votes value) {
