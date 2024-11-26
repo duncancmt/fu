@@ -38,7 +38,9 @@ contract ReflectMathTest is Boilerplate, Test {
         );
 
         fromShares = Shares.wrap(
-            bound(Shares.unwrap(fromShares), sharesRatio, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR)))
+            bound(
+                Shares.unwrap(fromShares), sharesRatio + 1, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))
+            )
         );
 
         Balance fromBalance = fromShares.toBalance(totalSupply, totalShares);
