@@ -166,10 +166,6 @@ library LibCheckpoints {
             }
         }
         assembly ("memory-safe") {
-            function check(s, q) -> c {
-                c := gt(shr(0xd0, s), q)
-            }
-
             // A dynamic array's elements are encoded in storage beginning at
             // the slot named by the hash of the base slot
             mstore(0x00, arr.slot)
@@ -183,7 +179,7 @@ library LibCheckpoints {
             let lo := sub(hi, 0x01)
             for {} true {} {
                 value := sload(lo)
-                if iszero(check(value, query)) { break }
+                if iszero(gt(shr(0xd0, value), query)) { break }
                 let newLo := sub(lo, shl(0x01, sub(hi, lo)))
                 hi := lo
                 lo := newLo
@@ -199,7 +195,7 @@ library LibCheckpoints {
             for {} xor(hi, lo) {} {
                 let mid := add(shr(0x01, sub(hi, lo)), lo)
                 let newValue := sload(mid)
-                if check(newValue, query) {
+                if gt(shr(0xd0, newValue), query) {
                     // down
                     hi := mid
                     continue
@@ -212,7 +208,7 @@ library LibCheckpoints {
             // Because we do not snapshot the initial, empty checkpoint, we have
             // to detect that we've run off the front of the array and zero-out
             // the return value
-            if check(value, query) {
+            if gt(shr(0xd0, value), query) {
                 value := 0
             }
         }
