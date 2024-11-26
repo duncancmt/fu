@@ -164,40 +164,55 @@ library LibCheckpoints {
             }
         }
         assembly ("memory-safe") {
+            function getKey(s) -> k {
+                k := and(0xffffffffffff, shr(0x70, s))
+            }
+
+            // A dynamic array's elements are encoded in storage beginning at
+            // the slot named by the hash of the base slot
             mstore(0x00, arr.slot)
             let start := keccak256(0x00, 0x20)
+
+            // Because we tend to query near the end of the array, we optimize
+            // by bounding our search to progressively larger suffixes of the
+            // array, until we find a suffix that contains the checkpoint of
+            // interest
             let hi := add(start, len)
             let lo := sub(hi, 0x01)
-            let slotValue
             for {} true {} {
-                slotValue := sload(lo)
-                let key := and(0xffffffffffff, shr(0x70, slotValue))
-                if iszero(gt(key, query)) { break }
+                value := sload(lo)
+                if iszero(gt(getKey(value), query)) { break }
                 let newLo := sub(lo, shl(0x01, sub(hi, lo)))
                 hi := lo
                 lo := newLo
                 if lt(lo, start) {
                     lo := start
-                    slotValue := sload(lo)
+                    value := sload(lo)
                     break
                 }
             }
+
+            // Apply normal binary search
             lo := add(0x01, lo)
             for {} xor(hi, lo) {} {
                 let mid := add(shr(0x01, sub(hi, lo)), lo)
                 let newSlotValue := sload(mid)
-                let key := and(0xffffffffffff, shr(0x70, newSlotValue))
-                if gt(key, query) {
+                if gt(getKey(newSlotValue), query) {
                     // down
                     hi := mid
+                    continue
                 }
                 // up
-                slotValue := newSlotValue
+                value := newSlotValue
                 lo := add(0x01, mid)
             }
-            switch gt(and(0xffffffffffff, shr(0x70, slotValue)), query)
-            case 0 { value := and(0xffffffffffffffffffffffffffff, slotValue) }
-            default { value := 0 }
+
+            // Because we do not snapshot the initial, empty checkpoint, we have
+            // to detect that we've run off the front of the array and zero-out
+            // the return value
+            if gt(getKey(value), query) {
+                value := 0
+            }
         }
     }
 
