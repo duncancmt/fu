@@ -398,11 +398,13 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     function DOMAIN_SEPARATOR() public view override returns (bytes32 r) {
         assembly ("memory-safe") {
             let ptr := mload(0x40)
-            mstore(ptr, _DOMAIN_TYPEHASH)
-            mstore(add(0x20, ptr), _NAME_HASH)
-            mstore(add(0x40, ptr), chainid())
-            mstore(add(0x60, ptr), address())
-            r := keccak256(ptr, 0x80)
+            mstore(0x00, _DOMAIN_TYPEHASH)
+            mstore(0x20, _NAME_HASH)
+            mstore(0x40, chainid())
+            mstore(0x60, address())
+            r := keccak256(0x00, 0x80)
+            mstore(0x40, ptr)
+            mstore(0x60, 0x00)
         }
     }
 
