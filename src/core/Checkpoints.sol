@@ -32,14 +32,16 @@ library LibCheckpoints {
         if (from == to) {
             if (incr > decr) {
                 _mint(checkpoints, from, incr - decr, clock);
-            } else if (incr < decr) {
+            }
+            if (incr < decr) {
                 _burn(checkpoints, to, decr - incr, clock);
             }
             return;
         }
         if (incr > decr) {
             _mint(checkpoints, incr - decr, clock);
-        } else if (incr < decr) {
+        }
+        if (incr < decr) {
             _burn(checkpoints, decr - incr, clock);
         }
         {
