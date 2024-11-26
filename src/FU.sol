@@ -132,6 +132,9 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     }
 
     function _applyWhaleLimit(Shares shares, Shares totalShares_) internal pure returns (Shares, Shares) {
+        // TODO: this is wrong. this doesn't burn the whale down enough because
+        // the *POST*-condition of this function is that the whale is under the
+        // limit
         Shares whaleLimit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         if (shares > whaleLimit) {
             totalShares_ = totalShares_ - (shares - whaleLimit);
