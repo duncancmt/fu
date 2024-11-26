@@ -166,7 +166,7 @@ library LibCheckpoints {
             }
         }
         assembly ("memory-safe") {
-            function getKey(s) -> k {
+            function key(s) -> k {
                 k := and(0xffffffffffff, shr(0x70, s))
             }
 
@@ -175,15 +175,15 @@ library LibCheckpoints {
             mstore(0x00, arr.slot)
             let start := keccak256(0x00, 0x20)
 
-            // Because we tend to query near the end of the array, we optimize
-            // by bounding our search to progressively larger suffixes of the
-            // array, until we find a suffix that contains the checkpoint of
+            // Because we tend to query near the current time, we optimize by
+            // bounding our search to progressively larger portions near the end
+            // of the array, until we find one that contains the checkpoint of
             // interest
             let hi := add(start, len)
             let lo := sub(hi, 0x01)
             for {} true {} {
                 value := sload(lo)
-                if iszero(gt(getKey(value), query)) { break }
+                if iszero(gt(key(value), query)) { break }
                 let newLo := sub(lo, shl(0x01, sub(hi, lo)))
                 hi := lo
                 lo := newLo
@@ -199,7 +199,7 @@ library LibCheckpoints {
             for {} xor(hi, lo) {} {
                 let mid := add(shr(0x01, sub(hi, lo)), lo)
                 let newSlotValue := sload(mid)
-                if gt(getKey(newSlotValue), query) {
+                if gt(key(newSlotValue), query) {
                     // down
                     hi := mid
                     continue
@@ -212,7 +212,7 @@ library LibCheckpoints {
             // Because we do not snapshot the initial, empty checkpoint, we have
             // to detect that we've run off the front of the array and zero-out
             // the return value
-            if gt(getKey(value), query) {
+            if gt(key(value), query) {
                 value := 0
             }
         }
