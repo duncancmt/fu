@@ -250,4 +250,22 @@ contract CheckpointsTest is Boilerplate, Test {
             }
         }
     }
+
+    function invariant_totalactors() external view {
+        if (total.length == 0) {
+            return;
+        }
+        for (uint256 i; i < actors.length; i++) {
+            assertEq(Votes.unwrap(dut.get(actors[i], total[0].key - 1)), 0);
+        }
+        for (uint256 i; i < total.length; i++) {
+            uint48 key = total[i].key;
+            Votes expected = total[i].value;
+            Votes actual;
+            for (uint256 j; j < actors.length; j++) {
+                actual = actual + dut.get(actors[j], key);
+            }
+            assertEq(Votes.unwrap(actual), Votes.unwrap(expected));
+        }
+    }
 }
