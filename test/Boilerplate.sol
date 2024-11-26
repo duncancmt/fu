@@ -13,7 +13,7 @@ abstract contract Boilerplate is TestBase {
 }
 
 abstract contract MedusaBoilerplate is Boilerplate, StdAssertions {
-    function setUp() public pure virtual override {}
+    function setUp() public view virtual override {}
 
     constructor() {
         super.setUp();
@@ -27,13 +27,14 @@ abstract contract MedusaBoilerplate is Boilerplate, StdAssertions {
         }
     }
 
-    function failPure() private pure {
-        function () internal contraband = fail;
-        function () internal pure smuggled;
+    function smuggle(function () internal contraband) internal pure returns (function () internal pure smuggled) {
         assembly ("memory-safe") {
             smuggled := contraband
         }
-        smuggled();
+    }
+
+    function failPure() private pure {
+        smuggle(fail)();
     }
 
     function assertTrue(bool data) internal pure virtual override {

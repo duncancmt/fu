@@ -23,16 +23,14 @@ contract CheckpointsTest is Boilerplate, Test {
     mapping(address => bool) internal isRegistered;
     address[] internal actors;
 
-    function setUp() public override {
+    function setUp() public virtual override {
         targetContract(address(this));
         FuzzSelector memory exclusion = FuzzSelector({addr: address(this), selectors: new bytes4[](1)});
         exclusion.selectors[0] = this.setUp.selector;
         excludeSelector(exclusion);
     }
 
-    // TODO: mint/burn/transfer variants _without_ elapsed
-
-    function mint(address to, Votes incr, uint32 elapsed) external {
+    function mint(address to, Votes incr, uint32 elapsed) public virtual {
         assume(to != address(0));
         incr = Votes.wrap(uint112(bound(Votes.unwrap(incr), 1, type(uint112).max >> 16)));
         assume(elapsed > 1);
@@ -58,7 +56,7 @@ contract CheckpointsTest is Boilerplate, Test {
         }
     }
 
-    function mint(address to, Votes incr) external {
+    function mint(address to, Votes incr) public virtual {
         assume(to != address(0));
         incr = Votes.wrap(uint112(bound(Votes.unwrap(incr), 1, type(uint112).max >> 16)));
         assume(clock != 0);
@@ -84,7 +82,7 @@ contract CheckpointsTest is Boilerplate, Test {
         }
     }
 
-    function burn(uint256 fromActor, Votes decr, uint32 elapsed) external {
+    function burn(uint256 fromActor, Votes decr, uint32 elapsed) public virtual {
         assume(actors.length > 0);
         fromActor = bound(fromActor, 0, actors.length - 1);
         address from = actors[fromActor];
@@ -104,7 +102,7 @@ contract CheckpointsTest is Boilerplate, Test {
         each[from].push(Shadow({key: clock, value: each[from][each[from].length - 1].value - decr}));
     }
 
-    function burn(uint256 fromActor, Votes decr) external {
+    function burn(uint256 fromActor, Votes decr) public virtual {
         assume(actors.length > 0);
         fromActor = bound(fromActor, 0, actors.length - 1);
         address from = actors[fromActor];
@@ -130,7 +128,7 @@ contract CheckpointsTest is Boilerplate, Test {
         }
     }
 
-    function transfer(uint256 fromActor, address to, Votes incr, Votes decr, uint32 elapsed) external {
+    function transfer(uint256 fromActor, address to, Votes incr, Votes decr, uint32 elapsed) public virtual {
         assume(actors.length > 0);
         fromActor = bound(fromActor, 0, actors.length - 1);
         address from = actors[fromActor];
@@ -167,7 +165,7 @@ contract CheckpointsTest is Boilerplate, Test {
         }
     }
 
-    function transfer(uint256 fromActor, address to, Votes incr, Votes decr) external {
+    function transfer(uint256 fromActor, address to, Votes incr, Votes decr) public virtual {
         assume(actors.length > 0);
         fromActor = bound(fromActor, 0, actors.length - 1);
         address from = actors[fromActor];
@@ -217,7 +215,7 @@ contract CheckpointsTest is Boilerplate, Test {
         }
     }
 
-    function invariant_total() external view {
+    function invariant_total() public view virtual {
         if (total.length == 0) {
             return;
         }
@@ -234,7 +232,7 @@ contract CheckpointsTest is Boilerplate, Test {
         }
     }
 
-    function invariant_actors() external view {
+    function invariant_actors() public view virtual {
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
             {
@@ -251,7 +249,7 @@ contract CheckpointsTest is Boilerplate, Test {
         }
     }
 
-    function invariant_totalactors() external view {
+    function invariant_totalactors() public view virtual {
         if (total.length == 0) {
             return;
         }

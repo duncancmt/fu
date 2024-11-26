@@ -12,7 +12,7 @@
 			"html",
 			"lcov"
 		],
-		"targetContracts": ["MedusaReflectMathTest"],
+		"targetContracts": ["MedusaReflectMathTest", "MedusaCheckpointsTest"],
 		"predeployedContracts": {},
 		"targetContractsBalances": [],
 		"constructorArgs": {},
@@ -24,8 +24,8 @@
 		],
 		"blockNumberDelayMax": 60480,
 		"blockTimestampDelayMax": 604800,
-		"blockGasLimit": 125000000,
-		"transactionGasLimit": 12500000,
+		"blockGasLimit": 1250000000,
+		"transactionGasLimit": 125000000,
 		"testing": {
 			"stopOnFailedTest": true,
 			"stopOnFailedContractMatching": false,
