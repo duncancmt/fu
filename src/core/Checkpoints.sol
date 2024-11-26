@@ -154,12 +154,12 @@ library LibCheckpoints {
         }
     }
 
-    function _bisect(Checkpoint[] storage arr, uint256 timepoint) private view returns (Votes value) {
+    function _bisect(Checkpoint[] storage arr, uint256 query) private view returns (Votes value) {
         uint256 len;
         {
             uint256 key;
             (value, len, key,) = _load(arr);
-            if (key <= timepoint) {
+            if (key <= query) {
                 return value;
             }
         }
@@ -167,12 +167,12 @@ library LibCheckpoints {
             mstore(0x00, arr.slot)
             let start := keccak256(0x00, 0x20)
             let hi := add(start, len)
-            let lo := start
+            let lo := sub(hi, 0x01)
             let slotValue
             for {} true {} {
                 slotValue := sload(lo)
                 let key := and(0xffffffffffff, shr(0x70, slotValue))
-                if iszero(gt(key, timepoint)) { break }
+                if iszero(gt(key, query)) { break }
                 let newLo := sub(lo, shl(0x01, sub(hi, lo)))
                 hi := lo
                 lo := newLo
@@ -187,7 +187,7 @@ library LibCheckpoints {
                 let mid := add(shr(0x01, sub(hi, lo)), lo)
                 let newSlotValue := sload(mid)
                 let key := and(0xffffffffffff, shr(0x70, newSlotValue))
-                if gt(key, timepoint) {
+                if gt(key, query) {
                     // down
                     hi := mid
                 }
@@ -195,9 +195,9 @@ library LibCheckpoints {
                 slotValue := newSlotValue
                 lo := add(0x01, mid)
             }
-            if iszero(gt(and(0xffffffffffff, shr(0x70, slotValue)), timepoint)) {
-                value := and(0xffffffffffffffffffffffffffff, slotValue)
-            }
+            switch gt(and(0xffffffffffff, shr(0x70, slotValue)), query)
+            case 0 { value := and(0xffffffffffffffffffffffffffff, slotValue) }
+            default { value := 0 }
         }
     }
 
