@@ -237,6 +237,10 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
 
         // === EFFECTS ARE ALLOWED ONLY FROM HERE DOWN ===
             CrazyBalance oldPairBalance = cachedToShares.toCrazyBalance(to, cachedTotalSupply, cachedTotalShares);
+            // TODO: `getBurnShares` isn't the correct function to use here. What we want is to set
+            // the number of shares of `pair` to the value such that it will again be exactly
+            // `newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)` after the transfer is
+            // computed. That's going to be complicated.
             (cachedToShares, cachedTotalShares, cachedTotalSupply) = ReflectMath.getBurnShares(
                 amount.toBalance(from, BASIS - taxRate), cachedTotalSupply, cachedTotalShares, cachedToShares
             );
