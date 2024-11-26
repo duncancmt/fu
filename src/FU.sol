@@ -451,7 +451,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     function clock() public view override returns (uint48) {
         unchecked {
             // slither-disable-next-line divide-before-multiply
-            return uint48(block.timestamp / 86400 * 86400);
+            return uint48(block.timestamp / 1 days * 1 days);
         }
     }
 
