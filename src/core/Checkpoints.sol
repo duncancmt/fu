@@ -6,8 +6,8 @@ import {IERC5805} from "../interfaces/IERC5805.sol";
 import {Votes} from "./types/Votes.sol";
 
 struct Checkpoint {
-    uint96 _pad;
     uint48 key;
+    uint96 _pad;
     Votes value;
 }
 
@@ -81,9 +81,9 @@ library LibCheckpoints {
     {
         assembly ("memory-safe") {
             slotValue := sload(arr.slot)
-            len := shr(0xa0, slotValue)
+            key := shr(0xd0, slotValue)
+            len := and(0xffffffffffffffffffffffff, shr(0x70, slotValue))
             value := and(0xffffffffffffffffffffffffffff, slotValue)
-            key := and(0xffffffffffff, shr(0x70, slotValue))
         }
     }
 
@@ -94,7 +94,7 @@ library LibCheckpoints {
         assembly ("memory-safe") {
             if mul(key, gt(and(0xffffffffffff, clock), key)) {
                 mstore(0x00, arr.slot)
-                sstore(add(keccak256(0x00, 0x20), len), and(0xffffffffffffffffffffffffffffffffffffffff, slotValue))
+                sstore(add(keccak256(0x00, 0x20), len), and(0xffffffffffff000000000000000000000000ffffffffffffffffffffffffffff, slotValue))
                 len := add(0x01, len)
             }
         }
@@ -105,8 +105,8 @@ library LibCheckpoints {
             sstore(
                 arr.slot,
                 or(
-                    shl(0xa0, len),
-                    or(shl(0x70, and(0xffffffffffff, clock)), and(0xffffffffffffffffffffffffffff, value))
+                    shl(0x70, len),
+                    or(shl(0xd0, clock), and(0xffffffffffffffffffffffffffff, value))
                 )
             )
         }
@@ -166,8 +166,8 @@ library LibCheckpoints {
             }
         }
         assembly ("memory-safe") {
-            function key(s) -> k {
-                k := and(0xffffffffffff, shr(0x70, s))
+            function check(s, q) -> c {
+                c := gt(shr(0xd0, s), q)
             }
 
             // A dynamic array's elements are encoded in storage beginning at
@@ -183,7 +183,7 @@ library LibCheckpoints {
             let lo := sub(hi, 0x01)
             for {} true {} {
                 value := sload(lo)
-                if iszero(gt(key(value), query)) { break }
+                if iszero(check(value, query)) { break }
                 let newLo := sub(lo, shl(0x01, sub(hi, lo)))
                 hi := lo
                 lo := newLo
@@ -198,21 +198,21 @@ library LibCheckpoints {
             lo := add(0x01, lo)
             for {} xor(hi, lo) {} {
                 let mid := add(shr(0x01, sub(hi, lo)), lo)
-                let newSlotValue := sload(mid)
-                if gt(key(newSlotValue), query) {
+                let newValue := sload(mid)
+                if check(newValue, query) {
                     // down
                     hi := mid
                     continue
                 }
                 // up
-                value := newSlotValue
+                value := newValue
                 lo := add(0x01, mid)
             }
 
             // Because we do not snapshot the initial, empty checkpoint, we have
             // to detect that we've run off the front of the array and zero-out
             // the return value
-            if gt(key(value), query) {
+            if check(value, query) {
                 value := 0
             }
         }
