@@ -625,9 +625,6 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return _success();
     }
 
-    // TODO: a better solution would be to maintain a list of whales and keeping them under the
-    // limit. This doesn't present a DoS vulnerability because the definition of a whale is a
-    // proportion of the total shares, thus the maximum number of whales is that proportion
     function punishWhale(address whale) external returns (bool) {
         Shares cachedWhaleShares = _sharesOf[whale];
         Shares cachedTotalShares = _totalShares;
