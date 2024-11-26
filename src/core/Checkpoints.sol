@@ -94,7 +94,10 @@ library LibCheckpoints {
         assembly ("memory-safe") {
             if mul(key, gt(and(0xffffffffffff, clock), key)) {
                 mstore(0x00, arr.slot)
-                sstore(add(keccak256(0x00, 0x20), len), and(0xffffffffffff000000000000000000000000ffffffffffffffffffffffffffff, slotValue))
+                sstore(
+                    add(keccak256(0x00, 0x20), len),
+                    and(0xffffffffffff000000000000000000000000ffffffffffffffffffffffffffff, slotValue)
+                )
                 len := add(0x01, len)
             }
         }
@@ -102,13 +105,7 @@ library LibCheckpoints {
 
     function _set(Checkpoint[] storage arr, uint48 clock, Votes value, uint256 len) private {
         assembly ("memory-safe") {
-            sstore(
-                arr.slot,
-                or(
-                    shl(0x70, len),
-                    or(shl(0xd0, clock), and(0xffffffffffffffffffffffffffff, value))
-                )
-            )
+            sstore(arr.slot, or(shl(0x70, len), or(shl(0xd0, clock), and(0xffffffffffffffffffffffffffff, value))))
         }
     }
 
@@ -208,9 +205,7 @@ library LibCheckpoints {
             // Because we do not snapshot the initial, empty checkpoint, we have
             // to detect that we've run off the front of the array and zero-out
             // the return value
-            if gt(shr(0xd0, value), query) {
-                value := 0
-            }
+            if gt(shr(0xd0, value), query) { value := 0 }
         }
     }
 

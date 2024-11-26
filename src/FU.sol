@@ -487,7 +487,10 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return _delegate(msg.sender, delegatee);
     }
 
-    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external override {
+    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)
+        external
+        override
+    {
         if (block.timestamp > expiry) {
             revert ERC5805ExpiredSignature(expiry);
         }
