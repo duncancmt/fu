@@ -68,6 +68,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             _PERMIT_TYPEHASH
                 == keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
         );
+        require(_DELEGATION_TYPEHASH == keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"));
 
         require(msg.value >= 1 ether);
         require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
@@ -511,6 +512,8 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return _delegate(msg.sender, delegatee);
     }
 
+    bytes32 internal constant _DELEGATION_TYPEHASH = 0xe48329057bfd03d55e49b547132e39cffd9c1820ad7b9d4c5307691425d15adf;
+
     function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)
         external
         override
@@ -518,13 +521,25 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         if (block.timestamp > expiry) {
             revert ERC5805ExpiredSignature(expiry);
         }
-        bytes32 structHash = keccak256(
-            abi.encode(
-                keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"), delegatee, nonce, expiry
-            )
-        );
-        bytes32 signingHash = keccak256(abi.encodePacked(bytes2(0x1901), DOMAIN_SEPARATOR(), structHash));
-        address signer = ecrecover(signingHash, v, r, s);
+        bytes32 sep = DOMAIN_SEPARATOR();
+        address signer;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            mstore(0x00, _DELEGATION_TYPEHASH)
+            mstore(0x20, and(0xffffffffffffffffffffffffffffffffffffffff, delegatee))
+            mstore(0x40, nonce)
+            mstore(0x60, expiry)
+            mstore(0x40, keccak256(0x00, 0x80))
+            mstore(0x00, 0x1901)
+            mstore(0x20, sep)
+            mstore(0x00, keccak256(0x1e, 0x22))
+            mstore(0x20, and(0xff, v))
+            mstore(0x40, r)
+            mstore(0x60, s)
+            signer := mul(mload(0x00), staticcall(gas(), 0x01, 0x00, 0x80, 0x00, 0x20))
+            mstore(0x40, ptr)
+            mstore(0x60, 0x00)
+        }
         if (signer == address(0)) {
             revert ERC5805InvalidSignature();
         }
