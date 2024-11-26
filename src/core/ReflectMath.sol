@@ -24,7 +24,7 @@ library ReflectMath {
     // TODO: reorder arguments for clarity/consistency
     function getTransferShares(
         Balance amount,
-        BasisPoints feeRate,
+        BasisPoints taxRate,
         Balance totalSupply,
         Shares totalShares,
         Shares fromShares,
@@ -36,9 +36,9 @@ library ReflectMath {
         BalanceXShares t3 = alloc().osub(t1, t2);
         BalanceXBasisPointsXShares2 n1 = alloc4().omul(t3, scale(uninvolvedShares, BASIS));
         BalanceXBasisPointsXShares t4 = alloc3().omul(totalSupply, scale(uninvolvedShares, BASIS));
-        BalanceXBasisPointsXShares t5 = alloc3().omul(amount, scale(totalShares, feeRate));
+        BalanceXBasisPointsXShares t5 = alloc3().omul(amount, scale(totalShares, taxRate));
         BalanceXBasisPointsXShares d = alloc3().oadd(t4, t5);
-        BalanceXBasisPointsXShares t6 = alloc3().omul(amount, scale(totalShares, BASIS - feeRate));
+        BalanceXBasisPointsXShares t6 = alloc3().omul(amount, scale(totalShares, BASIS - taxRate));
         BalanceXBasisPointsXShares t7 = alloc3().omul(scale(toShares, BASIS), totalSupply);
         BalanceXBasisPointsXShares t8 = alloc3().oadd(t6, t7);
         BalanceXBasisPointsXShares2 n2 = alloc4().omul(t8, uninvolvedShares);
@@ -57,8 +57,8 @@ library ReflectMath {
         // TODO use divMulti to compute beforeToBalance and beforeFromBalance (can't use it for after because newTotalShares might change)
         Balance beforeToBalance = toShares.toBalance(totalSupply, totalShares);
         Balance afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
-        Balance expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, feeRate));
-        Balance expectedAfterToBalanceHi = beforeToBalance + castUp(scale(amount, BASIS - feeRate));
+        Balance expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
+        Balance expectedAfterToBalanceHi = beforeToBalance + castUp(scale(amount, BASIS - taxRate));
 
         {
             bool condition = afterToBalance < expectedAfterToBalanceLo;
@@ -87,7 +87,7 @@ library ReflectMath {
     }
 
     function getTransferShares(
-        BasisPoints feeRate,
+        BasisPoints taxRate,
         Balance totalSupply,
         Shares totalShares,
         Shares fromShares,
@@ -95,19 +95,19 @@ library ReflectMath {
     ) internal pure returns (Shares newToShares, Shares newTotalShares) {
         Shares uninvolvedShares = totalShares - fromShares - toShares;
         Shares2XBasisPoints n = alloc5().omul(scale(uninvolvedShares, BASIS), totalShares);
-        SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, feeRate);
+        SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, taxRate);
 
         /*
         Shares2XBasisPoints n =
-            alloc5().omul(scale(fromShares, (BASIS - feeRate)) + scale(toShares, BASIS), uninvolvedShares);
-        SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, feeRate);
+            alloc5().omul(scale(fromShares, (BASIS - taxRate)) + scale(toShares, BASIS), uninvolvedShares);
+        SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, taxRate);
         newToShares = n.div(d);
         newTotalShares = totalShares + (newToShares - toShares) - fromShares;
         */
         newTotalShares = n.div(d);
         newToShares = toShares + fromShares - (totalShares - newTotalShares);
 
-        console.log("           feeRate", BasisPoints.unwrap(feeRate));
+        console.log("           taxRate", BasisPoints.unwrap(taxRate));
         console.log("       totalSupply", Balance.unwrap(totalSupply));
         console.log("       totalShares", Shares.unwrap(totalShares));
         console.log("        fromShares", Shares.unwrap(fromShares));
@@ -120,8 +120,8 @@ library ReflectMath {
         Balance beforeFromBalance = fromShares.toBalance(totalSupply, totalShares);
         Balance beforeToBalance = toShares.toBalance(totalSupply, totalShares);
         Balance afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
-        Balance expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, feeRate));
-        //Balance expectedAfterToBalance = beforeToBalance + cast(scale(beforeFromBalance, BASIS - feeRate));
+        Balance expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, taxRate));
+        //Balance expectedAfterToBalance = beforeToBalance + cast(scale(beforeFromBalance, BASIS - taxRate));
 
         console.log("before fromBalance", Balance.unwrap(beforeFromBalance));
         console.log("  before toBalance", Balance.unwrap(beforeToBalance));

@@ -67,19 +67,19 @@ contract ReflectMathTest is Boilerplate, Test {
         Shares fromShares,
         Shares toShares,
         Balance amount,
-        BasisPoints feeRate/*,
+        BasisPoints taxRate/*,
         uint256 sharesRatio*/
     ) public view virtual {
         Balance fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, /* sharesRatio */ 0);
 
-        feeRate = BasisPoints.wrap(
+        taxRate = BasisPoints.wrap(
             uint16(
                 bound(
-                    BasisPoints.unwrap(feeRate),
-                    BasisPoints.unwrap(Settings.MIN_FEE),
-                    BasisPoints.unwrap(Settings.MAX_FEE)
+                    BasisPoints.unwrap(taxRate),
+                    BasisPoints.unwrap(Settings.MIN_TAX),
+                    BasisPoints.unwrap(Settings.MAX_TAX)
                 )
             )
         );
@@ -90,14 +90,14 @@ contract ReflectMathTest is Boilerplate, Test {
 
         // console.log("===");
         // console.log("totalSupply", totalSupply);
-        // console.log("feeRate    ", feeRate);
+        // console.log("taxRate    ", taxRate);
         // console.log("amount     ", amount);
         // console.log("===");
         // console.log("fromBalance", fromBalance);
         // console.log("toBalance  ", toBalance);
         // console.log("===");
         (Shares newFromShares, Shares newToShares, Shares newTotalShares) =
-            ReflectMath.getTransferShares(amount, feeRate, totalSupply, totalShares, fromShares, toShares);
+            ReflectMath.getTransferShares(amount, taxRate, totalSupply, totalShares, fromShares, toShares);
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
         assertGe(Shares.unwrap(newToShares), Shares.unwrap(toShares), "to shares decreased");
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
@@ -110,8 +110,8 @@ contract ReflectMathTest is Boilerplate, Test {
         Balance newFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
         Balance newToBalance = newToShares.toBalance(totalSupply, newTotalShares);
         Balance expectedNewFromBalance = fromBalance - amount;
-        Balance expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - feeRate));
-        Balance expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, feeRate));
+        Balance expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - taxRate));
+        Balance expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, taxRate));
 
         assertEq(Balance.unwrap(newFromBalance), Balance.unwrap(expectedNewFromBalance), "newFromBalance");
         // TODO: tighten these bounds to exact equality
@@ -124,18 +124,18 @@ contract ReflectMathTest is Boilerplate, Test {
         Shares totalShares,
         Shares fromShares,
         Shares toShares,
-        BasisPoints feeRate/*,
+        BasisPoints taxRate/*,
         uint256 sharesRatio*/
     ) public pure virtual {
         Balance fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance) =
             _boundCommon(totalSupply, totalShares, fromShares, /* sharesRatio */ 0);
-        feeRate = BasisPoints.wrap(
+        taxRate = BasisPoints.wrap(
             uint16(
                 bound(
-                    BasisPoints.unwrap(feeRate),
-                    BasisPoints.unwrap(Settings.MIN_FEE),
-                    BasisPoints.unwrap(Settings.MAX_FEE)
+                    BasisPoints.unwrap(taxRate),
+                    BasisPoints.unwrap(Settings.MIN_TAX),
+                    BasisPoints.unwrap(Settings.MAX_TAX)
                 )
             )
         );
@@ -145,7 +145,7 @@ contract ReflectMathTest is Boilerplate, Test {
         Balance toBalance = toShares.toBalance(totalSupply, totalShares);
 
         (Shares newToShares, Shares newTotalShares) =
-            ReflectMath.getTransferShares(feeRate, totalSupply, totalShares, fromShares, toShares);
+            ReflectMath.getTransferShares(taxRate, totalSupply, totalShares, fromShares, toShares);
 
         assertGe(Shares.unwrap(newToShares), Shares.unwrap(toShares), "to shares decreased");
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
@@ -160,8 +160,8 @@ contract ReflectMathTest is Boilerplate, Test {
         console.log("         toShares", Shares.unwrap(toShares));
 
         // TODO: tighter bounds
-        Balance expectedNewToBalanceLo = toBalance + fromBalance - castUp(scale(fromBalance, feeRate));
-        Balance expectedNewToBalanceHi = toBalance + castUp(scale(fromBalance, BASIS - feeRate));
+        Balance expectedNewToBalanceLo = toBalance + fromBalance - castUp(scale(fromBalance, taxRate));
+        Balance expectedNewToBalanceHi = toBalance + castUp(scale(fromBalance, BASIS - taxRate));
         //assertEq(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance");
         if (newToShares == toShares) {
             assertGe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance lower");

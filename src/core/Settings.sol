@@ -20,9 +20,9 @@ library Settings {
     // even when the balance is well above the limit
     uint256 internal constant ANTI_WHALE_DIVISOR = 4;
 
-    BasisPoints internal constant MIN_FEE = BasisPoints.wrap(1);
-    // A fee above `ReflectMath.feeBasis / 2` makes ReflectMath break down
-    BasisPoints internal constant MAX_FEE = BasisPoints.wrap(BasisPoints.unwrap(BASIS) / 2);
+    BasisPoints internal constant MIN_TAX = BasisPoints.wrap(1);
+    // A tax above `BASIS / 2` makes ReflectMath break down
+    BasisPoints internal constant MAX_TAX = BasisPoints.wrap(BasisPoints.unwrap(BASIS) / 2);
 
     uint256 private constant _UNISWAPV2_MAX_BALANCE = type(uint112).max;
 

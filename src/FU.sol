@@ -148,13 +148,13 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return balance.toExternal();
     }
 
-    function _fee() internal view returns (BasisPoints) {
-        // TODO: set fee to zero and prohibit `deliver` when the shares ratio gets to `Settings.MIN_SHARES_RATIO`
+    function _tax() internal view returns (BasisPoints) {
+        // TODO: set tax to zero and prohibit `deliver` when the shares ratio gets to `Settings.MIN_SHARES_RATIO`
         revert("unimplemented");
     }
 
-    function fee() external view returns (uint256) {
-        return BasisPoints.unwrap(_fee());
+    function tax() external view returns (uint256) {
+        return BasisPoints.unwrap(_tax());
     }
 
     function _transfer(address from, address to, CrazyBalance amount) internal returns (bool) {
@@ -202,18 +202,18 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             return false;
         }
 
-        BasisPoints feeRate = _fee();
+        BasisPoints taxRate = _tax();
         Shares newFromShares;
         Shares newToShares;
         Shares newTotalShares;
         if (amount == fromBalance) {
             (newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
             );
             newFromShares = ZERO_SHARES;
         } else {
             (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                amount.toBalance(from), feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                amount.toBalance(from), taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
             );
         }
 
@@ -230,7 +230,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         // === EFFECTS ARE ALLOWED ONLY FROM HERE DOWN ===
             CrazyBalance oldPairBalance = cachedToShares.toCrazyBalance(to, cachedTotalSupply, cachedTotalShares);
             (cachedToShares, cachedTotalShares, cachedTotalSupply) = ReflectMath.getBurnShares(
-                amount.toBalance(from, BASIS - feeRate), cachedTotalSupply, cachedTotalShares, cachedToShares
+                amount.toBalance(from, BASIS - taxRate), cachedTotalSupply, cachedTotalShares, cachedToShares
             );
 
             emit Transfer(
@@ -247,13 +247,13 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
 
             if (amount == fromBalance) {
                 (newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                    feeRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                    taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
                 );
                 newFromShares = ZERO_SHARES;
             } else {
                 (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
                     amount.toBalance(from),
-                    feeRate,
+                    taxRate,
                     cachedTotalSupply,
                     cachedTotalShares,
                     cachedFromShares,

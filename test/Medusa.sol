@@ -52,10 +52,10 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         Shares fromShares,
         Shares toShares,
         Balance amount,
-        BasisPoints feeRate/*,
+        BasisPoints taxRate/*,
         uint256 sharesRatio*/
     ) external {
-        super.testTransfer(totalSupply, totalShares, fromShares, toShares, amount, feeRate);
+        super.testTransfer(totalSupply, totalShares, fromShares, toShares, amount, taxRate);
         assert(!failed());
     }
 
@@ -64,10 +64,10 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         Shares totalShares,
         Shares fromShares,
         Shares toShares,
-        BasisPoints feeRate/*,
+        BasisPoints taxRate/*,
         uint256 sharesRatio*/
     ) external {
-        super.testTransferAll(totalSupply, totalShares, fromShares, toShares, feeRate);
+        super.testTransferAll(totalSupply, totalShares, fromShares, toShares, taxRate);
         assert(!failed());
     }
 
