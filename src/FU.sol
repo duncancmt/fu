@@ -425,7 +425,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             nonce = nonces[owner]++;
         }
         bytes32 sep = DOMAIN_SEPARATOR();
-        bytes32 hash;
+        address signer;
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, _PERMIT_TYPEHASH)
@@ -437,9 +437,14 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             mstore(0x00, 0x1901)
             mstore(0x20, sep)
             mstore(0x40, keccak256(ptr, 0xc0))
-            hash := keccak256(0x1e, 0x22)
+            mstore(0x00, keccak256(0x1e, 0x22))
+            mstore(0x20, and(0xff, v))
+            mstore(0x40, r)
+            mstore(0x60, s)
+            signer := mul(mload(0x00), staticcall(gas(), 0x01, 0x00, 0x80, 0x00, 0x20))
+            mstore(0x40, ptr)
+            mstore(0x60, 0x00)
         }
-        address signer = ecrecover(hash, v, r, s);
         if (signer != owner) {
             revert ERC2612InvalidSigner(signer, owner);
         }
