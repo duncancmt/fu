@@ -76,6 +76,21 @@ library ReflectMath {
                 newFromShares = newFromShares + incr;
                 newTotalShares = newTotalShares + incr;
             }
+            if (newTotalShares > totalShares) {
+                Shares decrTotal = newTotalShares - totalShares;
+                Shares decrFrom;
+                Shares decrTo;
+                if (newFromShares > newToShares) {
+                    decrFrom = Shares.wrap(Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares) / Shares.unwrap(newFromShares + newToShares));
+                    decrTo = decrTotal - decrFrom;
+                } else {
+                    decrTo = Shares.wrap(Shares.unwrap(decrTotal) * Shares.unwrap(newToShares) / Shares.unwrap(newFromShares + newToShares));
+                    decrFrom = decrTotal - decrTo;
+                }
+                newTotalShares = totalShares;
+                newFromShares = newFromShares - decrFrom;
+                newToShares = newToShares - decrTo;
+            }
         } else {
             {
                 bool condition = afterToBalance > expectedAfterToBalanceHi;
