@@ -301,13 +301,13 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return _success();
     }
 
-    function approve(address spender, uint256 amount) external returns (bool) {
+    function approve(address spender, uint256 amount) external override returns (bool) {
         _allowance[msg.sender][spender] = amount.toCrazyBalance();
         emit Approval(msg.sender, spender, amount);
         return _success();
     }
 
-    function allowance(address owner, address spender) external view returns (uint256) {
+    function allowance(address owner, address spender) external view override returns (uint256) {
         CrazyBalance temporaryAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, spender);
         if (temporaryAllowance.isMax()) {
             return temporaryAllowance.toExternal();
@@ -483,11 +483,11 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         _checkpoints.transfer(oldDelegatee, delegatee, votes, votes, clock());
     }
 
-    function delegate(address delegatee) external {
+    function delegate(address delegatee) external override {
         return _delegate(msg.sender, delegatee);
     }
 
-    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external {
+    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external override {
         if (block.timestamp > expiry) {
             revert ERC5805ExpiredSignature(expiry);
         }
