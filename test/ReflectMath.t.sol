@@ -63,7 +63,7 @@ contract ReflectMathTest is Boilerplate, Test {
         return (totalSupply, totalShares, fromShares, fromBalance, amount);
     }
 
-    function testTransfer(
+    function testTransferSome(
         Balance totalSupply,
         Shares totalShares,
         Shares fromShares,

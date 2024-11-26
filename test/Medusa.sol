@@ -13,7 +13,7 @@ import {Boilerplate, MedusaBoilerplate} from "./Boilerplate.sol";
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
 
 contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
-    function testTransfer(
+    function testTransferSome(
         Balance,
         Shares,
         Shares,
@@ -46,7 +46,7 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         return;
     }
 
-    function medusa_testTransfer(
+    function medusa_testTransferSome(
         Balance totalSupply,
         Shares totalShares,
         Shares fromShares,
@@ -55,7 +55,7 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         BasisPoints taxRate/*,
         uint256 sharesRatio*/
     ) external {
-        super.testTransfer(totalSupply, totalShares, fromShares, toShares, amount, taxRate);
+        super.testTransferSome(totalSupply, totalShares, fromShares, toShares, amount, taxRate);
         assert(!failed());
     }
 
