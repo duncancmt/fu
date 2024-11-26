@@ -491,7 +491,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return _checkpoints.current(account).toExternal();
     }
 
-    function getPastVotes(address account, uint256 timepoint) external view override returns (uint256 votingWeight) {
+    function getPastVotes(address account, uint256 timepoint) external view override returns (uint256) {
         return _checkpoints.get(account, uint48(timepoint)).toExternal();
     }
 
