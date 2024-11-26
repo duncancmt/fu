@@ -58,10 +58,17 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     // This mapping is actually in transient storage. It's placed here so that
     // solc reserves a slot for it during storage layout generation. Solc 0.8.28
     // doesn't support declaring mappings in transient storage. It is ultimately
-    // manipulated by the TransientStorageLayout base contract (in assembly)
+    // manipulated by the `TransientStorageLayout` base contract (in assembly)
     mapping(address owner => mapping(address spender => CrazyBalance)) private _temporaryAllowance;
 
     constructor(address[] memory initialHolders) payable {
+        require(_DOMAIN_TYPEHASH == keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
+        require(_NAME_HASH == keccak256(bytes(name)));
+        require(
+            _PERMIT_TYPEHASH
+                == keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
+        );
+
         require(msg.value >= 1 ether);
         require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
@@ -384,17 +391,22 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
 
     uint8 public constant override decimals = Settings.DECIMALS;
 
+    bytes32 internal constant _DOMAIN_TYPEHASH = 0x8cad95687ba82c2ce50e74f7b754645e5117c3a5bec8151c0726d5857980a866;
+    bytes32 internal constant _NAME_HASH = 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93694;
+
     // slither-disable-next-line naming-convention
-    function DOMAIN_SEPARATOR() public view override returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes(name)),
-                block.chainid,
-                address(this)
-            )
-        );
+    function DOMAIN_SEPARATOR() public view override returns (bytes32 r) {
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            mstore(ptr, _DOMAIN_TYPEHASH)
+            mstore(add(0x20, ptr), _NAME_HASH)
+            mstore(add(0x40, ptr), chainid())
+            mstore(add(0x60, ptr), address())
+            r := keccak256(ptr, 0x80)
+        }
     }
+
+    bytes32 internal constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
 
     function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external
@@ -406,21 +418,26 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         if (block.timestamp > deadline) {
             revert ERC2612ExpiredSignature(deadline);
         }
-        bytes32 structHash;
+        uint256 nonce;
         unchecked {
-            structHash = keccak256(
-                abi.encode(
-                    keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
-                    owner,
-                    spender,
-                    amount,
-                    nonces[owner]++,
-                    deadline
-                )
-            );
+            nonce = nonces[owner]++;
         }
-        bytes32 signingHash = keccak256(abi.encodePacked(bytes2(0x1901), DOMAIN_SEPARATOR(), structHash));
-        address signer = ecrecover(signingHash, v, r, s);
+        bytes32 sep = DOMAIN_SEPARATOR();
+        bytes32 hash;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            mstore(ptr, _PERMIT_TYPEHASH)
+            mstore(add(0x20, ptr), and(0xffffffffffffffffffffffffffffffffffffffff, owner))
+            mstore(add(0x40, ptr), and(0xffffffffffffffffffffffffffffffffffffffff, spender))
+            mstore(add(0x60, ptr), amount)
+            mstore(add(0x80, ptr), nonce)
+            mstore(add(0xa0, ptr), deadline)
+            mstore(0x00, 0x1901)
+            mstore(0x20, sep)
+            mstore(0x40, keccak256(ptr, 0xc0))
+            hash := keccak256(0x1e, 0x22)
+        }
+        address signer = ecrecover(hash, v, r, s);
         if (signer != owner) {
             revert ERC2612InvalidSigner(signer, owner);
         }
