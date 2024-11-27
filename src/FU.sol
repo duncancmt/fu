@@ -142,6 +142,8 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return (shares, totalShares_);
     }
 
+    // TODO: because we enforce as a postcondition of every function that pair is under the limit,
+    // this function is kinda pointless
     function _applyWhaleLimit(Shares shares0, Shares shares1, Shares totalShares_)
         internal
         pure
