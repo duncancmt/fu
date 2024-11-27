@@ -40,7 +40,7 @@ library Settings {
     // This constant is intertwined with a bunch of constants in `Checkpoints.sol` because Solidity
     // has poor support for introspecting the range of user-defined types and for defining constants
     // dependant on values in other translation units. If you change this, make appropriate changes
-    // and be sure to run the invariant/property tests.
+    // over there, and be sure to run the invariant/property tests.
     uint256 internal constant SHARES_TO_VOTES_DIVISOR = 2 ** 32;
 
     function oneTokenInShares() internal pure returns (Shares) {

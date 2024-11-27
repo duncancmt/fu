@@ -69,6 +69,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
                 == keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
         );
         require(_DELEGATION_TYPEHASH == keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"));
+        require(Settings.SHARES_TO_VOTES_DIVISOR >= Settings.INITIAL_SHARES_RATIO);
 
         require(msg.value >= 1 ether);
         require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
