@@ -121,4 +121,14 @@ library CrazyBalanceArithmetic {
             );
         }
     }
+
+    function scale(CrazyBalance balance, BasisPoints proportion) internal pure returns (CrazyBalance) {
+        unchecked {
+            return CrazyBalance.wrap(
+                CrazyBalance.unwrap(balance) * BasisPoints.unwrap(proportion) / BasisPoints.unwrap(BASIS)
+            );
+        }
+    }
 }
+
+using CrazyBalanceArithmetic for CrazyBalance global;
