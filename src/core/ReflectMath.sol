@@ -333,12 +333,4 @@ library ReflectMath {
     {
         revert("unimplemented");
     }
-
-    function getBurnSharesPairWhale(Balance totalSupply, Shares totalShares, Shares fromShares)
-        internal
-        view
-        returns (Shares newTotalShares)
-    {
-        revert("unimplemented");
-    }
 }

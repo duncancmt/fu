@@ -617,11 +617,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             newTotalSupply = cachedTotalSupply - cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares);
             newTotalShares = cachedTotalShares - cachedFromShares;
             newFromShares = ZERO_SHARES;
-            if (newPairShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
-                newTotalShares =
-                    ReflectMath.getBurnSharesPairWhale(cachedTotalSupply, cachedTotalShares, cachedFromShares);
-                newPairShares = newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
-            }
+            (newPairShares, newTotalShares) = _applyWhaleLimit(newPairShares, newTotalShares);
         } else {
             Balance amountUnCrazy = amount.toBalance(from);
             (newFromShares, newTotalShares) =
