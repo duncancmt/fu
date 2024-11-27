@@ -319,9 +319,12 @@ library ReflectMath {
     function getBurnShares(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
         internal
         view
-        returns (Shares newFromShares, Shares newTotalShares)
+        returns (Shares)
     {
-        revert("unimplemented");
+        BalanceXShares t1 = alloc().omul(fromShares, totalSupply);
+        BalanceXShares t2 = alloc().omul(totalShares, amount);
+        BalanceXShares n = alloc().osub(t1, t2);
+        return n.div(totalSupply);
     }
 
     // getBurnShares(Balance,Shares,Shares) is not provided because it's extremely straightforward
