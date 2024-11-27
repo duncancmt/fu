@@ -72,7 +72,7 @@ library ReflectMath {
             Balance expectedAfterFromBalance = beforeFromBalance - amount;
             if (afterFromBalance < expectedAfterFromBalance) {
                 //console.log("from round up");
-                Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDivUp(Balance.unwrap(totalSupply)));
+                Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Balance.unwrap(totalSupply)));
                 newFromShares = newFromShares + incr;
                 newTotalShares = newTotalShares + incr;
             }
