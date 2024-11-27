@@ -4,7 +4,7 @@ art. By holding FU, you are participating in this art project. The authors hope
 that it brings you joy, because it won't bring you wealth.
 
 While FU is ownerless, decentralized, and great pains have been taken to ensure
-correctness, its authors make no guarantees about its correctness. See
+that it is bug-free, its authors make no guarantees about its correctness. See
 [LICENSE.txt](./LICENSE.txt) for full terms.
 
 # Goals
@@ -38,13 +38,13 @@ FU is a full-featured token, supporting the following extensions to the ERC20 st
 
 ## Non-standard extensions
 
-* `tax()(uint256)` (view)
-* `getTotalVotes()(uint256)` (view)
-* `getPastTotalVotes(uint256)(uint256)` (view)
-* `burn(uint256)(bool)`
-* `burnFrom(address,uint256)(bool)`
-* `deliver(uint256)(bool)`
-* `deliverFrom(address,uint256)(bool)`
+ * `tax()(uint256)` (view)
+ * `getTotalVotes()(uint256)` (view)
+ * `getPastTotalVotes(uint256)(uint256)` (view)
+ * `burn(uint256)(bool)`
+ * `burnFrom(address,uint256)(bool)`
+ * `deliver(uint256)(bool)`
+ * `deliverFrom(address,uint256)(bool)`
 
 ## Restrictions
 
