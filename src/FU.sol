@@ -167,7 +167,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
 
     function _transfer(address from, address to, CrazyBalance amount) internal returns (bool) {
         if (from == to) {
-            return _deliver(from, amount.scale(_tax()));
+            return _deliver(from, amount.scaleUp(_tax()));
         }
 
         if (to == address(this)) {
