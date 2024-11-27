@@ -146,21 +146,22 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         pure
         returns (Shares, Shares, Shares)
     {
-        (shares0, shares1) = (shares0 > shares1) ? (shares0, shares1) : (shares1, shares0);
+        (Shares sharesHi, Shares sharesLo) = (shares0 > shares1) ? (shares0, shares1) : (shares1, shares0);
         Shares whaleLimit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
-        if (shares0 > whaleLimit) {
-            whaleLimit = (totalShares_ - shares0).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
-            if (shares1 > whaleLimit) {
-                whaleLimit = (totalShares_ - shares0 - shares1).div(Settings.ANTI_WHALE_DIVISOR - 2) - ONE_SHARE;
-                totalShares_ = totalShares_ - (shares0 + shares1 - whaleLimit.mul(2));
-                shares0 = whaleLimit;
-                shares1 = whaleLimit;
-                // TODO: verify that this *EXACTLY* satisfied the postcondition `shares0 == shares1 == totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE`
+        if (sharesHi > whaleLimit) {
+            whaleLimit = (totalShares_ - sharesHi).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
+            if (sharesLo > whaleLimit) {
+                whaleLimit = (totalShares_ - sharesHi - sharesLo).div(Settings.ANTI_WHALE_DIVISOR - 2) - ONE_SHARE;
+                totalShares_ = totalShares_ - (sharesHi + sharesLo - whaleLimit.mul(2));
+                sharesHi = whaleLimit;
+                sharesLo = whaleLimit;
+                // TODO: verify that this *EXACTLY* satisfied the postcondition `sharesHi == sharesLo == totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE`
             } else {
-                totalShares_ = totalShares_ - (shares0 - whaleLimit);
-                shares0 = whaleLimit;
+                totalShares_ = totalShares_ - (sharesHi - whaleLimit);
+                sharesHi = whaleLimit;
             }
         }
+        (shares0, shares1) = (shares0 > shares1) ? (sharesHi, sharesLo) : (sharesLo, sharesHi);
         return (shares0, shares1, totalShares_);
     }
 
