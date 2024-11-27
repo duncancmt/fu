@@ -90,14 +90,14 @@ contract ReflectMathTest is Boilerplate, Test {
             Shares.wrap(bound(Shares.unwrap(toShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))));
         Balance toBalance = toShares.toBalance(totalSupply, totalShares);
 
-        // console.log("===");
-        // console.log("totalSupply", totalSupply);
-        // console.log("taxRate    ", taxRate);
-        // console.log("amount     ", amount);
-        // console.log("===");
-        // console.log("fromBalance", fromBalance);
-        // console.log("toBalance  ", toBalance);
-        // console.log("===");
+        //console.log("===");
+        //console.log("totalSupply", Balance.unwrap(totalSupply));
+        //console.log("taxRate    ", BasisPoints.unwrap(taxRate));
+        //console.log("amount     ", Balance.unwrap(amount));
+        //console.log("===");
+        //console.log("fromBalance", Balance.unwrap(fromBalance));
+        //console.log("toBalance  ", Balance.unwrap(toBalance));
+        //console.log("===");
         (Shares newFromShares, Shares newToShares, Shares newTotalShares) =
             ReflectMath.getTransferShares(amount, taxRate, totalSupply, totalShares, fromShares, toShares);
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");

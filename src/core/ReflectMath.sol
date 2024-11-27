@@ -66,6 +66,7 @@ library ReflectMath {
                 Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Balance.unwrap(totalSupply)));
                 newToShares = newToShares + incr;
                 newTotalShares = newTotalShares + incr;
+                //console.log("incr", Shares.unwrap(incr));
             }
             Balance beforeFromBalance = fromShares.toBalance(totalSupply, totalShares);
             Balance afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
@@ -75,18 +76,22 @@ library ReflectMath {
                 Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Balance.unwrap(totalSupply)));
                 newFromShares = newFromShares + incr;
                 newTotalShares = newTotalShares + incr;
+                //console.log("incr", Shares.unwrap(incr));
             }
             if (newTotalShares > totalShares) {
+                //console.log("clamp");
                 Shares decrTotal = newTotalShares - totalShares;
                 Shares decrFrom;
                 Shares decrTo;
                 if (newFromShares > newToShares) {
+                    //console.log("clamp from");
                     decrFrom = Shares.wrap(
                         Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares)
                             / Shares.unwrap(newFromShares + newToShares)
                     );
                     decrTo = decrTotal - decrFrom;
                 } else {
+                    //console.log("clamp to");
                     decrTo = Shares.wrap(
                         Shares.unwrap(decrTotal) * Shares.unwrap(newToShares)
                             / Shares.unwrap(newFromShares + newToShares)
@@ -139,21 +144,31 @@ library ReflectMath {
             afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
             {
                 bool condition = afterFromBalance > expectedAfterFromBalance;
-                //if (condition) {
-                //    console.log("from round down");
-                //}
+                if (condition) {
+                   //console.log("from round down");
+                }
                 newFromShares = newFromShares.dec(condition);
                 newTotalShares = newTotalShares.dec(condition);
             }
             {
                 bool condition = afterFromBalance < expectedAfterFromBalance;
-                //if (condition) {
-                //    console.log("from round up");
-                //}
+                if (condition) {
+                   //console.log("from round up");
+                }
                 newFromShares = newFromShares.inc(condition);
                 newTotalShares = newTotalShares.inc(condition);
             }
         }
+        //console.log("===");
+        //console.log("           taxRate", BasisPoints.unwrap(taxRate));
+        //console.log("       totalSupply", Balance.unwrap(totalSupply));
+        //console.log("       totalShares", Shares.unwrap(totalShares));
+        //console.log("    newTotalShares", Shares.unwrap(newTotalShares));
+        //console.log("        fromShares", Shares.unwrap(fromShares));
+        //console.log("     newFromShares", Shares.unwrap(newFromShares));
+        //console.log("          toShares", Shares.unwrap(toShares));
+        //console.log("       newToShares", Shares.unwrap(newToShares));
+        //console.log("===");
     }
 
     function getTransferShares(
