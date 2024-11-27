@@ -286,13 +286,15 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         }
         _sharesOf[from] = newFromShares;
         _sharesOf[to] = newToShares;
-        _totalShares = newTotalShares;
 
         if (from == address(pair)) {
+            _totalShares = newTotalShares;
             _checkpoints.mint(delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), clock());
         } else if (to == address(pair)) {
+            _totalShares = newTotalShares;
             _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
         } else {
+            (_sharesOf[address(pair)], _totalShares) = _applyWhaleLimit(_sharesOf[address(pair)], newTotalShares);
             _checkpoints.transfer(
                 delegates[from],
                 delegates[to],
@@ -588,7 +590,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             );
         }
         _sharesOf[from] = newFromShares;
-        _totalShares = newTotalShares;
+        (_sharesOf[address(pair)], _totalShares) = _applyWhaleLimit(_sharesOf[address(pair)], newTotalShares);
         _totalSupply = newTotalSupply;
         emit Transfer(from, address(0), amount.toExternal());
 
@@ -628,7 +630,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         }
 
         _sharesOf[from] = newFromShares;
-        _totalShares = newTotalShares;
+        (_sharesOf[address(pair)], _totalShares) = _applyWhaleLimit(_sharesOf[address(pair)], newTotalShares);
         emit Transfer(from, address(0), amount.toExternal());
 
         _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
@@ -672,16 +674,19 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     }
 
     function punishWhale(address whale) external returns (bool) {
-        Shares cachedWhaleShares = _sharesOf[whale];
+        if (whale == address(pair)) {
+            return _success();
+        }
+
         Shares cachedTotalShares = _totalShares;
+        Shares cachedWhaleShares = _sharesOf[whale];
         (Shares newWhaleShares, Shares newTotalShares) = _applyWhaleLimit(cachedWhaleShares, cachedTotalShares);
         _sharesOf[whale] = newWhaleShares;
         _totalShares = newTotalShares;
 
-        if (whale != address(pair)) {
-            _checkpoints.burn(delegates[whale], cachedWhaleShares.toVotes() - newWhaleShares.toVotes(), clock());
-            pair.sync();
-        }
+        _checkpoints.burn(delegates[whale], cachedWhaleShares.toVotes() - newWhaleShares.toVotes(), clock());
+
+        pair.sync();
 
         return _success();
     }
