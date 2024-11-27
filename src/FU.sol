@@ -101,7 +101,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             require(pair == FACTORY.getPair(WETH, IERC20(address(this))));
         }
         {
-            (CrazyBalance pairBalance,,,) = _balanceOf(address(pair));
+            (CrazyBalance pairBalance,,,,) = _balanceOf(address(pair));
             uint256 initialLiquidity = Math.sqrt(CrazyBalance.unwrap(pairBalance) * msg.value) - 1_000;
             require(pair.mint(address(0)) >= initialLiquidity);
         }
@@ -141,19 +141,46 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return (shares, totalShares_);
     }
 
-    function _loadAccount(address account) internal view returns (Shares, Shares) {
-        return _applyWhaleLimit(_sharesOf[account], _totalShares);
+    function _applyWhaleLimit(Shares shares0, Shares shares1, Shares totalShares_)
+        internal
+        pure
+        returns (Shares, Shares, Shares)
+    {
+        (shares0, shares1) = (shares0 > shares1) ? (shares0, shares1) : (shares1, shares0);
+        Shares whaleLimit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+        if (shares0 > whaleLimit) {
+            whaleLimit = (totalShares_ - shares0).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
+            if (shares1 > whaleLimit) {
+                whaleLimit = (totalShares_ - shares0 - shares1).div(Settings.ANTI_WHALE_DIVISOR - 2) - ONE_SHARE;
+                totalShares_ = totalShares_ - (shares0 + shares1 - whaleLimit.mul(2));
+                shares0 = whaleLimit;
+                shares1 = whaleLimit;
+                // TODO: verify that this *EXACTLY* satisfied the postcondition `shares0 == shares1 == totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE`
+            } else {
+                totalShares_ = totalShares_ - (shares0 - whaleLimit);
+                shares0 = whaleLimit;
+            }
+        }
+        return (shares0, shares1, totalShares_);
     }
 
-    function _balanceOf(address account) internal view returns (CrazyBalance, Shares, Balance, Shares) {
-        (Shares shares, Shares cachedTotalShares) = _loadAccount(account);
+    function _loadAccount(address account) internal view returns (Shares, Shares, Shares) {
+        if (account == address(pair)) {
+            (Shares cachedAccountShares, Shares cachedTotalShares) = _applyWhaleLimit(_sharesOf[account], _totalShares);
+            return (cachedAccountShares, cachedAccountShares, cachedTotalShares);
+        }
+        return _applyWhaleLimit(_sharesOf[account], _sharesOf[address(pair)], _totalShares);
+    }
+
+    function _balanceOf(address account) internal view returns (CrazyBalance, Shares, Shares, Balance, Shares) {
+        (Shares cachedAccountShares, Shares cachedPairShares, Shares cachedTotalShares) = _loadAccount(account);
         Balance cachedTotalSupply = _totalSupply;
-        CrazyBalance balance = shares.toCrazyBalance(account, cachedTotalSupply, cachedTotalShares);
-        return (balance, shares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance accountBalance = cachedAccountShares.toCrazyBalance(account, cachedTotalSupply, cachedTotalShares);
+        return (accountBalance, cachedAccountShares, cachedPairShares, cachedTotalSupply, cachedTotalShares);
     }
 
     function balanceOf(address account) external view override returns (uint256) {
-        (CrazyBalance balance,,,) = _balanceOf(account);
+        (CrazyBalance balance,,,,) = _balanceOf(account);
         return balance.toExternal();
     }
 
@@ -187,8 +214,13 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             return false;
         }
 
-        (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
-            _balanceOf(from);
+        (
+            CrazyBalance fromBalance,
+            Shares cachedFromShares,
+            Shares cachedPairShares,
+            Balance cachedTotalSupply,
+            Shares cachedTotalShares
+        ) = _balanceOf(from);
 
         if (amount > fromBalance) {
             if (_check()) {
@@ -197,16 +229,18 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             return false;
         }
 
-        Shares cachedToShares = _sharesOf[to];
+        Shares cachedToShares;
         if (to == address(pair)) {
-            // TODO: skip calling `getTransferShares` below because we know that
-            // we're going to have to apply the weird rule later
-            (cachedToShares, cachedTotalShares) = _applyWhaleLimit(cachedToShares, cachedTotalShares);
+            cachedToShares = cachedPairShares;
+        } else {
+            cachedToShares = _sharesOf[to];
         }
 
         if (cachedToShares >= cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
-            // anti-whale (also because the reflection math breaks down)
-            // we have to check this twice to ensure no underflow in the reflection math
+            // Anti-whale (also because the reflection math breaks down)
+            // We have to check this twice to ensure no underflow in the reflection math.  If `to ==
+            // address(pair)` then we will implicitly pass this check due to applying the whale
+            // limit when we loaded the accounts.
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
             }
@@ -231,56 +265,36 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         if (newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
             if (to != address(pair)) {
                 if (_check()) {
-                    // TODO: maybe make this a new error? It's not exactly an invalid recipient, it's an
-                    // invalid (too high) transfer amount
                     revert ERC20InvalidReceiver(to);
                 }
                 return false;
             }
 
-        // === EFFECTS ARE ALLOWED ONLY FROM HERE DOWN ===
-            CrazyBalance oldPairBalance = cachedToShares.toCrazyBalance(to, cachedTotalSupply, cachedTotalShares);
-            // TODO: `getBurnShares` isn't the correct function to use here. What we want is to set
-            // the number of shares of `pair` to the value such that it will again be exactly
-            // `newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)` after the transfer is
-            // computed. That's going to be complicated.
-            (cachedToShares, cachedTotalShares, cachedTotalSupply) = ReflectMath.getBurnShares(
-                amount.toBalance(from, BASIS - taxRate), cachedTotalSupply, cachedTotalShares, cachedToShares
-            );
-
-            emit Transfer(
-                to,
-                address(0),
-                (oldPairBalance - cachedToShares.toCrazyBalance(to, cachedTotalSupply, cachedTotalShares)).toExternal()
-            );
-            _sharesOf[to] = cachedToShares;
-            _totalShares = cachedTotalShares;
-            _totalSupply = cachedTotalSupply;
-            // pair does not delegate, so we don't need to update any votes
-
-            pair.sync();
-
             if (amount == fromBalance) {
-                (newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                    taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
-                );
+                (cachedToShares, newToShares, newTotalShares) =
+                    ReflectMath.getTransferShares(taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares);
                 newFromShares = ZERO_SHARES;
             } else {
-                (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                    amount.toBalance(from),
-                    taxRate,
-                    cachedTotalSupply,
-                    cachedTotalShares,
-                    cachedFromShares,
-                    cachedToShares
+                (newFromShares, cachedToShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
+                    amount.toBalance(from), taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares
                 );
             }
+
+        // === EFFECTS ARE ALLOWED ONLY FROM HERE DOWN ===
+
+            // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
+            // requirement that the sum of all accounts' shares equal the total shares. However,
+            // this does mean that the balance of the pair increases between `sync()` and this
+            // function's return by the requisite `amount * (1 - tax)`
+            _sharesOf[to] = cachedToShares;
+            // `pair` does not delegate, so we don't need to update any votes
+            pair.sync();
         }
 
         {
             // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
-            // units as if it were held by `from`
-            // TODO: this first `toCrazyBalance` could probably be combined/computed with `ReflectMath.getTransferShares`
+            // units as if it were held by `from`. Also note that when `to` is a whale, the `amount`
+            // emitted in the event does not accurately reflect the change in balance.
             CrazyBalance transferAmount = newToShares.toCrazyBalance(from, cachedTotalSupply, newTotalShares)
                 - cachedToShares.toCrazyBalance(from, cachedTotalSupply, cachedTotalShares);
             CrazyBalance burnAmount = amount - transferAmount;
@@ -288,17 +302,25 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             emit Transfer(from, address(0), burnAmount.toExternal());
         }
         _sharesOf[from] = newFromShares;
-        _sharesOf[to] = newToShares;
 
+        // In these first two cases, the computation in `ReflectMath.getTransferShares` (whichever
+        // version we used) enforces the postcondition that `from` and `to` come in under the whale
+        // limit. So we don't need to check, we can just write the values to storage.
         if (from == address(pair)) {
+            _sharesOf[to] = newToShares;
             _totalShares = newTotalShares;
             _checkpoints.mint(delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), clock());
         } else if (to == address(pair)) {
+            _sharesOf[to] = newToShares;
             _totalShares = newTotalShares;
             _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
         } else {
+            // However, in this last case, it's possible that because we burned some shares, `pair`
+            // is now over the whale limit, even though we applied the limit when we loaded
+            // it. Therefore, we have to apply the whale limit yet again.
             // TODO: what happens if `from` is a whale? could this push them over the limit?
-            (_sharesOf[address(pair)], _totalShares) = _applyWhaleLimit(_sharesOf[address(pair)], newTotalShares);
+            (_sharesOf[to], _sharesOf[address(pair)], _totalShares) =
+                _applyWhaleLimit(newToShares, cachedPairShares, newTotalShares);
             _checkpoints.transfer(
                 delegates[from],
                 delegates[to],
@@ -568,8 +590,13 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     }
 
     function _burn(address from, CrazyBalance amount) internal returns (bool) {
-        (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
-            _balanceOf(from);
+        (
+            CrazyBalance fromBalance,
+            Shares cachedFromShares,
+            Shares cachedPairShares,
+            Balance cachedTotalSupply,
+            Shares cachedTotalShares
+        ) = _balanceOf(from);
         if (amount > fromBalance) {
             if (_check()) {
                 revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
@@ -594,7 +621,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             );
         }
         _sharesOf[from] = newFromShares;
-        (_sharesOf[address(pair)], _totalShares) = _applyWhaleLimit(_sharesOf[address(pair)], newTotalShares);
+        (_sharesOf[address(pair)], _totalShares) = _applyWhaleLimit(cachedPairShares, newTotalShares);
         _totalSupply = newTotalSupply;
         emit Transfer(from, address(0), amount.toExternal());
 
@@ -613,8 +640,13 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     }
 
     function _deliver(address from, CrazyBalance amount) internal returns (bool) {
-        (CrazyBalance fromBalance, Shares cachedFromShares, Balance cachedTotalSupply, Shares cachedTotalShares) =
-            _balanceOf(from);
+        (
+            CrazyBalance fromBalance,
+            Shares cachedFromShares,
+            Shares cachedPairShares,
+            Balance cachedTotalSupply,
+            Shares cachedTotalShares
+        ) = _balanceOf(from);
         if (amount > fromBalance) {
             if (_check()) {
                 revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
@@ -627,6 +659,8 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         if (amount == fromBalance) {
             newTotalShares = cachedTotalShares - cachedFromShares;
             newFromShares = ZERO_SHARES;
+        } else if (cachedPairShares == totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE) {
+            revert("unimplemented");
         } else {
             (newFromShares, newTotalShares) = ReflectMath.getDeliverShares(
                 amount.toBalance(from), cachedTotalSupply, cachedTotalShares, cachedFromShares
@@ -634,7 +668,8 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         }
 
         _sharesOf[from] = newFromShares;
-        (_sharesOf[address(pair)], _totalShares) = _applyWhaleLimit(_sharesOf[address(pair)], newTotalShares);
+        _sharesOf[address(pair)] = cachedPairShares;
+        _totalShares = newTotalShares;
         emit Transfer(from, address(0), amount.toExternal());
 
         _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());

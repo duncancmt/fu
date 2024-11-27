@@ -129,6 +129,7 @@ library ReflectMath {
         Shares fromShares,
         Shares toShares
     ) internal pure returns (Shares newToShares, Shares newTotalShares) {
+        // Called when `from` is sending their entire balance
         Shares uninvolvedShares = totalShares - fromShares - toShares;
         Shares2XBasisPoints n = alloc5().omul(scale(uninvolvedShares, BASIS), totalShares);
         SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, taxRate);
@@ -208,6 +209,30 @@ library ReflectMath {
 
         console.log("    new toBalance", Balance.unwrap(newToShares.toBalance(totalSupply, newTotalShares)));
         console.log("===");
+    }
+
+    function getTransferShares(
+        Balance amount,
+        BasisPoints taxRate,
+        Balance totalSupply,
+        Shares totalShares,
+        Shares fromShares
+    )
+        internal
+        view
+        returns (Shares newFromShares, Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
+    {
+        // Called when `to`'s final shares will be the whale limit
+        revert("unimplemented");
+    }
+
+    function getTransferShares(BasisPoints taxRate, Balance totalSupply, Shares totalShares, Shares fromShares)
+        internal
+        pure
+        returns (Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
+    {
+        // Called when `to`'s final shares will be the whale limit and `from` is sending their entire balance
+        revert("unimplemented");
     }
 
     function getDeliverShares(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
