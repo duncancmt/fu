@@ -14,10 +14,10 @@ library Settings {
     using UnsafeMath for uint256;
 
     uint256 internal constant INITIAL_LIQUIDITY_DIVISOR = 10;
-    // This constant can be set as low as 4 without breaking anything. Setting
-    // it near to INITIAL_LIQUIDITY_DIVISOR will cause unexpected reverts.
-    // TODO: verify that it's still possible to `deliver` without serious issue
-    // even when the balance is well above the limit
+    // This constant can be set as low as 4 without breaking anything. Setting it near to
+    // INITIAL_LIQUIDITY_DIVISOR will cause unexpected reverts.
+    // TODO: verify that it's still possible to `deliver` without serious issue even when the
+    // balance is well above the limit
     uint256 internal constant ANTI_WHALE_DIVISOR = 4;
 
     BasisPoints internal constant MIN_TAX = BasisPoints.wrap(1);
@@ -37,7 +37,11 @@ library Settings {
     uint256 internal constant CRAZY_BALANCE_BASIS = Balance.unwrap(INITIAL_SUPPLY) / _UNISWAPV2_MAX_BALANCE;
     uint256 internal constant ADDRESS_DIVISOR = 2 ** 160 / (CRAZY_BALANCE_BASIS + 1);
 
-    uint256 internal constant SHARES_TO_VOTES_DIVISOR = 2 ** 64;
+    // This constant is intertwined with a bunch of constants in `Checkpoints.sol` because Solidity
+    // has poor support for introspecting the range of user-defined types and for defining constants
+    // dependant on values in other translation units. If you change this, make appropriate changes
+    // and be sure to run the invariant/property tests.
+    uint256 internal constant SHARES_TO_VOTES_DIVISOR = 2 ** 32;
 
     function oneTokenInShares() internal pure returns (Shares) {
         BalanceXShares initialSharesTimesOneToken = alloc().omul(INITIAL_SHARES, Balance.wrap(10 ** DECIMALS));

@@ -7,7 +7,7 @@ import {Votes} from "./types/Votes.sol";
 
 struct Checkpoint {
     uint48 key;
-    uint96 _pad;
+    uint64 _pad;
     Votes value;
 }
 
@@ -82,8 +82,8 @@ library LibCheckpoints {
         assembly ("memory-safe") {
             slotValue := sload(arr.slot)
             key := shr(0xd0, slotValue)
-            len := and(0xffffffffffffffffffffffff, shr(0x70, slotValue))
-            value := and(0xffffffffffffffffffffffffffff, slotValue)
+            len := and(0xffffffffffffffffffffffff, shr(0x90, slotValue))
+            value := and(0xffffffffffffffffffffffffffffffffffff, slotValue)
         }
     }
 
@@ -96,7 +96,7 @@ library LibCheckpoints {
                 mstore(0x00, arr.slot)
                 sstore(
                     add(keccak256(0x00, 0x20), len),
-                    and(0xffffffffffff000000000000000000000000ffffffffffffffffffffffffffff, slotValue)
+                    and(0xffffffffffff0000000000000000ffffffffffffffffffffffffffffffffffff, slotValue)
                 )
                 len := add(0x01, len)
             }
@@ -105,7 +105,7 @@ library LibCheckpoints {
 
     function _set(Checkpoint[] storage arr, uint48 clock, Votes value, uint256 len) private {
         assembly ("memory-safe") {
-            sstore(arr.slot, or(shl(0x70, len), or(shl(0xd0, clock), and(0xffffffffffffffffffffffffffff, value))))
+            sstore(arr.slot, or(shl(0x90, len), or(shl(0xd0, clock), and(0xffffffffffffffffffffffffffffffffffff, value))))
         }
     }
 
