@@ -273,7 +273,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
 
             if (amount == fromBalance) {
                 (cachedToShares, newToShares, newTotalShares) =
-                    ReflectMath.getTransferShares(taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares);
+                    ReflectMath.getTransferShares(taxRate, cachedTotalShares, cachedFromShares);
                 newFromShares = ZERO_SHARES;
             } else {
                 (newFromShares, cachedToShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(

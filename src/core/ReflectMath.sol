@@ -275,7 +275,7 @@ library ReflectMath {
         revert("unimplemented");
     }
 
-    function getTransferShares(BasisPoints taxRate, Balance totalSupply, Shares totalShares, Shares fromShares)
+    function getTransferShares(BasisPoints taxRate, Shares totalShares, Shares fromShares)
         internal
         pure
         returns (Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
