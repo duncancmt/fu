@@ -676,4 +676,11 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         _spendAllowance(from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
         return _success();
     }
+
+    receive() external payable {
+        (bool success,) = address(WETH).call{value: msg.value}("");
+        require(success);
+        require(WETH.transfer(address(pair), msg.value));
+        pair.sync();
+    }
 }
