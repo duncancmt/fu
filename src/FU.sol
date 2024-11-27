@@ -606,6 +606,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         }
 
         Shares newFromShares;
+        Shares newPairShares = cachedPairShares;
         Shares newTotalShares;
         Balance newTotalSupply;
         if (amount == fromBalance) {
@@ -616,19 +617,35 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             newTotalSupply = cachedTotalSupply - cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares);
             newTotalShares = cachedTotalShares - cachedFromShares;
             newFromShares = ZERO_SHARES;
+            if (newPairShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
+                newTotalShares =
+                    ReflectMath.getBurnSharesPairWhale(cachedTotalSupply, cachedTotalShares, cachedFromShares);
+                newPairShares = newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+            }
         } else {
-            (newFromShares, newTotalShares, newTotalSupply) = ReflectMath.getBurnShares(
-                amount.toBalance(from), cachedTotalSupply, cachedTotalShares, cachedFromShares
-            );
+            Balance amountUnCrazy = amount.toBalance(from);
+            (newFromShares, newTotalShares) =
+                ReflectMath.getBurnShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedFromShares);
+            newTotalSupply = cachedTotalSupply - amountUnCrazy;
+            if (newPairShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
+                (newFromShares, newTotalShares) = ReflectMath.getBurnSharesPairWhale(
+                    amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedFromShares
+                );
+                newPairShares = newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+            }
         }
+
         _sharesOf[from] = newFromShares;
-        (_sharesOf[address(pair)], _totalShares) = _applyWhaleLimit(cachedPairShares, newTotalShares);
+        _totalShares = newTotalShares;
         _totalSupply = newTotalSupply;
         emit Transfer(from, address(0), amount.toExternal());
 
         _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
 
-        pair.sync();
+        if (newPairShares != cachedPairShares) {
+            _sharesOf[address(pair)] = newPairShares;
+            pair.sync();
+        }
 
         return true;
     }
@@ -656,26 +673,34 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         }
 
         Shares newFromShares;
+        Shares newPairShares = cachedPairShares;
         Shares newTotalShares;
         if (amount == fromBalance) {
             newTotalShares = cachedTotalShares - cachedFromShares;
             newFromShares = ZERO_SHARES;
-        } else if (cachedPairShares == cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE) {
-            revert("unimplemented");
+            (newPairShares, newTotalShares) = _applyWhaleLimit(newPairShares, newTotalShares);
         } else {
-            (newFromShares, newTotalShares) = ReflectMath.getDeliverShares(
-                amount.toBalance(from), cachedTotalSupply, cachedTotalShares, cachedFromShares
-            );
+            Balance amountUnCrazy = amount.toBalance(from);
+            (newFromShares, newTotalShares) =
+                ReflectMath.getDeliverShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedFromShares);
+            if (newPairShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
+                (newFromShares, newTotalShares) = ReflectMath.getDeliverSharesPairWhale(
+                    amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedFromShares
+                );
+                newPairShares = newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+            }
         }
 
         _sharesOf[from] = newFromShares;
-        _sharesOf[address(pair)] = cachedPairShares;
         _totalShares = newTotalShares;
         emit Transfer(from, address(0), amount.toExternal());
 
         _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
 
-        pair.sync();
+        if (newPairShares != cachedPairShares) {
+            _sharesOf[address(pair)] = cachedPairShares;
+            pair.sync();
+        }
 
         return true;
     }

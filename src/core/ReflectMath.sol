@@ -308,10 +308,36 @@ library ReflectMath {
         newTotalShares = newTotalShares.inc(condition);
     }
 
+    function getDeliverSharesPairWhale(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
+        internal
+        view
+        returns (Shares newFromShares, Shares newTotalShares)
+    {
+        revert("unimplemented");
+    }
+
     function getBurnShares(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
         internal
         view
-        returns (Shares newFromShares, Shares newTotalShares, Balance newTotalSupply)
+        returns (Shares newFromShares, Shares newTotalShares)
+    {
+        revert("unimplemented");
+    }
+
+    // getBurnShares(Balance,Shares,Shares) is not provided because it's extremely straightforward
+
+    function getBurnSharesPairWhale(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
+        internal
+        view
+        returns (Shares newFromShares, Shares newTotalShares)
+    {
+        revert("unimplemented");
+    }
+
+    function getBurnSharesPairWhale(Balance totalSupply, Shares totalShares, Shares fromShares)
+        internal
+        view
+        returns (Shares newTotalShares)
     {
         revert("unimplemented");
     }
