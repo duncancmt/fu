@@ -58,11 +58,11 @@ library ReflectMath {
         Balance beforeToBalance = toShares.toBalance(totalSupply, totalShares);
         Balance afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
         Balance expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
-        Balance expectedAfterToBalanceHi = beforeToBalance + castUp(scale(amount, BASIS - taxRate));
+        //Balance expectedAfterToBalanceHi = beforeToBalance + castUp(scale(amount, BASIS - taxRate));
 
         if (afterToBalance < expectedAfterToBalanceLo) {
             {
-                console.log("to round up");
+                //console.log("to round up");
                 Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Balance.unwrap(totalSupply)));
                 newToShares = newToShares + incr;
                 newTotalShares = newTotalShares + incr;
@@ -71,7 +71,7 @@ library ReflectMath {
             Balance afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
             Balance expectedAfterFromBalance = beforeFromBalance - amount;
             if (afterFromBalance < expectedAfterFromBalance) {
-                console.log("from round up");
+                //console.log("from round up");
                 Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDivUp(Balance.unwrap(totalSupply)));
                 newFromShares = newFromShares + incr;
                 newTotalShares = newTotalShares + incr;
@@ -81,10 +81,16 @@ library ReflectMath {
                 Shares decrFrom;
                 Shares decrTo;
                 if (newFromShares > newToShares) {
-                    decrFrom = Shares.wrap(Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares) / Shares.unwrap(newFromShares + newToShares));
+                    decrFrom = Shares.wrap(
+                        Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares)
+                            / Shares.unwrap(newFromShares + newToShares)
+                    );
                     decrTo = decrTotal - decrFrom;
                 } else {
-                    decrTo = Shares.wrap(Shares.unwrap(decrTotal) * Shares.unwrap(newToShares) / Shares.unwrap(newFromShares + newToShares));
+                    decrTo = Shares.wrap(
+                        Shares.unwrap(decrTotal) * Shares.unwrap(newToShares)
+                            / Shares.unwrap(newFromShares + newToShares)
+                    );
                     decrFrom = decrTotal - decrTo;
                 }
                 newTotalShares = totalShares;
@@ -92,30 +98,58 @@ library ReflectMath {
                 newToShares = newToShares - decrTo;
             }
         } else {
-            {
-                bool condition = afterToBalance > expectedAfterToBalanceHi;
-                if (condition) {
-                    console.log("to round down");
-                }
-                newToShares = newToShares.dec(condition);
-                newTotalShares = newTotalShares.dec(condition);
-            }
             Balance beforeFromBalance = fromShares.toBalance(totalSupply, totalShares);
             Balance afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
             Balance expectedAfterFromBalance = beforeFromBalance - amount;
             {
                 bool condition = afterFromBalance > expectedAfterFromBalance;
-                if (condition) {
-                    console.log("from round down");
-                }
+                //if (condition) {
+                //    console.log("from round down");
+                //}
                 newFromShares = newFromShares.dec(condition);
                 newTotalShares = newTotalShares.dec(condition);
             }
             {
                 bool condition = afterFromBalance < expectedAfterFromBalance;
-                if (condition) {
-                    console.log("from round up");
-                }
+                //if (condition) {
+                //    console.log("from round up");
+                //}
+                newFromShares = newFromShares.inc(condition);
+                newTotalShares = newTotalShares.inc(condition);
+            }
+
+            afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
+            {
+                bool condition = afterToBalance > expectedAfterToBalanceLo;
+                //if (condition) {
+                //    console.log("to round down");
+                //}
+                newToShares = newToShares.dec(condition);
+                newTotalShares = newTotalShares.dec(condition);
+            }
+            {
+                bool condition = afterToBalance < expectedAfterToBalanceLo;
+                //if (condition) {
+                //    console.log("to round up");
+                //}
+                newToShares = newToShares.inc(condition);
+                newTotalShares = newTotalShares.inc(condition);
+            }
+
+            afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
+            {
+                bool condition = afterFromBalance > expectedAfterFromBalance;
+                //if (condition) {
+                //    console.log("from round down");
+                //}
+                newFromShares = newFromShares.dec(condition);
+                newTotalShares = newTotalShares.dec(condition);
+            }
+            {
+                bool condition = afterFromBalance < expectedAfterFromBalance;
+                //if (condition) {
+                //    console.log("from round up");
+                //}
                 newFromShares = newFromShares.inc(condition);
                 newTotalShares = newTotalShares.inc(condition);
             }
@@ -144,13 +178,13 @@ library ReflectMath {
         newTotalShares = n.div(d);
         newToShares = toShares + fromShares - (totalShares - newTotalShares);
 
-        console.log("           taxRate", BasisPoints.unwrap(taxRate));
-        console.log("       totalSupply", Balance.unwrap(totalSupply));
-        console.log("       totalShares", Shares.unwrap(totalShares));
-        console.log("        fromShares", Shares.unwrap(fromShares));
-        console.log("          toShares", Shares.unwrap(toShares));
-        console.log("       newToShares", Shares.unwrap(newToShares));
-        console.log("===");
+        //console.log("           taxRate", BasisPoints.unwrap(taxRate));
+        //console.log("       totalSupply", Balance.unwrap(totalSupply));
+        //console.log("       totalShares", Shares.unwrap(totalShares));
+        //console.log("        fromShares", Shares.unwrap(fromShares));
+        //console.log("          toShares", Shares.unwrap(toShares));
+        //console.log("       newToShares", Shares.unwrap(newToShares));
+        //console.log("===");
 
         // Fixup rounding error
         // TODO: use divMulti
@@ -160,10 +194,10 @@ library ReflectMath {
         Balance expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, taxRate));
         //Balance expectedAfterToBalance = beforeToBalance + cast(scale(beforeFromBalance, BASIS - taxRate));
 
-        console.log("before fromBalance", Balance.unwrap(beforeFromBalance));
-        console.log("  before toBalance", Balance.unwrap(beforeToBalance));
-        console.log("         toBalance", Balance.unwrap(afterToBalance));
-        console.log("expected toBalance", Balance.unwrap(expectedAfterToBalance));
+        //console.log("before fromBalance", Balance.unwrap(beforeFromBalance));
+        //console.log("  before toBalance", Balance.unwrap(beforeToBalance));
+        //console.log("         toBalance", Balance.unwrap(afterToBalance));
+        //console.log("expected toBalance", Balance.unwrap(expectedAfterToBalance));
 
         /*
         {
@@ -178,37 +212,37 @@ library ReflectMath {
         }
         */
         for (uint256 i; afterToBalance > expectedAfterToBalance && i < 3; i++) {
-            console.log("round down");
+            //console.log("round down");
             Shares decr = Shares.wrap(
                 (Balance.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(
                     Balance.unwrap(totalSupply)
                 )
             );
-            console.log("decr", Shares.unwrap(decr));
+            //console.log("decr", Shares.unwrap(decr));
             newToShares = newToShares - decr;
             newTotalShares = newTotalShares - decr;
             if (newToShares <= toShares) {
-                console.log("clamp");
+                //console.log("clamp");
                 newTotalShares = newTotalShares + (toShares - newToShares);
                 newToShares = toShares;
                 afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
-                console.log("updated toBalance", Balance.unwrap(afterToBalance));
+                //console.log("updated toBalance", Balance.unwrap(afterToBalance));
                 break;
             }
             afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
-            console.log("updated toBalance", Balance.unwrap(afterToBalance));
+            //console.log("updated toBalance", Balance.unwrap(afterToBalance));
         }
         {
             bool condition = afterToBalance < expectedAfterToBalance;
             if (condition) {
-                console.log("round up");
+                //console.log("round up");
             }
             newToShares = newToShares.inc(condition);
             newTotalShares = newTotalShares.inc(condition);
         }
 
-        console.log("    new toBalance", Balance.unwrap(newToShares.toBalance(totalSupply, newTotalShares)));
-        console.log("===");
+        //console.log("    new toBalance", Balance.unwrap(newToShares.toBalance(totalSupply, newTotalShares)));
+        //console.log("===");
     }
 
     function getTransferShares(

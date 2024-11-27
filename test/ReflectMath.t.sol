@@ -158,8 +158,8 @@ contract ReflectMathTest is Boilerplate, Test {
         );
 
         Balance newToBalance = newToShares.toBalance(totalSupply, newTotalShares);
-        console.log("      newToShares", Shares.unwrap(newToShares));
-        console.log("         toShares", Shares.unwrap(toShares));
+        //console.log("      newToShares", Shares.unwrap(newToShares));
+        //console.log("         toShares", Shares.unwrap(toShares));
 
         // TODO: tighter bounds
         Balance expectedNewToBalanceLo = toBalance + fromBalance - castUp(scale(fromBalance, taxRate));

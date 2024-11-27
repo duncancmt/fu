@@ -31,8 +31,8 @@ library Settings {
     Shares internal constant INITIAL_SHARES = Shares.wrap(Balance.unwrap(INITIAL_SUPPLY) << 32);
 
     uint256 internal constant INITIAL_SHARES_RATIO = Shares.unwrap(INITIAL_SHARES) / Balance.unwrap(INITIAL_SUPPLY);
-    uint256 internal constant MIN_SHARES_RATIO = 10000; // below this, ReflectMath breaks down
-    // bisecting: lo = 10000; hi =
+    uint256 internal constant MIN_SHARES_RATIO = 4096; // below this, ReflectMath breaks down
+    // bisecting: lo = 1024 ; hi = 4096?
 
     uint256 internal constant CRAZY_BALANCE_BASIS = Balance.unwrap(INITIAL_SUPPLY) / _UNISWAPV2_MAX_BALANCE;
     uint256 internal constant ADDRESS_DIVISOR = 2 ** 160 / (CRAZY_BALANCE_BASIS + 1);
