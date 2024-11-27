@@ -297,6 +297,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             _totalShares = newTotalShares;
             _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
         } else {
+            // TODO: what happens if `from` is a whale? could this push them over the limit?
             (_sharesOf[address(pair)], _totalShares) = _applyWhaleLimit(_sharesOf[address(pair)], newTotalShares);
             _checkpoints.transfer(
                 delegates[from],
@@ -673,24 +674,6 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             return false;
         }
         _spendAllowance(from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
-        return _success();
-    }
-
-    function punishWhale(address whale) external returns (bool) {
-        if (whale == address(pair)) {
-            return _success();
-        }
-
-        Shares cachedTotalShares = _totalShares;
-        Shares cachedWhaleShares = _sharesOf[whale];
-        (Shares newWhaleShares, Shares newTotalShares) = _applyWhaleLimit(cachedWhaleShares, cachedTotalShares);
-        _sharesOf[whale] = newWhaleShares;
-        _totalShares = newTotalShares;
-
-        _checkpoints.burn(delegates[whale], cachedWhaleShares.toVotes() - newWhaleShares.toVotes(), clock());
-
-        pair.sync();
-
         return _success();
     }
 }

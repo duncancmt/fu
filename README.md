@@ -45,7 +45,6 @@ FU is a full-featured token, supporting the following extensions to the ERC20 st
 * `burnFrom(address,uint256)(bool)`
 * `deliver(uint256)(bool)`
 * `deliverFrom(address,uint256)(bool)`
-* `punishWhale(address)(bool)`
 
 ## Restrictions
 
