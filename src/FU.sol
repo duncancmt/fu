@@ -78,9 +78,9 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
 
         // slither-disable-next-line low-level-calls
-        (bool success,) = address(WETH).call{value: msg.value}("");
+        (bool success,) = address(WETH).call{value: address(this).balance}("");
         require(success);
-        require(WETH.transfer(address(pair), msg.value));
+        require(WETH.transfer(address(pair), WETH.balanceOf(address(this))));
 
         _totalSupply = Settings.INITIAL_SUPPLY;
         _totalShares = Settings.INITIAL_SHARES;
@@ -99,11 +99,11 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         try FACTORY.createPair(WETH, IERC20(address(this))) returns (IUniswapV2Pair newPair) {
             require(pair == newPair);
         } catch {
-            require(pair == FACTORY.getPair(WETH, IERC20(address(this))));
+            require(pair == FACTORY.getPair(WETH, this));
         }
         {
             (CrazyBalance pairBalance,,,,) = _balanceOf(address(pair));
-            uint256 initialLiquidity = Math.sqrt(CrazyBalance.unwrap(pairBalance) * msg.value) - 1_000;
+            uint256 initialLiquidity = Math.sqrt(CrazyBalance.unwrap(pairBalance) * WETH.balanceOf(address(pair))) - 1_000;
             require(pair.mint(address(0)) >= initialLiquidity);
         }
     }
@@ -745,9 +745,9 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     }
 
     receive() external payable {
-        (bool success,) = address(WETH).call{value: msg.value}("");
+        (bool success,) = address(WETH).call{value: address(this).balance}("");
         require(success);
-        require(WETH.transfer(address(pair), msg.value));
+        require(WETH.transfer(address(pair), WETH.balanceOf(address(this))));
         pair.sync();
     }
 }
