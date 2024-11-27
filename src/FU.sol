@@ -196,6 +196,8 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
 
         Shares cachedToShares = _sharesOf[to];
         if (to == address(pair)) {
+            // TODO: skip calling `getTransferShares` below because we know that
+            // we're going to have to apply the weird rule later
             (cachedToShares, cachedTotalShares) = _applyWhaleLimit(cachedToShares, cachedTotalShares);
         }
 
