@@ -416,11 +416,20 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
 
     string public constant override name = "Fuck You!";
 
-    function symbol() external view override returns (string memory) {
+    function symbol() external view override returns (string memory r) {
         if (msg.sender == tx.origin) {
             return "FU";
         }
-        return string.concat("Fuck you, ", msg.sender.toChecksumAddress(), "!");
+        assembly ("memory-safe") {
+            r := mload(0x40)
+            mstore(0x40, add(0x0a, r))
+        }
+        msg.sender.toChecksumAddress();
+        assembly ("memory-safe") {
+            mstore(add(0x0a, r), 0x4675636b20796f752c20)
+            mstore(r, 0x35)
+            mstore8(add(0x54, r), 0x21)
+        }
     }
 
     uint8 public constant override decimals = Settings.DECIMALS;
