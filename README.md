@@ -93,7 +93,7 @@ python3 -m pip install --user slither-analyzer
 ## Run some tests
 
 ```shell
-forge test -vvv --fuzz-seed "$(python3 -c 'import secrets; print(secrets.randbelow(2**64))')"
+forge test -vvv --fuzz-seed "$(python3 -c 'import secrets; print(secrets.randbelow(2**53))')"
 ./medusa fuzz # or use your system `medusa`
 slither .
 ```

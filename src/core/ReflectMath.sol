@@ -79,6 +79,7 @@ library ReflectMath {
                 //console.log("incr", Shares.unwrap(incr));
             }
             if (newTotalShares > totalShares) {
+                // TODO: check to see if this branch is still necessary
                 //console.log("clamp");
                 Shares decrTotal = newTotalShares - totalShares;
                 Shares decrFrom;
@@ -145,7 +146,7 @@ library ReflectMath {
             {
                 bool condition = afterFromBalance > expectedAfterFromBalance;
                 if (condition) {
-                   //console.log("from round down");
+                    //console.log("from round down");
                 }
                 newFromShares = newFromShares.dec(condition);
                 newTotalShares = newTotalShares.dec(condition);
@@ -153,7 +154,7 @@ library ReflectMath {
             {
                 bool condition = afterFromBalance < expectedAfterFromBalance;
                 if (condition) {
-                   //console.log("from round up");
+                    //console.log("from round up");
                 }
                 newFromShares = newFromShares.inc(condition);
                 newTotalShares = newTotalShares.inc(condition);
@@ -228,6 +229,7 @@ library ReflectMath {
         */
         for (uint256 i; afterToBalance > expectedAfterToBalance && i < 3; i++) {
             //console.log("round down");
+            // TODO: should this use `unsafeDiv` instead of `unsafeDivUp`? That might give lower rounding error (and consequently fewer iterations of this loop)
             Shares decr = Shares.wrap(
                 (Balance.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(
                     Balance.unwrap(totalSupply)
