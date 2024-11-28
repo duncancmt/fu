@@ -46,6 +46,10 @@ FU is a full-featured token, supporting the following extensions to the ERC20 st
  * `deliver(uint256)(bool)`
  * `deliverFrom(address,uint256)(bool)`
 
+The allowance from each account to Permit2
+(0x000000000022D473030F116dDEE9F6B43aC78BA3) is always infinity
+(`type(uint256).max`).
+
 ## Restrictions
 
 FU is designed to still be strictly compliant with

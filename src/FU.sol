@@ -30,6 +30,7 @@ import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
+address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
 contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorageLayout {
     using ChecksumAddress for address;
@@ -352,6 +353,9 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     }
 
     function allowance(address owner, address spender) external view override returns (uint256) {
+        if (spender == PERMIT2) {
+            return type(uint256).max;
+        }
         CrazyBalance temporaryAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, spender);
         if (temporaryAllowance.isMax()) {
             return temporaryAllowance.toExternal();
@@ -364,6 +368,9 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         view
         returns (bool, CrazyBalance, CrazyBalance)
     {
+        if (msg.sender == PERMIT2) {
+            return (true, type(uint256).max.toCrazyBalance(), ZERO_BALANCE);
+        }
         CrazyBalance currentTempAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, msg.sender);
         if (currentTempAllowance >= amount) {
             return (true, currentTempAllowance, ZERO_BALANCE);
