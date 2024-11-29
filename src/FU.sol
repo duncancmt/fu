@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {BasicERC20} from "./core/BasicERC20.sol";
+import {FUStorage} from "./FUStorage.sol";
+
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
-import {IERC2612} from "./interfaces/IERC2612.sol";
-import {IERC5267} from "./interfaces/IERC5267.sol";
-import {IERC5805} from "./interfaces/IERC5805.sol";
-import {IERC6093} from "./interfaces/IERC6093.sol";
-import {IERC7674} from "./interfaces/IERC7674.sol";
+import {IERC6372} from "./interfaces/IERC6372.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
 import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
-import {CrazyBalance, toCrazyBalance, ZERO as ZERO_BALANCE, CrazyBalanceArithmetic} from "./core/CrazyBalance.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 import {Checkpoints, LibCheckpoints} from "./core/Checkpoints.sol";
 
@@ -24,6 +22,7 @@ import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./core/types/Shares
 import {Balance} from "./core/types/Balance.sol";
 import {SharesToBalance} from "./core/types/BalanceXShares.sol";
 import {Votes, toVotes} from "./core/types/Votes.sol";
+import {CrazyBalance, toCrazyBalance, ZERO as ZERO_BALANCE, CrazyBalanceArithmetic} from "./core/CrazyBalance.sol";
 
 import {Math} from "./lib/Math.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
@@ -32,21 +31,13 @@ IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
-contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorageLayout {
+contract FU is FUStorage, TransientStorageLayout, BasicERC20 {
     using ChecksumAddress for address;
     using {toCrazyBalance} for uint256;
     using SharesToBalance for Shares;
     using CrazyBalanceArithmetic for Shares;
     using {toVotes} for Shares;
     using LibCheckpoints for Checkpoints;
-
-    mapping(address account => Shares shares) internal _sharesOf;
-    Balance internal _totalSupply;
-    Shares internal _totalShares;
-    mapping(address owner => mapping(address spender => CrazyBalance allowed)) internal _allowance;
-    mapping(address account => address delegatee) public override delegates;
-    Checkpoints _checkpoints;
-    mapping(address account => uint256 nonce) public override(IERC2612, IERC5805) nonces;
 
     function totalSupply() external view override returns (uint256) {
         return Balance.unwrap(_totalSupply);
@@ -62,13 +53,6 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     mapping(address owner => mapping(address spender => CrazyBalance allowed)) private _temporaryAllowance;
 
     constructor(address[] memory initialHolders) payable {
-        require(_DOMAIN_TYPEHASH == keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
-        require(_NAME_HASH == keccak256(bytes(name)));
-        require(
-            _PERMIT_TYPEHASH
-                == keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
-        );
-        require(_DELEGATION_TYPEHASH == keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"));
         require(Settings.SHARES_TO_VOTES_DIVISOR >= Settings.INITIAL_SHARES_RATIO);
 
         require(msg.value >= 1 ether);
@@ -124,7 +108,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return block.prevrandao & 1 == 0;
     }
 
-    function _success() internal view returns (bool) {
+    function _success() internal view override returns (bool) {
         if (_check()) {
             assembly ("memory-safe") {
                 stop()
@@ -198,7 +182,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return BasisPoints.unwrap(_tax());
     }
 
-    function _transfer(address from, address to, CrazyBalance amount) internal returns (bool) {
+    function _transfer(address from, address to, CrazyBalance amount) internal override returns (bool) {
         if (from == to) {
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
@@ -346,10 +330,10 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return _success();
     }
 
-    function approve(address spender, uint256 amount) external override returns (bool) {
-        _allowance[msg.sender][spender] = amount.toCrazyBalance();
-        emit Approval(msg.sender, spender, amount);
-        return _success();
+    function _approve(address owner, address spender, CrazyBalance amount) internal override returns (bool) {
+        _allowance[owner][spender] = amount;
+        emit Approval(owner, spender, amount.toExternal());
+        return true;
     }
 
     function allowance(address owner, address spender) external view override returns (uint256) {
@@ -366,6 +350,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     function _checkAllowance(address owner, CrazyBalance amount)
         internal
         view
+        override
         returns (bool, CrazyBalance, CrazyBalance)
     {
         if (msg.sender == PERMIT2) {
@@ -390,7 +375,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         CrazyBalance amount,
         CrazyBalance currentTempAllowance,
         CrazyBalance currentAllowance
-    ) internal {
+    ) internal override {
         if (currentTempAllowance.isMax()) {
             // TODO: maybe remove this branch
             return;
@@ -411,20 +396,9 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         emit Approval(owner, msg.sender, currentAllowance.toExternal());
     }
 
-    function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
-        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance(from, amount.toCrazyBalance());
-        if (!success) {
-            return false;
-        }
-        if (!_transfer(from, to, amount.toCrazyBalance())) {
-            return false;
-        }
-        _spendAllowance(from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
-        return _success();
+    function name() public pure override(IERC20, BasicERC20) returns (string memory) {
+        return "Fuck You!";
     }
-
-    string public constant override name = "Fuck You!";
 
     function symbol() external view override returns (string memory r) {
         if (msg.sender == tx.origin) {
@@ -444,88 +418,11 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
 
     uint8 public constant override decimals = Settings.DECIMALS;
 
-    bytes32 internal constant _DOMAIN_TYPEHASH = 0x8cad95687ba82c2ce50e74f7b754645e5117c3a5bec8151c0726d5857980a866;
-    bytes32 internal constant _NAME_HASH = 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93694;
-
-    // slither-disable-next-line naming-convention
-    function DOMAIN_SEPARATOR() public view override returns (bytes32 r) {
-        assembly ("memory-safe") {
-            let ptr := mload(0x40)
-            mstore(0x00, _DOMAIN_TYPEHASH)
-            mstore(0x20, _NAME_HASH)
-            mstore(0x40, chainid())
-            mstore(0x60, address())
-            r := keccak256(0x00, 0x80)
-            mstore(0x40, ptr)
-            mstore(0x60, 0x00)
-        }
+    function _NAME_HASH() internal pure override returns (bytes32) {
+        return 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93694;
     }
 
-    bytes32 internal constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
-
-    function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
-        external
-        override
-    {
-        if (owner == address(0)) {
-            revert ERC20InvalidApprover(address(0));
-        }
-        if (block.timestamp > deadline) {
-            revert ERC2612ExpiredSignature(deadline);
-        }
-        uint256 nonce;
-        unchecked {
-            nonce = nonces[owner]++;
-        }
-        bytes32 sep = DOMAIN_SEPARATOR();
-        address signer;
-        assembly ("memory-safe") {
-            let ptr := mload(0x40)
-            mstore(ptr, _PERMIT_TYPEHASH)
-            mstore(add(0x20, ptr), and(0xffffffffffffffffffffffffffffffffffffffff, owner))
-            mstore(add(0x40, ptr), and(0xffffffffffffffffffffffffffffffffffffffff, spender))
-            mstore(add(0x60, ptr), amount)
-            mstore(add(0x80, ptr), nonce)
-            mstore(add(0xa0, ptr), deadline)
-            mstore(0x00, 0x1901)
-            mstore(0x20, sep)
-            mstore(0x40, keccak256(ptr, 0xc0))
-            mstore(0x00, keccak256(0x1e, 0x42))
-            mstore(0x20, and(0xff, v))
-            mstore(0x40, r)
-            mstore(0x60, s)
-            signer := mul(mload(0x00), staticcall(gas(), 0x01, 0x00, 0x80, 0x00, 0x20))
-            mstore(0x40, ptr)
-            mstore(0x60, 0x00)
-        }
-        if (signer != owner) {
-            revert ERC2612InvalidSigner(signer, owner);
-        }
-        _allowance[owner][spender] = amount.toCrazyBalance();
-        emit Approval(owner, spender, amount);
-    }
-
-    function eip712Domain()
-        external
-        view
-        override
-        returns (
-            bytes1 fields,
-            string memory name_,
-            string memory version,
-            uint256 chainId,
-            address verifyingContract,
-            bytes32 salt,
-            uint256[] memory extensions
-        )
-    {
-        fields = bytes1(0x0d);
-        name_ = name;
-        chainId = block.chainid;
-        verifyingContract = address(this);
-    }
-
-    function clock() public view override returns (uint48) {
+    function clock() public view override(IERC6372, BasicERC20) returns (uint48) {
         unchecked {
             // slither-disable-next-line divide-before-multiply
             return uint48(block.timestamp / 1 days * 1 days);
@@ -551,7 +448,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return _checkpoints.getTotal(uint48(timepoint)).toExternal();
     }
 
-    function _delegate(address delegator, address delegatee) internal {
+    function _delegate(address delegator, address delegatee) internal override {
         Shares shares = _sharesOf[delegator];
         address oldDelegatee = delegates[delegator];
         emit DelegateChanged(delegator, oldDelegatee, delegatee);
@@ -560,56 +457,12 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         _checkpoints.transfer(oldDelegatee, delegatee, votes, votes, clock());
     }
 
-    function delegate(address delegatee) external override {
-        return _delegate(msg.sender, delegatee);
-    }
-
-    bytes32 internal constant _DELEGATION_TYPEHASH = 0xe48329057bfd03d55e49b547132e39cffd9c1820ad7b9d4c5307691425d15adf;
-
-    function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)
-        external
-        override
-    {
-        if (block.timestamp > expiry) {
-            revert ERC5805ExpiredSignature(expiry);
-        }
-        bytes32 sep = DOMAIN_SEPARATOR();
-        address signer;
-        assembly ("memory-safe") {
-            let ptr := mload(0x40)
-            mstore(0x00, _DELEGATION_TYPEHASH)
-            mstore(0x20, and(0xffffffffffffffffffffffffffffffffffffffff, delegatee))
-            mstore(0x40, nonce)
-            mstore(0x60, expiry)
-            mstore(0x40, keccak256(0x00, 0x80))
-            mstore(0x00, 0x1901)
-            mstore(0x20, sep)
-            mstore(0x00, keccak256(0x1e, 0x42))
-            mstore(0x20, and(0xff, v))
-            mstore(0x40, r)
-            mstore(0x60, s)
-            signer := mul(mload(0x00), staticcall(gas(), 0x01, 0x00, 0x80, 0x00, 0x20))
-            mstore(0x40, ptr)
-            mstore(0x60, 0x00)
-        }
-        if (signer == address(0)) {
-            revert ERC5805InvalidSignature();
-        }
-        unchecked {
-            uint256 expected = nonces[signer]++;
-            if (nonce != expected) {
-                revert ERC5805InvalidNonce(nonce, expected);
-            }
-        }
-        return _delegate(signer, delegatee);
-    }
-
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
         _setTemporaryAllowance(_temporaryAllowance, msg.sender, spender, amount.toCrazyBalance());
         return _success();
     }
 
-    function _burn(address from, CrazyBalance amount) internal returns (bool) {
+    function _burn(address from, CrazyBalance amount) internal override returns (bool) {
         (
             CrazyBalance fromBalance,
             Shares cachedFromShares,
@@ -666,14 +519,7 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         return true;
     }
 
-    function burn(uint256 amount) external returns (bool) {
-        if (!_burn(msg.sender, amount.toCrazyBalance())) {
-            return false;
-        }
-        return _success();
-    }
-
-    function _deliver(address from, CrazyBalance amount) internal returns (bool) {
+    function _deliver(address from, CrazyBalance amount) internal override returns (bool) {
         (
             CrazyBalance fromBalance,
             Shares cachedFromShares,
@@ -719,39 +565,6 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         }
 
         return true;
-    }
-
-    function deliver(uint256 amount) external returns (bool) {
-        if (!_deliver(msg.sender, amount.toCrazyBalance())) {
-            return false;
-        }
-        return _success();
-    }
-
-    function burnFrom(address from, uint256 amount) external returns (bool) {
-        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance(from, amount.toCrazyBalance());
-        if (!success) {
-            return false;
-        }
-        if (!_burn(from, amount.toCrazyBalance())) {
-            return false;
-        }
-        _spendAllowance(from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
-        return _success();
-    }
-
-    function deliverFrom(address from, uint256 amount) external returns (bool) {
-        (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance(from, amount.toCrazyBalance());
-        if (!success) {
-            return false;
-        }
-        if (!_deliver(from, amount.toCrazyBalance())) {
-            return false;
-        }
-        _spendAllowance(from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
-        return _success();
     }
 
     receive() external payable {
