@@ -38,24 +38,53 @@ FU is a full-featured token, supporting the following extensions to the ERC20 st
 
 ## Non-standard extensions
 
+The allowance from each account to Permit2
+(0x000000000022D473030F116dDEE9F6B43aC78BA3) is always infinity
+(`type(uint256).max`).
+
  * `tax()(uint256)` (view)
- * `getTotalVotes()(uint256)` (view)
- * `getPastTotalVotes(uint256)(uint256)` (view)
  * `burn(uint256)(bool)`
  * `burnFrom(address,uint256)(bool)`
  * `deliver(uint256)(bool)`
  * `deliverFrom(address,uint256)(bool)`
 
-The allowance from each account to Permit2
-(0x000000000022D473030F116dDEE9F6B43aC78BA3) is always infinity
-(`type(uint256).max`).
+### `GovernorVotesQuorumFraction`
+
+Note that the following non-standard extensions to ERC20 are intended to be used
+to interface with an instance of OpenZeppelin's `GovernorVotesQuorumFraction`
+contract _**BUT**_ the selectors that implement reading the past "`totalSupply`"
+are deliberately incompatible with that contract (without a simple
+modification). This is because the current total voting supply is (necessarily)
+not `totalSupply`, therefore the signature `getPastTotalSupply` is
+misleading. Additionally, FU implements these functions in a way that returns
+the _actively delegated_ voting power, not the hypothetical voting power if all
+tokens were delegated.
+
+ * `getTotalVotes()(uint256)` (view)
+ * `getPastTotalVotes(uint256)(uint256)` (view)
+
+FU is otherwise compatible with the OpenZeppelin Governor suite. The author
+recommends a Governor that inherits from the following OpenZeppelin contracts
+(version 5.1.0):
+
+* `Governor`
+* `GovernorSettings`
+* `GovernorCountingSimple`
+* `GovernorVotes`
+* `GovernorVotesQuorumFraction` (with the aforementioned modifications)
+* `GovernorTimelockControl`
+* `GovernorPreventLateQuorum`
+
+Remember that FU uses `block.timestamp` for durations, with a quantum of 1
+day. The author recommends setting the voting delay to 2 days, the voting period
+to 1 week, the quorum fraction to 33%, and the timelock min delay to 2 weeks.
 
 ## Restrictions
 
 FU is designed to still be strictly compliant with
 [ERC20](https://eips.ethereum.org/EIPS/eip-20) as written. However, to make
-things a little more interesting, I've applied some additional restrictions
-beyond what ERC20 literally requires.
+things a little more interesting, there are some additional restrictions beyond
+what ERC20 literally requires.
 
 * Calls to `transfer` or `transferFrom` reduce the balance of the caller/`from`
   by exactly the specified amount
