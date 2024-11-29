@@ -105,7 +105,9 @@ library LibCheckpoints {
 
     function _set(Checkpoint[] storage arr, uint48 clock, Votes value, uint256 len) private {
         assembly ("memory-safe") {
-            sstore(arr.slot, or(shl(0x90, len), or(shl(0xd0, clock), and(0xffffffffffffffffffffffffffffffffffff, value))))
+            sstore(
+                arr.slot, or(shl(0x90, len), or(shl(0xd0, clock), and(0xffffffffffffffffffffffffffffffffffff, value)))
+            )
         }
     }
 

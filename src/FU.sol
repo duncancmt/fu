@@ -103,7 +103,8 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
         }
         {
             (CrazyBalance pairBalance,,,,) = _balanceOf(address(pair));
-            uint256 initialLiquidity = Math.sqrt(CrazyBalance.unwrap(pairBalance) * WETH.balanceOf(address(pair))) - 1_000;
+            uint256 initialLiquidity =
+                Math.sqrt(CrazyBalance.unwrap(pairBalance) * WETH.balanceOf(address(pair))) - 1_000;
             require(pair.mint(address(0)) >= initialLiquidity);
         }
     }
@@ -638,7 +639,8 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
             (newPairShares, newTotalShares) = _applyWhaleLimit(newPairShares, newTotalShares);
         } else {
             Balance amountUnCrazy = amount.toBalance(from);
-            newFromShares = ReflectMath.getBurnShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedFromShares);
+            newFromShares =
+                ReflectMath.getBurnShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedFromShares);
             newTotalShares = newTotalShares - (cachedFromShares - newFromShares);
             newTotalSupply = cachedTotalSupply - amountUnCrazy;
             if (newPairShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
