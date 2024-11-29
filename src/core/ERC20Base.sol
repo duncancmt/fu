@@ -10,7 +10,7 @@ import {IERC7674} from "../interfaces/IERC7674.sol";
 
 import {CrazyBalance, toCrazyBalance} from "./CrazyBalance.sol";
 
-abstract contract BasicERC20 is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 {
+abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 {
     using {toCrazyBalance} for uint256;
 
     constructor() {
