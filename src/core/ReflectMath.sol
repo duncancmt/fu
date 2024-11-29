@@ -141,6 +141,10 @@ library ReflectMath {
                 newToShares = newToShares.inc(condition);
                 newTotalShares = newTotalShares.inc(condition);
             }
+            if (newToShares < toShares) {
+                newTotalShares = newTotalShares + (toShares - newToShares);
+                newToShares = toShares;
+            }
 
             afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
             {
