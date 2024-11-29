@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {BasisPoints, BASIS} from "./BasisPoints.sol";
 import {Balance} from "./Balance.sol";
 
-import {UnsafeMath} from "../../lib/UnsafeMath.sol";
+import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
 /// This type is given as `uint256` for efficiency, but it is actually only 158 bits.
 type BalanceXBasisPoints is uint256;

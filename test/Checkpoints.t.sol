@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {Checkpoints, LibCheckpoints} from "src/core/Checkpoints.sol";
 
-import {Votes} from "src/core/types/Votes.sol";
+import {Votes} from "src/types/Votes.sol";
 
 import {Test} from "@forge-std/Test.sol";
 import {Boilerplate} from "./Boilerplate.sol";

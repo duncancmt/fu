@@ -8,7 +8,7 @@ import {IERC5805} from "../interfaces/IERC5805.sol";
 import {IERC6093} from "../interfaces/IERC6093.sol";
 import {IERC7674} from "../interfaces/IERC7674.sol";
 
-import {CrazyBalance, toCrazyBalance} from "./CrazyBalance.sol";
+import {CrazyBalance, toCrazyBalance} from "../types/CrazyBalance.sol";
 
 abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 {
     using {toCrazyBalance} for uint256;

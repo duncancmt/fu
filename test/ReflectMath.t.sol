@@ -4,11 +4,11 @@ pragma solidity ^0.8.28;
 import {Settings} from "src/core/Settings.sol";
 import {ReflectMath} from "src/core/ReflectMath.sol";
 
-import {BasisPoints, BASIS} from "src/core/types/BasisPoints.sol";
-import {Shares} from "src/core/types/Shares.sol";
-import {Balance} from "src/core/types/Balance.sol";
-import {BalanceXShares, tmp, alloc, SharesToBalance} from "src/core/types/BalanceXShares.sol";
-import {BalanceXBasisPoints, scale, castUp} from "src/core/types/BalanceXBasisPoints.sol";
+import {BasisPoints, BASIS} from "src/types/BasisPoints.sol";
+import {Shares} from "src/types/Shares.sol";
+import {Balance} from "src/types/Balance.sol";
+import {BalanceXShares, tmp, alloc, SharesToBalance} from "src/types/BalanceXShares.sol";
+import {BalanceXBasisPoints, scale, castUp} from "src/types/BalanceXBasisPoints.sol";
 
 import {UnsafeMath} from "src/lib/UnsafeMath.sol";
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Settings} from "./Settings.sol";
+import {Settings} from "../core/Settings.sol";
 
-import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
-import {Shares} from "./types/Shares.sol";
-import {Balance} from "./types/Balance.sol";
+import {BasisPoints, BASIS} from "./BasisPoints.sol";
+import {Shares} from "./Shares.sol";
+import {Balance} from "./Balance.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 import {tmp} from "../lib/512Math.sol";

@@ -6,7 +6,7 @@ import {Balance} from "./Balance.sol";
 import {SharesXBasisPoints} from "./SharesXBasisPoints.sol";
 import {BalanceXBasisPoints} from "./BalanceXBasisPoints.sol";
 
-import {uint512, tmp as baseTmp, alloc as baseAlloc} from "../../lib/512Math.sol";
+import {uint512, tmp as baseTmp, alloc as baseAlloc} from "../lib/512Math.sol";
 
 type BalanceXBasisPointsXShares is bytes32;
 

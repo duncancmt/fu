@@ -15,20 +15,19 @@ import {ReflectMath} from "./core/ReflectMath.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 import {Checkpoints, LibCheckpoints} from "./core/Checkpoints.sol";
 
-// TODO: move all user-defined types into ./types (instead of ./core/types)
-import {BasisPoints} from "./core/types/BasisPoints.sol";
-import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./core/types/Shares.sol";
+import {BasisPoints} from "./types/BasisPoints.sol";
+import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./types/Shares.sol";
 // TODO: rename Balance to Tokens (pretty big refactor)
-import {Balance} from "./core/types/Balance.sol";
-import {SharesToBalance} from "./core/types/BalanceXShares.sol";
-import {Votes, toVotes} from "./core/types/Votes.sol";
+import {Balance} from "./types/Balance.sol";
+import {SharesToBalance} from "./types/BalanceXShares.sol";
+import {Votes, toVotes} from "./types/Votes.sol";
 import {
     CrazyBalance,
     toCrazyBalance,
     ZERO as ZERO_BALANCE,
     MAX as MAX_BALANCE,
     CrazyBalanceArithmetic
-} from "./core/CrazyBalance.sol";
+} from "./types/CrazyBalance.sol";
 
 import {Math} from "./lib/Math.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";

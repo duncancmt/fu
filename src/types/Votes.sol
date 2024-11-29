@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Settings} from "../Settings.sol";
+import {Settings} from "../core/Settings.sol";
 
 import {Shares} from "./Shares.sol";
 

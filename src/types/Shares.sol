@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {BasisPoints} from "./BasisPoints.sol";
 
-import {UnsafeMath} from "../../lib/UnsafeMath.sol";
+import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
 /// This type is given as `uint256` for efficiency, but it is capped at `type(uint176).max`.
 type Shares is uint256;

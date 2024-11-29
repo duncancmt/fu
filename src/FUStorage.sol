@@ -4,10 +4,10 @@ pragma solidity ^0.8.28;
 import {INonces} from "./interfaces/INonces.sol";
 import {IERC5805} from "./interfaces/IERC5805.sol";
 
-import {Balance} from "./core/types/Balance.sol";
-import {Shares} from "./core/types/Shares.sol";
+import {Balance} from "./types/Balance.sol";
+import {Shares} from "./types/Shares.sol";
+import {CrazyBalance} from "./types/CrazyBalance.sol";
 
-import {CrazyBalance} from "./core/CrazyBalance.sol";
 import {Checkpoints} from "./core/Checkpoints.sol";
 
 abstract contract FUStorage is INonces, IERC5805 {

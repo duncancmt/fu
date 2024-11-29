@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {BasisPoints} from "src/core/types/BasisPoints.sol";
-import {Shares} from "src/core/types/Shares.sol";
-import {Balance} from "src/core/types/Balance.sol";
-import {Votes} from "src/core/types/Votes.sol";
+import {BasisPoints} from "src/types/BasisPoints.sol";
+import {Shares} from "src/types/Shares.sol";
+import {Balance} from "src/types/Balance.sol";
+import {Votes} from "src/types/Votes.sol";
 
 import {ReflectMathTest} from "./ReflectMath.t.sol";
 import {CheckpointsTest} from "./Checkpoints.t.sol";

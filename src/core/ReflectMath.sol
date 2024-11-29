@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
-import {Shares} from "./types/Shares.sol";
-import {Balance} from "./types/Balance.sol";
-import {scale} from "./types/SharesXBasisPoints.sol";
-import {scale, castUp} from "./types/BalanceXBasisPoints.sol";
-import {BalanceXShares, tmp, alloc, SharesToBalance} from "./types/BalanceXShares.sol";
-import {BalanceXShares2, tmp as tmp2, alloc as alloc2} from "./types/BalanceXShares2.sol";
-import {BalanceXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "./types/BalanceXBasisPointsXShares.sol";
-import {BalanceXBasisPointsXShares2, tmp as tmp4, alloc as alloc4} from "./types/BalanceXBasisPointsXShares2.sol";
-import {SharesXBasisPoints} from "./types/SharesXBasisPoints.sol";
-import {Shares2XBasisPoints, tmp as tmp5, alloc as alloc5} from "./types/Shares2XBasisPoints.sol";
+import {BasisPoints, BASIS} from "../types/BasisPoints.sol";
+import {Shares} from "../types/Shares.sol";
+import {Balance} from "../types/Balance.sol";
+import {scale} from "../types/SharesXBasisPoints.sol";
+import {scale, castUp} from "../types/BalanceXBasisPoints.sol";
+import {BalanceXShares, tmp, alloc, SharesToBalance} from "../types/BalanceXShares.sol";
+import {BalanceXShares2, tmp as tmp2, alloc as alloc2} from "../types/BalanceXShares2.sol";
+import {BalanceXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "../types/BalanceXBasisPointsXShares.sol";
+import {BalanceXBasisPointsXShares2, tmp as tmp4, alloc as alloc4} from "../types/BalanceXBasisPointsXShares2.sol";
+import {SharesXBasisPoints} from "../types/SharesXBasisPoints.sol";
+import {Shares2XBasisPoints, tmp as tmp5, alloc as alloc5} from "../types/Shares2XBasisPoints.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 

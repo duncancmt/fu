@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IERC5805} from "../interfaces/IERC5805.sol";
 
-import {Votes} from "./types/Votes.sol";
+import {Votes} from "../types/Votes.sol";
 
 struct Checkpoint {
     uint48 key;

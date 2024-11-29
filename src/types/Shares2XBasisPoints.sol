@@ -5,7 +5,7 @@ import {BasisPoints} from "./BasisPoints.sol";
 import {Shares} from "./Shares.sol";
 import {SharesXBasisPoints} from "./SharesXBasisPoints.sol";
 
-import {uint512, tmp as baseTmp, alloc as baseAlloc} from "../../lib/512Math.sol";
+import {uint512, tmp as baseTmp, alloc as baseAlloc} from "../lib/512Math.sol";
 
 type Shares2XBasisPoints is bytes32;
 

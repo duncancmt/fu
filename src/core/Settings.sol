@@ -3,10 +3,10 @@ pragma solidity ^0.8.28;
 
 import {ReflectMath} from "./ReflectMath.sol";
 
-import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
-import {Shares} from "./types/Shares.sol";
-import {Balance} from "./types/Balance.sol";
-import {BalanceXShares, alloc, tmp} from "./types/BalanceXShares.sol";
+import {BasisPoints, BASIS} from "../types/BasisPoints.sol";
+import {Shares} from "../types/Shares.sol";
+import {Balance} from "../types/Balance.sol";
+import {BalanceXShares, alloc, tmp} from "../types/BalanceXShares.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 

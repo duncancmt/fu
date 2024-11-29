@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {CrazyBalance} from "./CrazyBalance.sol";
+import {CrazyBalance} from "../types/CrazyBalance.sol";
 
 abstract contract TransientStorageLayout {
     function _setTemporaryAllowance(
