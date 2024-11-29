@@ -54,7 +54,7 @@ abstract contract BasicERC20 is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674
         }
         return _success();
     }
-    
+
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
             _checkAllowance(from, amount.toCrazyBalance());
@@ -105,7 +105,6 @@ abstract contract BasicERC20 is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674
         }
     }
 
-
     bytes32 internal constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
 
     function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
@@ -151,6 +150,7 @@ abstract contract BasicERC20 is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674
     function delegate(address delegatee) external override {
         return _delegate(msg.sender, delegatee);
     }
+
     function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)
         external
         override

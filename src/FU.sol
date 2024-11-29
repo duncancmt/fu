@@ -93,6 +93,12 @@ contract FU is FUStorage, TransientStorageLayout, BasicERC20 {
         }
     }
 
+    function _consumeNonce(address account) internal override returns (uint256) {
+        unchecked {
+            return nonces[account]++;
+        }
+    }
+
     function _mintShares(address to, Shares shares) internal {
         Shares oldShares = _sharesOf[to];
         Shares newShares = oldShares + shares;
@@ -396,7 +402,7 @@ contract FU is FUStorage, TransientStorageLayout, BasicERC20 {
         emit Approval(owner, msg.sender, currentAllowance.toExternal());
     }
 
-    function name() public pure override(IERC20, BasicERC20) returns (string memory) {
+    function name() public pure override returns (string memory) {
         return "Fuck You!";
     }
 
