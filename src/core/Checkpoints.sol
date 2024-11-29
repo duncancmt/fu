@@ -178,24 +178,24 @@ library LibCheckpoints {
             // TODO: given some knowledge about voting delays and periods,
             // there's probably a different, more-optimal value for this
             // constant
-            // TODO: what happens when there are no checkpoints, but we query
-            // for a value before the current?
             let lo := sub(hi, 0x01)
             for {} true {} {
+                if lt(lo, start) {
+                    lo := start
+                    value := 0x00
+                    break
+                }
                 value := sload(lo)
-                if iszero(gt(shr(0xd0, value), query)) { break }
+                if iszero(gt(shr(0xd0, value), query)) {
+                    lo := add(0x01, lo)
+                    break
+                }
                 let newLo := sub(lo, shl(0x01, sub(hi, lo)))
                 hi := lo
                 lo := newLo
-                if lt(lo, start) {
-                    lo := start
-                    value := sload(lo)
-                    break
-                }
             }
 
             // Apply normal binary search
-            lo := add(0x01, lo)
             for {} xor(hi, lo) {} {
                 let mid := add(shr(0x01, sub(hi, lo)), lo)
                 let newValue := sload(mid)
@@ -208,11 +208,6 @@ library LibCheckpoints {
                 value := newValue
                 lo := add(0x01, mid)
             }
-
-            // Because we do not snapshot the initial, empty checkpoint, we have
-            // to detect that we've run off the front of the array and zero-out
-            // the return value
-            if gt(shr(0xd0, value), query) { value := 0 }
         }
     }
 
