@@ -140,7 +140,8 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 
             mstore(0x20, and(0xff, v))
             mstore(0x40, r)
             mstore(0x60, s)
-            signer := mul(mload(0x00), staticcall(gas(), 0x01, 0x00, 0x80, 0x00, 0x20))
+            pop(staticcall(gas(), 0x01, 0x00, 0x80, 0x00, 0x20))
+            signer := mul(mload(0x00), eq(returndatasize(), 0x20))
             mstore(0x40, ptr)
             mstore(0x60, 0x00)
         }
@@ -178,7 +179,8 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 
             mstore(0x20, and(0xff, v))
             mstore(0x40, r)
             mstore(0x60, s)
-            signer := mul(mload(0x00), staticcall(gas(), 0x01, 0x00, 0x80, 0x00, 0x20))
+            pop(staticcall(gas(), 0x01, 0x00, 0x80, 0x00, 0x20))
+            signer := mul(mload(0x00), eq(returndatasize(), 0x20))
             mstore(0x40, ptr)
             mstore(0x60, 0x00)
         }
