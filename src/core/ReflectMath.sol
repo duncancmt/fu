@@ -103,23 +103,25 @@ library ReflectMath {
                 newFromShares = newFromShares - decrFrom;
                 newToShares = newToShares - decrTo;
             }
-        } else {
+        }
+        // TODO: previously the block below was an `else` block. This is more accurate, but it is *MUCH* less gas efficient
+        {
             Balance beforeFromBalance = fromShares.toBalance(totalSupply, totalShares);
             Balance afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
             Balance expectedAfterFromBalance = beforeFromBalance - amount;
             {
                 bool condition = afterFromBalance > expectedAfterFromBalance;
-                //if (condition) {
-                //    console.log("from round down");
-                //}
+                if (condition) {
+                    //console.log("from round down");
+                }
                 newFromShares = newFromShares.dec(condition);
                 newTotalShares = newTotalShares.dec(condition);
             }
             {
                 bool condition = afterFromBalance < expectedAfterFromBalance;
-                //if (condition) {
-                //    console.log("from round up");
-                //}
+                if (condition) {
+                    //console.log("from round up");
+                }
                 newFromShares = newFromShares.inc(condition);
                 newTotalShares = newTotalShares.inc(condition);
             }
@@ -127,21 +129,23 @@ library ReflectMath {
             afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
             {
                 bool condition = afterToBalance > expectedAfterToBalanceLo;
-                //if (condition) {
-                //    console.log("to round down");
-                //}
+                if (condition) {
+                    //console.log("to round down");
+                }
                 newToShares = newToShares.dec(condition);
                 newTotalShares = newTotalShares.dec(condition);
             }
             {
                 bool condition = afterToBalance < expectedAfterToBalanceLo;
-                //if (condition) {
-                //    console.log("to round up");
-                //}
+                if (condition) {
+                    //console.log("to round up");
+                }
                 newToShares = newToShares.inc(condition);
                 newTotalShares = newTotalShares.inc(condition);
             }
             if (newToShares < toShares) {
+                // TODO: maybe remove this branch?
+                //console.log("clamp to");
                 newTotalShares = newTotalShares + (toShares - newToShares);
                 newToShares = toShares;
             }
