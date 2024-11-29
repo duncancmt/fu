@@ -413,6 +413,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             mstore(add(0x0a, r), 0x4675636b20796f752c20)
             mstore(r, 0x35)
             mstore8(add(0x54, r), 0x21)
+            mstore(0x40, add(0x60, r))
         }
     }
 
