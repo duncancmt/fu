@@ -48,6 +48,13 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 
     function _consumeNonce(address account) internal virtual returns (uint256);
     function clock() public view virtual override returns (uint48);
 
+    function transfer(address to, uint256 amount) external override returns (bool) {
+        if (!_transfer(msg.sender, to, amount.toCrazyBalance())) {
+            return false;
+        }
+        return _success();
+    }
+
     function approve(address spender, uint256 amount) external override returns (bool) {
         _approve(msg.sender, spender, amount.toCrazyBalance());
         return _success();
@@ -103,7 +110,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 
         }
     }
 
-    bytes32 internal constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
+    bytes32 private constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
 
     function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external

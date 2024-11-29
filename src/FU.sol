@@ -16,13 +16,19 @@ import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 import {Checkpoints, LibCheckpoints} from "./core/Checkpoints.sol";
 
 // TODO: move all user-defined types into ./types (instead of ./core/types)
-import {BasisPoints, BASIS} from "./core/types/BasisPoints.sol";
+import {BasisPoints} from "./core/types/BasisPoints.sol";
 import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./core/types/Shares.sol";
 // TODO: rename Balance to Tokens (pretty big refactor)
 import {Balance} from "./core/types/Balance.sol";
 import {SharesToBalance} from "./core/types/BalanceXShares.sol";
 import {Votes, toVotes} from "./core/types/Votes.sol";
-import {CrazyBalance, toCrazyBalance, ZERO as ZERO_BALANCE, CrazyBalanceArithmetic} from "./core/CrazyBalance.sol";
+import {
+    CrazyBalance,
+    toCrazyBalance,
+    ZERO as ZERO_BALANCE,
+    MAX as MAX_BALANCE,
+    CrazyBalanceArithmetic
+} from "./core/CrazyBalance.sol";
 
 import {Math} from "./lib/Math.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
@@ -80,7 +86,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             }
         }
 
-        try FACTORY.createPair(WETH, IERC20(address(this))) returns (IUniswapV2Pair newPair) {
+        try FACTORY.createPair(WETH, this) returns (IUniswapV2Pair newPair) {
             require(pair == newPair);
         } catch {
             require(pair == FACTORY.getPair(WETH, this));
@@ -99,7 +105,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         }
     }
 
-    function _mintShares(address to, Shares shares) internal {
+    function _mintShares(address to, Shares shares) private {
         Shares oldShares = _sharesOf[to];
         Shares newShares = oldShares + shares;
         _sharesOf[to] = newShares;
@@ -110,7 +116,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         );
     }
 
-    function _check() internal view returns (bool) {
+    function _check() private view returns (bool) {
         return block.prevrandao & 1 == 0;
     }
 
@@ -123,7 +129,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return true;
     }
 
-    function _applyWhaleLimit(Shares shares, Shares totalShares_) internal pure returns (Shares, Shares) {
+    function _applyWhaleLimit(Shares shares, Shares totalShares_) private pure returns (Shares, Shares) {
         Shares whaleLimit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         if (shares > whaleLimit) {
             whaleLimit = (totalShares_ - shares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
@@ -136,7 +142,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     // TODO: because we enforce as a postcondition of every function that pair is under the limit,
     // this function is kinda pointless
     function _applyWhaleLimit(Shares shares0, Shares shares1, Shares totalShares_)
-        internal
+        private
         pure
         returns (Shares, Shares, Shares)
     {
@@ -159,7 +165,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return (shares0, shares1, totalShares_);
     }
 
-    function _loadAccount(address account) internal view returns (Shares, Shares, Shares) {
+    function _loadAccount(address account) private view returns (Shares, Shares, Shares) {
         if (account == address(pair)) {
             (Shares cachedAccountShares, Shares cachedTotalShares) = _applyWhaleLimit(_sharesOf[account], _totalShares);
             return (cachedAccountShares, cachedAccountShares, cachedTotalShares);
@@ -167,7 +173,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return _applyWhaleLimit(_sharesOf[account], _sharesOf[address(pair)], _totalShares);
     }
 
-    function _balanceOf(address account) internal view returns (CrazyBalance, Shares, Shares, Balance, Shares) {
+    function _balanceOf(address account) private view returns (CrazyBalance, Shares, Shares, Balance, Shares) {
         (Shares cachedAccountShares, Shares cachedPairShares, Shares cachedTotalShares) = _loadAccount(account);
         Balance cachedTotalSupply = _totalSupply;
         CrazyBalance accountBalance = cachedAccountShares.toCrazyBalance(account, cachedTotalSupply, cachedTotalShares);
@@ -179,7 +185,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return balance.toExternal();
     }
 
-    function _tax() internal view returns (BasisPoints) {
+    function _tax() private view returns (BasisPoints) {
         // TODO: set tax to zero and prohibit `deliver` when the shares ratio gets to `Settings.MIN_SHARES_RATIO`
         revert("unimplemented");
     }
@@ -329,13 +335,6 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return true;
     }
 
-    function transfer(address to, uint256 amount) external override returns (bool) {
-        if (!_transfer(msg.sender, to, amount.toCrazyBalance())) {
-            return false;
-        }
-        return _success();
-    }
-
     function _approve(address owner, address spender, CrazyBalance amount) internal override {
         _allowance[owner][spender] = amount;
         emit Approval(owner, spender, amount.toExternal());
@@ -359,7 +358,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         returns (bool, CrazyBalance, CrazyBalance)
     {
         if (msg.sender == PERMIT2) {
-            return (true, type(uint256).max.toCrazyBalance(), ZERO_BALANCE);
+            return (true, MAX_BALANCE, ZERO_BALANCE);
         }
         CrazyBalance currentTempAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, msg.sender);
         if (currentTempAllowance >= amount) {

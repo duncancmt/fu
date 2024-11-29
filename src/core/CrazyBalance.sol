@@ -29,6 +29,7 @@ function toCrazyBalance(uint256 x) pure returns (CrazyBalance) {
 using CrazyBalanceAccessors for CrazyBalance global;
 
 CrazyBalance constant ZERO = CrazyBalance.wrap(0);
+CrazyBalance constant MAX = CrazyBalance.wrap(type(uint256).max);
 
 function __add(CrazyBalance a, CrazyBalance b) pure returns (CrazyBalance) {
     unchecked {
