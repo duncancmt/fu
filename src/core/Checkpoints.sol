@@ -175,6 +175,11 @@ library LibCheckpoints {
             // of the array, until we find one that contains the checkpoint of
             // interest
             let hi := add(start, len)
+            // TODO: given some knowledge about voting delays and periods,
+            // there's probably a different, more-optimal value for this
+            // constant
+            // TODO: what happens when there are no checkpoints, but we query
+            // for a value before the current?
             let lo := sub(hi, 0x01)
             for {} true {} {
                 value := sload(lo)
