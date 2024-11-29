@@ -30,12 +30,7 @@ abstract contract BasicERC20 is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674
     function _deliver(address from, CrazyBalance amount) internal virtual returns (bool);
     function _delegate(address delegator, address delegatee) internal virtual;
 
-    function name() public pure virtual returns (string memory);
-    function _NAME_HASH() internal pure virtual returns (bytes32);
-    function _consumeNonce(address account) internal virtual returns (uint256);
-    function clock() public view virtual override returns (uint48);
-
-    function _approve(address owner, address spender, CrazyBalance amount) internal virtual returns (bool);
+    function _approve(address owner, address spender, CrazyBalance amount) internal virtual;
     function _checkAllowance(address owner, CrazyBalance amount)
         internal
         view
@@ -48,10 +43,13 @@ abstract contract BasicERC20 is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674
         CrazyBalance currentAllowance
     ) internal virtual;
 
+    function name() public pure virtual returns (string memory);
+    function _NAME_HASH() internal pure virtual returns (bytes32);
+    function _consumeNonce(address account) internal virtual returns (uint256);
+    function clock() public view virtual override returns (uint48);
+
     function approve(address spender, uint256 amount) external override returns (bool) {
-        if (!_approve(msg.sender, spender, amount.toCrazyBalance())) {
-            return false;
-        }
+        _approve(msg.sender, spender, amount.toCrazyBalance());
         return _success();
     }
 
@@ -142,7 +140,7 @@ abstract contract BasicERC20 is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674
         if (signer != owner) {
             revert ERC2612InvalidSigner(signer, owner);
         }
-        require(_approve(owner, spender, amount.toCrazyBalance()));
+        _approve(owner, spender, amount.toCrazyBalance());
     }
 
     bytes32 private constant _DELEGATION_TYPEHASH = 0xe48329057bfd03d55e49b547132e39cffd9c1820ad7b9d4c5307691425d15adf;

@@ -336,10 +336,9 @@ contract FU is FUStorage, TransientStorageLayout, BasicERC20 {
         return _success();
     }
 
-    function _approve(address owner, address spender, CrazyBalance amount) internal override returns (bool) {
+    function _approve(address owner, address spender, CrazyBalance amount) internal override {
         _allowance[owner][spender] = amount;
         emit Approval(owner, spender, amount.toExternal());
-        return true;
     }
 
     function allowance(address owner, address spender) external view override returns (uint256) {
@@ -397,9 +396,7 @@ contract FU is FUStorage, TransientStorageLayout, BasicERC20 {
         if (currentAllowance.isMax()) {
             return;
         }
-        currentAllowance = currentAllowance - amount;
-        _allowance[owner][msg.sender] = currentAllowance;
-        emit Approval(owner, msg.sender, currentAllowance.toExternal());
+        _approve(owner, msg.sender, currentAllowance - amount);
     }
 
     function name() public pure override returns (string memory) {
