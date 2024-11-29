@@ -25,6 +25,28 @@ being technically correct.
     `balanceOf(...)`
 * Anti-whale
 
+## Restrictions
+
+FU is designed to still be strictly compliant with
+[ERC20](https://eips.ethereum.org/EIPS/eip-20) as written. However, to make
+things a little more interesting, there are some additional restrictions beyond
+what ERC20 literally requires.
+
+* Calls to `transfer` or `transferFrom` reduce the balance of the caller/`from`
+  by exactly the specified amount
+* Calls to `transfer` or `transferFrom` increase the balance of `to` by a value
+  that lies in the range of reasonable interpretations of how it should be
+  calculated
+  * Lower bound: compute the tax amount exactly, round it up, then deduct it
+    from the specified amount
+  * Upper bound: exactly compute the specified amount minus the tax, round it up
+
+"Normal" reflection tokens do not have these properties, and the author adopted
+them primarily to demonstrate mastery of the required numerical programming
+techniques.
+
+# Implementation
+
 ## Extension standards
 
 FU is a full-featured token, supporting the following extensions to the ERC20 standard (with metadata)
@@ -78,26 +100,6 @@ recommends a Governor that inherits from the following OpenZeppelin contracts
 Remember that FU uses `block.timestamp` for durations, with a quantum of 1
 day. The author recommends setting the voting delay to 2 days, the voting period
 to 1 week, the quorum fraction to 33%, and the timelock min delay to 2 weeks.
-
-## Restrictions
-
-FU is designed to still be strictly compliant with
-[ERC20](https://eips.ethereum.org/EIPS/eip-20) as written. However, to make
-things a little more interesting, there are some additional restrictions beyond
-what ERC20 literally requires.
-
-* Calls to `transfer` or `transferFrom` reduce the balance of the caller/`from`
-  by exactly the specified amount
-* Calls to `transfer` or `transferFrom` increase the balance of `to` by a value
-  that lies in the range of reasonable interpretations of how it should be
-  calculated
-  * Lower bound: compute the tax amount exactly, round it up, then deduct it
-    from the specified amount
-  * Upper bound: exactly compute the specified amount minus the tax, round it up
-
-"Normal" reflection tokens do not have these properties, and the author adopted
-them primarily to demonstrate mastery of the required numerical programming
-techniques.
 
 # Testing
 
