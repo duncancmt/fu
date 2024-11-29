@@ -82,7 +82,7 @@ library LibCheckpoints {
         assembly ("memory-safe") {
             slotValue := sload(arr.slot)
             key := shr(0xd0, slotValue)
-            len := and(0xffffffffffffffffffffffff, shr(0x90, slotValue))
+            len := and(0xffffffffffffffff, shr(0x90, slotValue))
             value := and(0xffffffffffffffffffffffffffffffffffff, slotValue)
         }
     }
