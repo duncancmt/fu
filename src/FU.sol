@@ -17,9 +17,8 @@ import {Checkpoints, LibCheckpoints} from "./core/Checkpoints.sol";
 
 import {BasisPoints} from "./types/BasisPoints.sol";
 import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./types/Shares.sol";
-// TODO: rename Balance to Tokens (pretty big refactor)
-import {Balance} from "./types/Balance.sol";
-import {SharesToBalance} from "./types/BalanceXShares.sol";
+import {Tokens} from "./types/Tokens.sol";
+import {SharesToTokens} from "./types/TokensXShares.sol";
 import {Votes, toVotes} from "./types/Votes.sol";
 import {
     CrazyBalance,
@@ -39,13 +38,13 @@ address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     using ChecksumAddress for address;
     using {toCrazyBalance} for uint256;
-    using SharesToBalance for Shares;
+    using SharesToTokens for Shares;
     using CrazyBalanceArithmetic for Shares;
     using {toVotes} for Shares;
     using LibCheckpoints for Checkpoints;
 
     function totalSupply() external view override returns (uint256) {
-        return Balance.unwrap(_totalSupply);
+        return Tokens.unwrap(_totalSupply);
     }
 
     /// @custom:security non-reentrant
@@ -172,9 +171,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return _applyWhaleLimit(_sharesOf[account], _sharesOf[address(pair)], _totalShares);
     }
 
-    function _balanceOf(address account) private view returns (CrazyBalance, Shares, Shares, Balance, Shares) {
+    function _balanceOf(address account) private view returns (CrazyBalance, Shares, Shares, Tokens, Shares) {
         (Shares cachedAccountShares, Shares cachedPairShares, Shares cachedTotalShares) = _loadAccount(account);
-        Balance cachedTotalSupply = _totalSupply;
+        Tokens cachedTotalSupply = _totalSupply;
         CrazyBalance accountBalance = cachedAccountShares.toCrazyBalance(account, cachedTotalSupply, cachedTotalShares);
         return (accountBalance, cachedAccountShares, cachedPairShares, cachedTotalSupply, cachedTotalShares);
     }
@@ -218,7 +217,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             CrazyBalance fromBalance,
             Shares cachedFromShares,
             Shares cachedPairShares,
-            Balance cachedTotalSupply,
+            Tokens cachedTotalSupply,
             Shares cachedTotalShares
         ) = _balanceOf(from);
 
@@ -258,7 +257,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             newFromShares = ZERO_SHARES;
         } else {
             (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                amount.toBalance(from), taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                amount.toTokens(from), taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
             );
         }
 
@@ -276,7 +275,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
                 newFromShares = ZERO_SHARES;
             } else {
                 (newFromShares, cachedToShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                    amount.toBalance(from), taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares
+                    amount.toTokens(from), taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares
                 );
             }
 
@@ -468,7 +467,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             CrazyBalance fromBalance,
             Shares cachedFromShares,
             Shares cachedPairShares,
-            Balance cachedTotalSupply,
+            Tokens cachedTotalSupply,
             Shares cachedTotalShares
         ) = _balanceOf(from);
         if (amount > fromBalance) {
@@ -481,18 +480,18 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         Shares newFromShares;
         Shares newPairShares = cachedPairShares;
         Shares newTotalShares;
-        Balance newTotalSupply;
+        Tokens newTotalSupply;
         if (amount == fromBalance) {
             // The amount to be deducted from `_totalSupply` is *NOT* the same as
-            // `amount.toBalance(from)`. That would not correctly account for dust that is below the
+            // `amount.toTokens(from)`. That would not correctly account for dust that is below the
             // "crazy balance" scaling factor for `from`. We have to explicitly recompute the
             // un-crazy balance of `from` and deduct *THAT* instead.
-            newTotalSupply = cachedTotalSupply - cachedFromShares.toBalance(cachedTotalSupply, cachedTotalShares);
+            newTotalSupply = cachedTotalSupply - cachedFromShares.toTokens(cachedTotalSupply, cachedTotalShares);
             newTotalShares = cachedTotalShares - cachedFromShares;
             newFromShares = ZERO_SHARES;
             (newPairShares, newTotalShares) = _applyWhaleLimit(newPairShares, newTotalShares);
         } else {
-            Balance amountUnCrazy = amount.toBalance(from);
+            Tokens amountUnCrazy = amount.toTokens(from);
             newFromShares =
                 ReflectMath.getBurnShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedFromShares);
             newTotalShares = newTotalShares - (cachedFromShares - newFromShares);
@@ -525,7 +524,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             CrazyBalance fromBalance,
             Shares cachedFromShares,
             Shares cachedPairShares,
-            Balance cachedTotalSupply,
+            Tokens cachedTotalSupply,
             Shares cachedTotalShares
         ) = _balanceOf(from);
         if (amount > fromBalance) {
@@ -543,7 +542,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             newFromShares = ZERO_SHARES;
             (newPairShares, newTotalShares) = _applyWhaleLimit(newPairShares, newTotalShares);
         } else {
-            Balance amountUnCrazy = amount.toBalance(from);
+            Tokens amountUnCrazy = amount.toTokens(from);
             (newFromShares, newTotalShares) =
                 ReflectMath.getDeliverShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedFromShares);
             if (newPairShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {

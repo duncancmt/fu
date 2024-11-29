@@ -6,9 +6,9 @@ import {ReflectMath} from "src/core/ReflectMath.sol";
 
 import {BasisPoints, BASIS} from "src/types/BasisPoints.sol";
 import {Shares} from "src/types/Shares.sol";
-import {Balance} from "src/types/Balance.sol";
-import {BalanceXShares, tmp, alloc, SharesToBalance} from "src/types/BalanceXShares.sol";
-import {BalanceXBasisPoints, scale, castUp} from "src/types/BalanceXBasisPoints.sol";
+import {Tokens} from "src/types/Tokens.sol";
+import {TokensXShares, tmp, alloc, SharesToTokens} from "src/types/TokensXShares.sol";
+import {TokensXBasisPoints, scale, castUp} from "src/types/TokensXBasisPoints.sol";
 
 import {UnsafeMath} from "src/lib/UnsafeMath.sol";
 
@@ -19,62 +19,62 @@ import {console} from "@forge-std/console.sol";
 
 contract ReflectMathTest is Boilerplate, Test {
     using UnsafeMath for uint256;
-    using SharesToBalance for Shares;
+    using SharesToTokens for Shares;
 
-    function _boundCommon(Balance totalSupply, Shares totalShares, Shares fromShares, uint256 sharesRatio)
+    function _boundCommon(Tokens totalSupply, Shares totalShares, Shares fromShares, uint256 sharesRatio)
         internal
         pure
-        returns (Balance, Shares, Shares, Balance)
+        returns (Tokens, Shares, Shares, Tokens)
     {
-        totalSupply = Balance.wrap(
-            bound(Balance.unwrap(totalSupply), 10 ** Settings.DECIMALS + 1 wei, Balance.unwrap(Settings.INITIAL_SUPPLY))
+        totalSupply = Tokens.wrap(
+            bound(Tokens.unwrap(totalSupply), 10 ** Settings.DECIMALS + 1 wei, Tokens.unwrap(Settings.INITIAL_SUPPLY))
         );
         //sharesRatio = bound(sharesRatio, Settings.MIN_SHARES_RATIO, Settings.INITIAL_SHARES_RATIO);
         sharesRatio = Settings.MIN_SHARES_RATIO; // TODO: remove
-        Shares maxShares = Shares.wrap(Balance.unwrap(totalSupply) * (sharesRatio + 1) - 1 wei);
+        Shares maxShares = Shares.wrap(Tokens.unwrap(totalSupply) * (sharesRatio + 1) - 1 wei);
         maxShares = maxShares > Settings.INITIAL_SHARES ? Settings.INITIAL_SHARES : maxShares;
         totalShares = Shares.wrap(
-            bound(Shares.unwrap(totalShares), Balance.unwrap(totalSupply) * sharesRatio, Shares.unwrap(maxShares))
+            bound(Shares.unwrap(totalShares), Tokens.unwrap(totalSupply) * sharesRatio, Shares.unwrap(maxShares))
         );
 
         fromShares = Shares.wrap(
             bound(
                 Shares.unwrap(fromShares),
-                Shares.unwrap(totalShares).unsafeDivUp(Balance.unwrap(totalSupply)),
+                Shares.unwrap(totalShares).unsafeDivUp(Tokens.unwrap(totalSupply)),
                 Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR)) - 1
             )
         );
 
-        Balance fromBalance = fromShares.toBalance(totalSupply, totalShares);
-        assertGt(Balance.unwrap(fromBalance), 0);
+        Tokens fromBalance = fromShares.toTokens(totalSupply, totalShares);
+        assertGt(Tokens.unwrap(fromBalance), 0);
         return (totalSupply, totalShares, fromShares, fromBalance);
     }
 
     function _boundCommon(
-        Balance totalSupply,
+        Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
-        Balance amount,
+        Tokens amount,
         uint256 sharesRatio
-    ) internal pure returns (Balance, Shares, Shares, Balance, Balance) {
-        Balance fromBalance;
+    ) internal pure returns (Tokens, Shares, Shares, Tokens, Tokens) {
+        Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance) =
             _boundCommon(totalSupply, totalShares, fromShares, sharesRatio);
-        assume(Balance.unwrap(fromBalance) > 1 wei);
-        amount = Balance.wrap(bound(Balance.unwrap(amount), 1 wei, Balance.unwrap(fromBalance) - 1 wei));
+        assume(Tokens.unwrap(fromBalance) > 1 wei);
+        amount = Tokens.wrap(bound(Tokens.unwrap(amount), 1 wei, Tokens.unwrap(fromBalance) - 1 wei));
         return (totalSupply, totalShares, fromShares, fromBalance, amount);
     }
 
     function testTransferSome(
-        Balance totalSupply,
+        Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
         Shares toShares,
-        Balance amount,
+        Tokens amount,
         BasisPoints taxRate/*,
         uint256 sharesRatio*/
     ) public view virtual {
-        Balance fromBalance;
+        Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, /* sharesRatio */ 0);
 
@@ -90,15 +90,15 @@ contract ReflectMathTest is Boilerplate, Test {
 
         toShares =
             Shares.wrap(bound(Shares.unwrap(toShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))));
-        Balance toBalance = toShares.toBalance(totalSupply, totalShares);
+        Tokens toBalance = toShares.toTokens(totalSupply, totalShares);
 
         //console.log("===");
-        //console.log("totalSupply", Balance.unwrap(totalSupply));
+        //console.log("totalSupply", Tokens.unwrap(totalSupply));
         //console.log("taxRate    ", BasisPoints.unwrap(taxRate));
-        //console.log("amount     ", Balance.unwrap(amount));
+        //console.log("amount     ", Tokens.unwrap(amount));
         //console.log("===");
-        //console.log("fromBalance", Balance.unwrap(fromBalance));
-        //console.log("toBalance  ", Balance.unwrap(toBalance));
+        //console.log("fromBalance", Tokens.unwrap(fromBalance));
+        //console.log("toBalance  ", Tokens.unwrap(toBalance));
         //console.log("===");
         (Shares newFromShares, Shares newToShares, Shares newTotalShares) =
             ReflectMath.getTransferShares(amount, taxRate, totalSupply, totalShares, fromShares, toShares);
@@ -111,27 +111,27 @@ contract ReflectMathTest is Boilerplate, Test {
             "shares delta"
         );
 
-        Balance newFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
-        Balance newToBalance = newToShares.toBalance(totalSupply, newTotalShares);
-        Balance expectedNewFromBalance = fromBalance - amount;
-        Balance expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - taxRate));
-        Balance expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, taxRate));
+        Tokens newFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
+        Tokens newToBalance = newToShares.toTokens(totalSupply, newTotalShares);
+        Tokens expectedNewFromBalance = fromBalance - amount;
+        Tokens expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - taxRate));
+        Tokens expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, taxRate));
 
-        assertEq(Balance.unwrap(newFromBalance), Balance.unwrap(expectedNewFromBalance), "newFromBalance");
+        assertEq(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "newFromBalance");
         // TODO: tighten these bounds to exact equality
-        assertGe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance lower");
-        assertLe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceHi), "newToBalance upper");
+        assertGe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
+        assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi), "newToBalance upper");
     }
 
     function testTransferAll(
-        Balance totalSupply,
+        Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
         Shares toShares,
         BasisPoints taxRate/*,
         uint256 sharesRatio*/
     ) public pure virtual {
-        Balance fromBalance;
+        Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance) =
             _boundCommon(totalSupply, totalShares, fromShares, /* sharesRatio */ 0);
         taxRate = BasisPoints.wrap(
@@ -146,7 +146,7 @@ contract ReflectMathTest is Boilerplate, Test {
 
         toShares =
             Shares.wrap(bound(Shares.unwrap(toShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))));
-        Balance toBalance = toShares.toBalance(totalSupply, totalShares);
+        Tokens toBalance = toShares.toTokens(totalSupply, totalShares);
 
         (Shares newToShares, Shares newTotalShares) =
             ReflectMath.getTransferShares(taxRate, totalSupply, totalShares, fromShares, toShares);
@@ -159,30 +159,30 @@ contract ReflectMathTest is Boilerplate, Test {
             "shares delta"
         );
 
-        Balance newToBalance = newToShares.toBalance(totalSupply, newTotalShares);
+        Tokens newToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         //console.log("      newToShares", Shares.unwrap(newToShares));
         //console.log("         toShares", Shares.unwrap(toShares));
 
         // TODO: tighter bounds
-        Balance expectedNewToBalanceLo = toBalance + fromBalance - castUp(scale(fromBalance, taxRate));
-        Balance expectedNewToBalanceHi = toBalance + castUp(scale(fromBalance, BASIS - taxRate));
-        //assertEq(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance");
+        Tokens expectedNewToBalanceLo = toBalance + fromBalance - castUp(scale(fromBalance, taxRate));
+        Tokens expectedNewToBalanceHi = toBalance + castUp(scale(fromBalance, BASIS - taxRate));
+        //assertEq(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance");
         if (newToShares == toShares) {
-            assertGe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance lower");
-            assertLe(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceHi), "newToBalance upper");
+            assertGe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
+            assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi), "newToBalance upper");
         } else {
-            assertEq(Balance.unwrap(newToBalance), Balance.unwrap(expectedNewToBalanceLo), "newToBalance");
+            assertEq(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance");
         }
     }
 
     function testDeliver(
-        Balance totalSupply,
+        Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
-        Balance amount/*,
+        Tokens amount/*,
         uint256 sharesRatio*/
     ) public view virtual {
-        Balance fromBalance;
+        Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, /* sharesRatio */ 0);
         assume(fromShares < totalShares.div(2));
@@ -192,11 +192,11 @@ contract ReflectMathTest is Boilerplate, Test {
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares));
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares));
 
-        Balance newFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
-        Balance expectedNewFromBalance = fromBalance - amount;
+        Tokens newFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
+        Tokens expectedNewFromBalance = fromBalance - amount;
 
         assertEq(
-            Balance.unwrap(newFromBalance), Balance.unwrap(expectedNewFromBalance), "new balance, expected new balance"
+            Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "new balance, expected new balance"
         );
     }
 }

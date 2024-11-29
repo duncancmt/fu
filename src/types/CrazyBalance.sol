@@ -5,7 +5,7 @@ import {Settings} from "../core/Settings.sol";
 
 import {BasisPoints, BASIS} from "./BasisPoints.sol";
 import {Shares} from "./Shares.sol";
-import {Balance} from "./Balance.sol";
+import {Tokens} from "./Tokens.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 import {tmp} from "../lib/512Math.sol";
@@ -86,7 +86,7 @@ library CrazyBalanceArithmetic {
         return x < y ? CrazyBalance.wrap(type(uint256).max) : x;
     }
 
-    function toCrazyBalance(Shares shares, address account, Balance totalSupply, Shares totalShares)
+    function toCrazyBalance(Shares shares, address account, Tokens totalSupply, Shares totalShares)
         internal
         pure
         returns (CrazyBalance)
@@ -96,27 +96,27 @@ library CrazyBalanceArithmetic {
             return CrazyBalance.wrap(
                 tmp().omul(
                     Shares.unwrap(shares),
-                    Balance.unwrap(totalSupply) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)
+                    Tokens.unwrap(totalSupply) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)
                 ).div(Shares.unwrap(totalShares) * Settings.CRAZY_BALANCE_BASIS)
             );
         }
     }
 
-    function toBalance(CrazyBalance balance, address account) internal pure returns (Balance) {
+    function toTokens(CrazyBalance balance, address account) internal pure returns (Tokens) {
         unchecked {
             // Checking for overflow in the multiplication is unnecessary. Checking for division by
             // zero is required.
-            return Balance.wrap(
+            return Tokens.wrap(
                 CrazyBalance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS
                     / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)
             );
         }
     }
 
-    function toBalance(CrazyBalance balance, address account, BasisPoints proportion) internal pure returns (Balance) {
+    function toTokens(CrazyBalance balance, address account, BasisPoints proportion) internal pure returns (Tokens) {
         unchecked {
             // slither-disable-next-line divide-before-multiply
-            return Balance.wrap(
+            return Tokens.wrap(
                 (CrazyBalance.unwrap(balance) * BasisPoints.unwrap(proportion) * Settings.CRAZY_BALANCE_BASIS)
                     .unsafeDivUp(BasisPoints.unwrap(BASIS) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR))
             );

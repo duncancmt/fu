@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {BasisPoints} from "src/types/BasisPoints.sol";
 import {Shares} from "src/types/Shares.sol";
-import {Balance} from "src/types/Balance.sol";
+import {Tokens} from "src/types/Tokens.sol";
 import {Votes} from "src/types/Votes.sol";
 
 import {ReflectMathTest} from "./ReflectMath.t.sol";
@@ -14,11 +14,11 @@ import {StdAssertions} from "@forge-std/StdAssertions.sol";
 
 contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
     function testTransferSome(
-        Balance,
+        Tokens,
         Shares,
         Shares,
         Shares,
-        Balance,
+        Tokens,
         BasisPoints/*,
         uint256*/
     ) public view override {
@@ -26,7 +26,7 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
     }
 
     function testTransferAll(
-        Balance,
+        Tokens,
         Shares,
         Shares,
         Shares,
@@ -37,21 +37,21 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
     }
 
     function testDeliver(
-        Balance,
+        Tokens,
         Shares,
         Shares,
-        Balance/*,
+        Tokens/*,
         uint256*/
     ) public view override {
         return;
     }
 
     function medusa_testTransferSome(
-        Balance totalSupply,
+        Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
         Shares toShares,
-        Balance amount,
+        Tokens amount,
         BasisPoints taxRate/*,
         uint256 sharesRatio*/
     ) external {
@@ -60,7 +60,7 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
     }
 
     function medusa_testTransferAll(
-        Balance totalSupply,
+        Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
         Shares toShares,
@@ -72,10 +72,10 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
     }
 
     function medusa_testDeliver(
-        Balance totalSupply,
+        Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
-        Balance amount/*,
+        Tokens amount/*,
         uint256 sharesRatio*/
     ) external {
         super.testDeliver(totalSupply, totalShares, fromShares, amount);

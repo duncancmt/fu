@@ -3,13 +3,13 @@ pragma solidity ^0.8.28;
 
 import {BasisPoints, BASIS} from "../types/BasisPoints.sol";
 import {Shares} from "../types/Shares.sol";
-import {Balance} from "../types/Balance.sol";
+import {Tokens} from "../types/Tokens.sol";
 import {scale} from "../types/SharesXBasisPoints.sol";
-import {scale, castUp} from "../types/BalanceXBasisPoints.sol";
-import {BalanceXShares, tmp, alloc, SharesToBalance} from "../types/BalanceXShares.sol";
-import {BalanceXShares2, tmp as tmp2, alloc as alloc2} from "../types/BalanceXShares2.sol";
-import {BalanceXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "../types/BalanceXBasisPointsXShares.sol";
-import {BalanceXBasisPointsXShares2, tmp as tmp4, alloc as alloc4} from "../types/BalanceXBasisPointsXShares2.sol";
+import {scale, castUp} from "../types/TokensXBasisPoints.sol";
+import {TokensXShares, tmp, alloc, SharesToTokens} from "../types/TokensXShares.sol";
+import {TokensXShares2, tmp as tmp2, alloc as alloc2} from "../types/TokensXShares2.sol";
+import {TokensXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "../types/TokensXBasisPointsXShares.sol";
+import {TokensXBasisPointsXShares2, tmp as tmp4, alloc as alloc4} from "../types/TokensXBasisPointsXShares2.sol";
 import {SharesXBasisPoints} from "../types/SharesXBasisPoints.sol";
 import {Shares2XBasisPoints, tmp as tmp5, alloc as alloc5} from "../types/Shares2XBasisPoints.sol";
 
@@ -19,33 +19,33 @@ import {console} from "@forge-std/console.sol";
 
 library ReflectMath {
     using UnsafeMath for uint256;
-    using SharesToBalance for Shares;
+    using SharesToTokens for Shares;
 
     // TODO: reorder arguments for clarity/consistency
     function getTransferShares(
-        Balance amount,
+        Tokens amount,
         BasisPoints taxRate,
-        Balance totalSupply,
+        Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
         Shares toShares
     ) internal view returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
         Shares uninvolvedShares = totalShares - fromShares - toShares;
-        BalanceXShares t1 = alloc().omul(fromShares, totalSupply);
-        BalanceXShares t2 = alloc().omul(amount, totalShares);
-        BalanceXShares t3 = alloc().osub(t1, t2);
-        BalanceXBasisPointsXShares2 n1 = alloc4().omul(t3, scale(uninvolvedShares, BASIS));
-        BalanceXBasisPointsXShares t4 = alloc3().omul(totalSupply, scale(uninvolvedShares, BASIS));
-        BalanceXBasisPointsXShares t5 = alloc3().omul(amount, scale(totalShares, taxRate));
-        BalanceXBasisPointsXShares d = alloc3().oadd(t4, t5);
-        BalanceXBasisPointsXShares t6 = alloc3().omul(amount, scale(totalShares, BASIS - taxRate));
-        BalanceXBasisPointsXShares t7 = alloc3().omul(scale(toShares, BASIS), totalSupply);
-        BalanceXBasisPointsXShares t8 = alloc3().oadd(t6, t7);
-        BalanceXBasisPointsXShares2 n2 = alloc4().omul(t8, uninvolvedShares);
+        TokensXShares t1 = alloc().omul(fromShares, totalSupply);
+        TokensXShares t2 = alloc().omul(amount, totalShares);
+        TokensXShares t3 = alloc().osub(t1, t2);
+        TokensXBasisPointsXShares2 n1 = alloc4().omul(t3, scale(uninvolvedShares, BASIS));
+        TokensXBasisPointsXShares t4 = alloc3().omul(totalSupply, scale(uninvolvedShares, BASIS));
+        TokensXBasisPointsXShares t5 = alloc3().omul(amount, scale(totalShares, taxRate));
+        TokensXBasisPointsXShares d = alloc3().oadd(t4, t5);
+        TokensXBasisPointsXShares t6 = alloc3().omul(amount, scale(totalShares, BASIS - taxRate));
+        TokensXBasisPointsXShares t7 = alloc3().omul(scale(toShares, BASIS), totalSupply);
+        TokensXBasisPointsXShares t8 = alloc3().oadd(t6, t7);
+        TokensXBasisPointsXShares2 n2 = alloc4().omul(t8, uninvolvedShares);
 
         newFromShares = n1.div(d);
         newToShares = n2.div(d);
-        // TODO: implement divMulti for BalanceXBasisPointsXShares2 / BalanceXBasisPointsXShares
+        // TODO: implement divMulti for TokensXBasisPointsXShares2 / TokensXBasisPointsXShares
         /*
         {
             (uint256 x, uint256 y) = cast(n1).divMulti(cast(n2), cast(d));
@@ -55,25 +55,26 @@ library ReflectMath {
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
 
         // TODO use divMulti to compute beforeToBalance and beforeFromBalance (can't use it for after because newTotalShares might change)
-        Balance beforeToBalance = toShares.toBalance(totalSupply, totalShares);
-        Balance afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
-        Balance expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
-        //Balance expectedAfterToBalanceHi = beforeToBalance + castUp(scale(amount, BASIS - taxRate));
+        Tokens beforeToBalance = toShares.toTokens(totalSupply, totalShares);
+        Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
+        Tokens expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
+        //Tokens expectedAfterToBalanceHi = beforeToBalance + castUp(scale(amount, BASIS - taxRate));
 
         if (afterToBalance < expectedAfterToBalanceLo) {
+            //console.log("branch 0");
             {
                 //console.log("to round up");
-                Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Balance.unwrap(totalSupply)));
+                Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(totalSupply)));
                 newToShares = newToShares + incr;
                 newTotalShares = newTotalShares + incr;
                 //console.log("incr", Shares.unwrap(incr));
             }
-            Balance beforeFromBalance = fromShares.toBalance(totalSupply, totalShares);
-            Balance afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
-            Balance expectedAfterFromBalance = beforeFromBalance - amount;
+            Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
+            Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
+            Tokens expectedAfterFromBalance = beforeFromBalance - amount;
             if (afterFromBalance < expectedAfterFromBalance) {
                 //console.log("from round up");
-                Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Balance.unwrap(totalSupply)));
+                Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(totalSupply)));
                 newFromShares = newFromShares + incr;
                 newTotalShares = newTotalShares + incr;
                 //console.log("incr", Shares.unwrap(incr));
@@ -106,9 +107,10 @@ library ReflectMath {
         }
         // TODO: previously the block below was an `else` block. This is more accurate, but it is *MUCH* less gas efficient
         {
-            Balance beforeFromBalance = fromShares.toBalance(totalSupply, totalShares);
-            Balance afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
-            Balance expectedAfterFromBalance = beforeFromBalance - amount;
+            //console.log("branch 1");
+            Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
+            Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
+            Tokens expectedAfterFromBalance = beforeFromBalance - amount;
             {
                 bool condition = afterFromBalance > expectedAfterFromBalance;
                 if (condition) {
@@ -126,7 +128,7 @@ library ReflectMath {
                 newTotalShares = newTotalShares.inc(condition);
             }
 
-            afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
+            afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
             {
                 bool condition = afterToBalance > expectedAfterToBalanceLo;
                 if (condition) {
@@ -150,7 +152,7 @@ library ReflectMath {
                 newToShares = toShares;
             }
 
-            afterFromBalance = newFromShares.toBalance(totalSupply, newTotalShares);
+            afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
             {
                 bool condition = afterFromBalance > expectedAfterFromBalance;
                 if (condition) {
@@ -170,7 +172,7 @@ library ReflectMath {
         }
         //console.log("===");
         //console.log("           taxRate", BasisPoints.unwrap(taxRate));
-        //console.log("       totalSupply", Balance.unwrap(totalSupply));
+        //console.log("       totalSupply", Tokens.unwrap(totalSupply));
         //console.log("       totalShares", Shares.unwrap(totalShares));
         //console.log("    newTotalShares", Shares.unwrap(newTotalShares));
         //console.log("        fromShares", Shares.unwrap(fromShares));
@@ -182,7 +184,7 @@ library ReflectMath {
 
     function getTransferShares(
         BasisPoints taxRate,
-        Balance totalSupply,
+        Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
         Shares toShares
@@ -203,7 +205,7 @@ library ReflectMath {
         newToShares = toShares + fromShares - (totalShares - newTotalShares);
 
         //console.log("           taxRate", BasisPoints.unwrap(taxRate));
-        //console.log("       totalSupply", Balance.unwrap(totalSupply));
+        //console.log("       totalSupply", Tokens.unwrap(totalSupply));
         //console.log("       totalShares", Shares.unwrap(totalShares));
         //console.log("        fromShares", Shares.unwrap(fromShares));
         //console.log("          toShares", Shares.unwrap(toShares));
@@ -212,16 +214,16 @@ library ReflectMath {
 
         // Fixup rounding error
         // TODO: use divMulti
-        Balance beforeFromBalance = fromShares.toBalance(totalSupply, totalShares);
-        Balance beforeToBalance = toShares.toBalance(totalSupply, totalShares);
-        Balance afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
-        Balance expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, taxRate));
-        //Balance expectedAfterToBalance = beforeToBalance + cast(scale(beforeFromBalance, BASIS - taxRate));
+        Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
+        Tokens beforeToBalance = toShares.toTokens(totalSupply, totalShares);
+        Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
+        Tokens expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, taxRate));
+        //Tokens expectedAfterToBalance = beforeToBalance + cast(scale(beforeFromBalance, BASIS - taxRate));
 
-        //console.log("before fromBalance", Balance.unwrap(beforeFromBalance));
-        //console.log("  before toBalance", Balance.unwrap(beforeToBalance));
-        //console.log("         toBalance", Balance.unwrap(afterToBalance));
-        //console.log("expected toBalance", Balance.unwrap(expectedAfterToBalance));
+        //console.log("before fromBalance", Tokens.unwrap(beforeFromBalance));
+        //console.log("  before toBalance", Tokens.unwrap(beforeToBalance));
+        //console.log("         toBalance", Tokens.unwrap(afterToBalance));
+        //console.log("expected toBalance", Tokens.unwrap(expectedAfterToBalance));
 
         /*
         {
@@ -239,8 +241,8 @@ library ReflectMath {
             //console.log("round down");
             // TODO: should this use `unsafeDiv` instead of `unsafeDivUp`? That might give lower rounding error (and consequently fewer iterations of this loop)
             Shares decr = Shares.wrap(
-                (Balance.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(
-                    Balance.unwrap(totalSupply)
+                (Tokens.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(
+                    Tokens.unwrap(totalSupply)
                 )
             );
             //console.log("decr", Shares.unwrap(decr));
@@ -250,12 +252,12 @@ library ReflectMath {
                 //console.log("clamp");
                 newTotalShares = newTotalShares + (toShares - newToShares);
                 newToShares = toShares;
-                afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
-                //console.log("updated toBalance", Balance.unwrap(afterToBalance));
+                afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
+                //console.log("updated toBalance", Tokens.unwrap(afterToBalance));
                 break;
             }
-            afterToBalance = newToShares.toBalance(totalSupply, newTotalShares);
-            //console.log("updated toBalance", Balance.unwrap(afterToBalance));
+            afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
+            //console.log("updated toBalance", Tokens.unwrap(afterToBalance));
         }
         {
             bool condition = afterToBalance < expectedAfterToBalance;
@@ -266,14 +268,14 @@ library ReflectMath {
             newTotalShares = newTotalShares.inc(condition);
         }
 
-        //console.log("    new toBalance", Balance.unwrap(newToShares.toBalance(totalSupply, newTotalShares)));
+        //console.log("    new toBalance", Tokens.unwrap(newToShares.toTokens(totalSupply, newTotalShares)));
         //console.log("===");
     }
 
     function getTransferShares(
-        Balance amount,
+        Tokens amount,
         BasisPoints taxRate,
-        Balance totalSupply,
+        Tokens totalSupply,
         Shares totalShares,
         Shares fromShares
     )
@@ -294,31 +296,33 @@ library ReflectMath {
         revert("unimplemented");
     }
 
-    function getDeliverShares(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
+    function getDeliverShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
         internal
         view
         returns (Shares newFromShares, Shares newTotalShares)
     {
-        BalanceXShares t1 = alloc().omul(fromShares, totalSupply);
-        BalanceXShares t2 = alloc().omul(amount, totalShares);
-        BalanceXShares t3 = alloc().osub(t1, t2);
-        BalanceXShares2 n = alloc2().omul(t3, totalShares - fromShares);
-        BalanceXShares t4 = alloc().omul(totalSupply, totalShares - fromShares);
-        BalanceXShares d = alloc().oadd(t4, t2);
+        TokensXShares t1 = alloc().omul(fromShares, totalSupply);
+        TokensXShares t2 = alloc().omul(amount, totalShares);
+        TokensXShares t3 = alloc().osub(t1, t2);
+        TokensXShares2 n = alloc2().omul(t3, totalShares - fromShares);
+        TokensXShares t4 = alloc().omul(totalSupply, totalShares - fromShares);
+        TokensXShares d = alloc().oadd(t4, t2);
 
         newFromShares = n.div(d);
         newTotalShares = totalShares - (fromShares - newFromShares);
 
         // Fixup rounding error
-        Balance beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
-        Balance afterFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
-        Balance expectedAfterFromBalance = beforeFromBalance - amount;
+        Tokens beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
+        Tokens afterFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
+        Tokens expectedAfterFromBalance = beforeFromBalance - amount;
         bool condition = afterFromBalance < expectedAfterFromBalance;
         newFromShares = newFromShares.inc(condition);
         newTotalShares = newTotalShares.inc(condition);
     }
 
-    function getDeliverSharesPairWhale(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
+    // getDeliverShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
+
+    function getDeliverSharesPairWhale(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
         internal
         view
         returns (Shares newFromShares, Shares newTotalShares)
@@ -326,20 +330,20 @@ library ReflectMath {
         revert("unimplemented");
     }
 
-    function getBurnShares(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
+    function getBurnShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
         internal
         view
         returns (Shares)
     {
-        BalanceXShares t1 = alloc().omul(fromShares, totalSupply);
-        BalanceXShares t2 = alloc().omul(totalShares, amount);
-        BalanceXShares n = alloc().osub(t1, t2);
+        TokensXShares t1 = alloc().omul(fromShares, totalSupply);
+        TokensXShares t2 = alloc().omul(totalShares, amount);
+        TokensXShares n = alloc().osub(t1, t2);
         return n.div(totalSupply);
     }
 
-    // getBurnShares(Balance,Shares,Shares) is not provided because it's extremely straightforward
+    // getBurnShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
 
-    function getBurnSharesPairWhale(Balance amount, Balance totalSupply, Shares totalShares, Shares fromShares)
+    function getBurnSharesPairWhale(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
         internal
         view
         returns (Shares newFromShares, Shares newTotalShares)
