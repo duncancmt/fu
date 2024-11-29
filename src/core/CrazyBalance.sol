@@ -122,3 +122,5 @@ library CrazyBalanceArithmetic {
         }
     }
 }
+
+using CrazyBalanceArithmetic for CrazyBalance global;

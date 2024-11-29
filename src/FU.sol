@@ -37,7 +37,6 @@ contract FU is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, TransientStorag
     using {toCrazyBalance} for uint256;
     using SharesToBalance for Shares;
     using CrazyBalanceArithmetic for Shares;
-    using CrazyBalanceArithmetic for CrazyBalance;
     using {toVotes} for Shares;
     using LibCheckpoints for Checkpoints;
 
