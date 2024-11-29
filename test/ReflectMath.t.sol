@@ -50,13 +50,11 @@ contract ReflectMathTest is Boilerplate, Test {
         return (totalSupply, totalShares, fromShares, fromBalance);
     }
 
-    function _boundCommon(
-        Tokens totalSupply,
-        Shares totalShares,
-        Shares fromShares,
-        Tokens amount,
-        uint256 sharesRatio
-    ) internal pure returns (Tokens, Shares, Shares, Tokens, Tokens) {
+    function _boundCommon(Tokens totalSupply, Shares totalShares, Shares fromShares, Tokens amount, uint256 sharesRatio)
+        internal
+        pure
+        returns (Tokens, Shares, Shares, Tokens, Tokens)
+    {
         Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance) =
             _boundCommon(totalSupply, totalShares, fromShares, sharesRatio);
