@@ -14,14 +14,14 @@ library Settings {
     using UnsafeMath for uint256;
 
     uint256 internal constant INITIAL_LIQUIDITY_DIVISOR = 10;
-    // This constant can be set as low as 4 without breaking anything. Setting it near to
-    // INITIAL_LIQUIDITY_DIVISOR will cause unexpected reverts.
+    // An amount of shares above `totalShares / 4` makes `ReflectMath` break down. Also setting it
+    // near to INITIAL_LIQUIDITY_DIVISOR will cause unexpected reverts.
     // TODO: verify that it's still possible to `deliver` without serious issue even when the
     // balance is well above the limit
     uint256 internal constant ANTI_WHALE_DIVISOR = 4;
 
     BasisPoints internal constant MIN_TAX = BasisPoints.wrap(1);
-    // A tax above `BASIS / 2` makes ReflectMath break down
+    // A tax above `BASIS / 2` makes `ReflectMath` break down
     BasisPoints internal constant MAX_TAX = BasisPoints.wrap(BasisPoints.unwrap(BASIS) / 2);
 
     uint256 private constant _UNISWAPV2_MAX_BALANCE = type(uint112).max;

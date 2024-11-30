@@ -232,12 +232,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             return false;
         }
 
-        Shares cachedToShares;
-        if (to == address(pair)) {
-            cachedToShares = cachedPairShares;
-        } else {
-            cachedToShares = _sharesOf[to];
-        }
+        Shares cachedToShares = to == address(pair) ? cachedPairShares : _sharesOf[to];
 
         if (cachedToShares >= cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
             // Anti-whale (also because the reflection math breaks down)
