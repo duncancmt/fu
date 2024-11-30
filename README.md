@@ -42,8 +42,8 @@ what ERC20 literally requires.
   * Upper bound: exactly compute the specified amount minus the tax, round it up
 
 "Normal" reflection tokens do not have these properties, and the author adopted
-them primarily to demonstrate mastery of the required numerical programming
-techniques.
+these restrictions primarily to demonstrate mastery of the required numerical
+programming techniques.
 
 # Implementation
 
@@ -99,7 +99,8 @@ recommends a Governor that inherits from the following OpenZeppelin contracts
 
 Remember that FU uses `block.timestamp` for durations, with a quantum of 1
 day. The author recommends setting the voting delay to 2 days, the voting period
-to 1 week, the quorum fraction to 33%, and the timelock min delay to 2 weeks.
+to 1 week, the vote extension period to 4 days, the quorum fraction to 33%, and
+the timelock min delay to 2 weeks.
 
 # Testing
 
