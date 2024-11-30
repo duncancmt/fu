@@ -685,17 +685,17 @@ library Lib512MathArithmetic {
         }
     }
 
-    function _toOdd256(uint256 x_hi, uint256 x_lo, uint256 y) private pure returns (uint256 x_lo_out, uint256 y_out) {
+    function _toOdd256(uint256 x_hi, uint256 x_lo, uint256 y) private pure returns (uint256 rx_lo, uint256 ry) {
         // Factor powers of two out of `y` and apply the same shift to [x_hi
         // x_lo]
         (uint256 twos, uint256 twosInv) = _twos(y);
 
         assembly ("memory-safe") {
             // Divide `y` by the power of two
-            y_out := div(y, twos)
+            ry := div(y, twos)
 
             // Divide [x_hi x_lo] by the power of two
-            x_lo_out := or(div(x_lo, twos), mul(x_hi, twosInv))
+            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
         }
     }
 
@@ -723,7 +723,7 @@ library Lib512MathArithmetic {
     function _toOdd256(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo)
         private
         pure
-        returns (uint256 x_lo_out, uint256 y_lo_out)
+        returns (uint256 rx_lo, uint256 ry_lo)
     {
         // Factor powers of two out of `y_lo` and apply the same shift to [x_hi
         // x_lo]
@@ -731,10 +731,10 @@ library Lib512MathArithmetic {
 
         assembly ("memory-safe") {
             // Divide [y_hi y_lo] by the power of two, returning only the low limb
-            y_lo_out := or(div(y_lo, twos), mul(y_hi, twosInv))
+            ry_lo := or(div(y_lo, twos), mul(y_hi, twosInv))
 
             // Divide [x_hi x_lo] by the power of two, returning only the low limb
-            x_lo_out := or(div(x_lo, twos), mul(x_hi, twosInv))
+            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
         }
     }
 
@@ -762,7 +762,7 @@ library Lib512MathArithmetic {
     function _toOdd512(uint256 x_hi, uint256 x_lo, uint256 y)
         private
         pure
-        returns (uint256 x_hi_out, uint256 x_lo_out, uint256 y_out)
+        returns (uint256 rx_hi, uint256 rx_lo, uint256 ry)
     {
         // Factor powers of two out of `y` and apply the same shift to [x_hi
         // x_lo]
@@ -770,11 +770,11 @@ library Lib512MathArithmetic {
 
         assembly ("memory-safe") {
             // Divide `y` by the power of two
-            y_out := div(y, twos)
+            ry := div(y, twos)
 
             // Divide [x_hi x_lo] by the power of two
-            x_hi_out := div(x_hi, twos)
-            x_lo_out := or(div(x_lo, twos), mul(x_hi, twosInv))
+            rx_hi := div(x_hi, twos)
+            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
         }
     }
 
@@ -804,7 +804,7 @@ library Lib512MathArithmetic {
     function _toOdd512(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo)
         private
         pure
-        returns (uint256 x_hi_out, uint256 x_lo_out, uint256 y_hi_out, uint256 y_lo_out)
+        returns (uint256 rx_hi, uint256 rx_lo, uint256 ry_hi, uint256 ry_lo)
     {
         // Factor powers of two out of [y_hi y_lo] and apply the same shift to
         // [x_hi x_lo] and [y_hi y_lo]
@@ -812,12 +812,12 @@ library Lib512MathArithmetic {
 
         assembly ("memory-safe") {
             // Divide [y_hi y_lo] by the power of two
-            y_hi_out := div(y_hi, twos)
-            y_lo_out := or(div(y_lo, twos), mul(y_hi, twosInv))
+            ry_hi := div(y_hi, twos)
+            ry_lo := or(div(y_lo, twos), mul(y_hi, twosInv))
 
             // Divide [x_hi x_lo] by the power of two
-            x_hi_out := div(x_hi, twos)
-            x_lo_out := or(div(x_lo, twos), mul(x_hi, twosInv))
+            rx_hi := div(x_hi, twos)
+            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
         }
     }
 
