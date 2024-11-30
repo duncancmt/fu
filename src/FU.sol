@@ -213,6 +213,10 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             return false;
         }
 
+        // TODO: there is a bad interaction here between the anti-whale
+        // computation and checkpointing. namely, if an account has shares
+        // burned due to anti-whale, it won't be reflected in the checkpoint for
+        // that account's delegate. there will be some excess "stuck" shares.
         (
             CrazyBalance fromBalance,
             Shares cachedFromShares,
