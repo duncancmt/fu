@@ -3,6 +3,8 @@ pragma solidity ^0.8.28;
 
 import {IERC5805} from "../interfaces/IERC5805.sol";
 
+import {Settings} from "./Settings.sol";
+
 import {Votes} from "../types/Votes.sol";
 
 struct Checkpoint {
@@ -164,6 +166,7 @@ library LibCheckpoints {
                 return value;
             }
         }
+        uint256 initialWindow = Settings.BISECT_WINDOW_DEFAULT;
         assembly ("memory-safe") {
             // A dynamic array's elements are encoded in storage beginning at
             // the slot named by the hash of the base slot
@@ -175,10 +178,7 @@ library LibCheckpoints {
             // of the array, until we find one that contains the checkpoint of
             // interest
             let hi := add(start, len)
-            // TODO: given some knowledge about voting delays and periods,
-            // there's probably a different, more-optimal value for this
-            // constant
-            let lo := sub(hi, 0x01)
+            let lo := sub(hi, initialWindow)
             for {} true {} {
                 if lt(lo, start) {
                     lo := start
