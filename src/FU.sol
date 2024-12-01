@@ -90,7 +90,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             require(pair == FACTORY.getPair(WETH, this));
         }
         {
-            (CrazyBalance pairBalance,,,,) = _balanceOf(address(pair));
+            (CrazyBalance pairBalance,,,,,) = _balanceOf(address(pair));
             uint256 initialLiquidity =
                 Math.sqrt(CrazyBalance.unwrap(pairBalance) * WETH.balanceOf(address(pair))) - 1_000;
             require(pair.mint(address(0)) >= initialLiquidity);
@@ -163,23 +163,40 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return (shares0, shares1, totalShares_);
     }
 
-    function _loadAccount(address account) private view returns (Shares, Shares, Shares) {
+    function _loadAccount(address account)
+        private
+        view
+        returns (Shares originalShares, Shares cachedShares, Shares cachedPairShares, Shares cachedTotalShares)
+    {
         if (account == address(pair)) {
-            (Shares cachedAccountShares, Shares cachedTotalShares) = _applyWhaleLimit(_sharesOf[account], _totalShares);
-            return (cachedAccountShares, cachedAccountShares, cachedTotalShares);
+            cachedShares = originalShares = cachedPairShares = _sharesOf[account];
+            cachedTotalShares = _totalShares;
+        } else {
+            originalShares = _sharesOf[account];
+            (cachedShares, cachedPairShares, cachedTotalShares) =
+                _applyWhaleLimit(originalShares, _sharesOf[address(pair)], _totalShares);
         }
-        return _applyWhaleLimit(_sharesOf[account], _sharesOf[address(pair)], _totalShares);
     }
 
-    function _balanceOf(address account) private view returns (CrazyBalance, Shares, Shares, Tokens, Shares) {
-        (Shares cachedAccountShares, Shares cachedPairShares, Shares cachedTotalShares) = _loadAccount(account);
-        Tokens cachedTotalSupply = _totalSupply;
-        CrazyBalance accountBalance = cachedAccountShares.toCrazyBalance(account, cachedTotalSupply, cachedTotalShares);
-        return (accountBalance, cachedAccountShares, cachedPairShares, cachedTotalSupply, cachedTotalShares);
+    function _balanceOf(address account)
+        private
+        view
+        returns (
+            CrazyBalance balance,
+            Shares originalShares,
+            Shares cachedShares,
+            Shares pairShares,
+            Tokens cachedTotalSupply,
+            Shares cachedTotalShares
+        )
+    {
+        (originalShares, cachedShares, pairShares, cachedTotalShares) = _loadAccount(account);
+        cachedTotalSupply = _totalSupply;
+        balance = cachedShares.toCrazyBalance(account, cachedTotalSupply, cachedTotalShares);
     }
 
     function balanceOf(address account) external view override returns (uint256) {
-        (CrazyBalance balance,,,,) = _balanceOf(account);
+        (CrazyBalance balance,,,,,) = _balanceOf(account);
         return balance.toExternal();
     }
 
@@ -213,12 +230,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             return false;
         }
 
-        // TODO: there is a bad interaction here between the anti-whale
-        // computation and checkpointing. namely, if an account has shares
-        // burned due to anti-whale, it won't be reflected in the checkpoint for
-        // that account's delegate. there will be some excess "stuck" shares.
         (
             CrazyBalance fromBalance,
+            Shares originalFromShares,
             Shares cachedFromShares,
             Shares cachedPairShares,
             Tokens cachedTotalSupply,
@@ -311,7 +325,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         } else if (to == address(pair)) {
             _sharesOf[to] = newToShares;
             _totalShares = newTotalShares;
-            _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
+            _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
         } else {
             // However, in this last case, it's possible that because we burned some shares, `pair`
             // is now over the whale limit, even though we applied the limit when we loaded
@@ -323,7 +337,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
                 delegates[from],
                 delegates[to],
                 newToShares.toVotes() - cachedToShares.toVotes(),
-                cachedFromShares.toVotes() - newFromShares.toVotes(),
+                originalFromShares.toVotes() - newFromShares.toVotes(),
                 clock()
             );
             pair.sync();
@@ -465,6 +479,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     function _burn(address from, CrazyBalance amount) internal override returns (bool) {
         (
             CrazyBalance fromBalance,
+            Shares originalFromShares,
             Shares cachedFromShares,
             Shares cachedPairShares,
             Tokens cachedTotalSupply,
@@ -509,7 +524,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         _totalSupply = newTotalSupply;
         emit Transfer(from, address(0), amount.toExternal());
 
-        _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
+        _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
 
         if (newPairShares != cachedPairShares) {
             _sharesOf[address(pair)] = newPairShares;
@@ -522,6 +537,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     function _deliver(address from, CrazyBalance amount) internal override returns (bool) {
         (
             CrazyBalance fromBalance,
+            Shares originalFromShares,
             Shares cachedFromShares,
             Shares cachedPairShares,
             Tokens cachedTotalSupply,
@@ -557,7 +573,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         _totalShares = newTotalShares;
         emit Transfer(from, address(0), amount.toExternal());
 
-        _checkpoints.burn(delegates[from], cachedFromShares.toVotes() - newFromShares.toVotes(), clock());
+        _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
 
         if (newPairShares != cachedPairShares) {
             _sharesOf[address(pair)] = cachedPairShares;
