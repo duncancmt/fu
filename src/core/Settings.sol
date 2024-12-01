@@ -15,7 +15,7 @@ library Settings {
 
     uint256 internal constant INITIAL_LIQUIDITY_DIVISOR = 10;
     // An amount of shares above `totalShares / 4` makes `ReflectMath` break down. Also setting it
-    // near to INITIAL_LIQUIDITY_DIVISOR will cause unexpected reverts.
+    // near to `INITIAL_LIQUIDITY_DIVISOR` will cause unexpected reverts.
     // TODO: verify that it's still possible to `deliver` without serious issue even when the
     // balance is well above the limit
     uint256 internal constant ANTI_WHALE_DIVISOR = 4;
@@ -31,7 +31,7 @@ library Settings {
     Shares internal constant INITIAL_SHARES = Shares.wrap(Tokens.unwrap(INITIAL_SUPPLY) << 32);
 
     uint256 internal constant INITIAL_SHARES_RATIO = Shares.unwrap(INITIAL_SHARES) / Tokens.unwrap(INITIAL_SUPPLY);
-    uint256 internal constant MIN_SHARES_RATIO = 4; // below this, ReflectMath breaks down
+    uint256 internal constant MIN_SHARES_RATIO = 5; // below this, `ReflectMath` breaks down
 
     uint256 internal constant CRAZY_BALANCE_BASIS = Tokens.unwrap(INITIAL_SUPPLY) / _UNISWAPV2_MAX_BALANCE;
     uint256 internal constant ADDRESS_DIVISOR = 2 ** 160 / (CRAZY_BALANCE_BASIS + 1);
