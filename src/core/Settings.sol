@@ -26,18 +26,14 @@ library Settings {
 
     uint256 private constant _UNISWAPV2_MAX_BALANCE = type(uint112).max;
 
-    // TODO: `INITIAL_SUPPLY` and `INITIAL_SHARES` can be increased by 1 bit
-    // each. `CRAZY_BALANCE_BASIS` does not need to be increased. The anti-whale constraint ensures
-    // that it will still remain 4 times smaller than the maximum total supply (so I guess we could
-    // actually decrease it by one bit)
     uint8 internal constant DECIMALS = 36;
-    Tokens internal constant INITIAL_SUPPLY = Tokens.wrap(_UNISWAPV2_MAX_BALANCE * type(uint32).max);
+    Tokens internal constant INITIAL_SUPPLY = Tokens.wrap(_UNISWAPV2_MAX_BALANCE * (2 ** 33 - 1));
     Shares internal constant INITIAL_SHARES = Shares.wrap(Tokens.unwrap(INITIAL_SUPPLY) << 32);
 
     uint256 internal constant INITIAL_SHARES_RATIO = Shares.unwrap(INITIAL_SHARES) / Tokens.unwrap(INITIAL_SUPPLY);
     uint256 internal constant MIN_SHARES_RATIO = 5; // below this, `ReflectMath` breaks down
 
-    uint256 internal constant CRAZY_BALANCE_BASIS = Tokens.unwrap(INITIAL_SUPPLY) / _UNISWAPV2_MAX_BALANCE;
+    uint256 internal constant CRAZY_BALANCE_BASIS = Tokens.unwrap(INITIAL_SUPPLY) / ANTI_WHALE_DIVISOR / _UNISWAPV2_MAX_BALANCE;
     uint256 internal constant ADDRESS_DIVISOR = 2 ** 160 / (CRAZY_BALANCE_BASIS + 1);
 
     // This constant is intertwined with a bunch of hex literals in `Checkpoints.sol`, because
