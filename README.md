@@ -102,6 +102,60 @@ day. The author recommends setting the voting delay to 2 days, the voting period
 to 1 week, the vote extension period to 4 days, the quorum fraction to 33%, and
 the timelock min delay to 2 weeks.
 
+## wFU
+
+A wrapped version of the FU token is not provided. It *could* be easily
+implemented as an ERC4626 vault. One should be careful, however, not to trip
+over the anti-whale provision of FU. The relative increase of the
+`balanceOf(...)` of the vault is a reliable indicator of the value received
+during minting (and consequently the amount of shares that should be
+minted). However, because the underlying token is a transfer tax token, the
+`amount` passed to `transfer` or `transferFrom` is not a reliable indicator of
+the balance increase of the `to`. Additionally, wFU must be a tax token to
+reflect the transfer tax of the underlying token. For that reason, `transfer`
+and `transferFrom` should implement a pattern like:
+
+```Solidity
+address internal constant _DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
+
+constructor() {
+    assert(uint256(uint160(address(this))) / Settings.ADDRESS_DIVISOR == Settings.CRAZY_BALANCE_BASIS);
+    uint256 balance = asset.balanceOf(address(this));
+    require(balance >= 1 ether);
+    balanceOf[_DEAD] = balance;
+    totalSupply = balance;
+    emit Transfer(address(0), _DEAD, balance);
+}
+
+function _transfer(address from, address to, uint256 amount) internal {
+    uint256 balance = asset.balanceOf(address(this));
+    uint512 n = alloc().omul(balance, amount * asset.tax());
+    uint256 d = totalSupply * BasisPoints.unwrap(BasisPoints.BASIS);
+    uint256 taxAmountFu = n.div(d);
+    taxAmountFu = taxAmountFu.unsafeInc(tmp().omul(taxAmountFu, d) < n);
+
+    n.omul(taxAmountFu, totalSupply);
+    d = balance;
+    uint256 taxAmount = n.div(d);
+    taxAmount = taxAmount.unsafeInc(tmp().omul(taxAmount, d) < n);
+
+    balanceOf[from] -= amount; // underflow indicates insufficient balance
+    unchecked {
+        totalSupply -= taxAmount;
+        amount -= taxAmount;
+        balanceOf[to] += amount;
+    }
+    emit Transfer(from, to, amount);
+    emit Transfer(from, address(0), taxAmount);
+
+    asset.deliver(taxAmountFu);
+}
+```
+
+Exactly how to fully generalize these concepts to an ERC4626 compatible
+tokenized vault while correctly handing rounding error and avoiding inflation
+attacks is left as an exercise for the implementer.
+
 # Testing
 
 FU was developed using the [Foundry](https://github.com/foundry-rs/foundry)
