@@ -43,7 +43,10 @@ what ERC20 literally requires.
 
 "Normal" reflection tokens do not have these properties, and the author adopted
 these restrictions primarily to demonstrate mastery of the required numerical
-programming techniques.
+programming techniques. This creates some interesting game-theoretic interplay
+where it sometimes becomes advantageous to store tokens in multiple addresses,
+so that the holder benefits from the tax applied to their own incoming and
+outgoing transfers.
 
 # Implementation
 
