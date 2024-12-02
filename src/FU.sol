@@ -294,6 +294,10 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
         // === EFFECTS ARE ALLOWED ONLY FROM HERE DOWN ===
 
+            // TODO: in order to avoid artificially inflating the price of FU,
+            // should we withdraw liquidity in order to maintain a constant
+            // price?
+
             // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
             // requirement that the sum of all accounts' shares equal the total shares. However,
             // this does mean that the balance of the pair increases between `sync()` and this
