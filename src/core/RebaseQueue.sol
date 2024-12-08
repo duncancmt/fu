@@ -65,7 +65,7 @@ library LibRebaseQueue {
         Shares shares,
         Tokens totalSupply,
         Shares totalShares
-    ) internal returns (CrazyBalance newBalance) {
+    ) private returns (CrazyBalance newBalance) {
         CrazyBalance oldBalance = elem.lastBalance;
         newBalance = shares.toCrazyBalance(account, totalSupply, totalShares);
         if (oldBalance != newBalance) {
@@ -74,7 +74,7 @@ library LibRebaseQueue {
     }
 
     function rebaseFor(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares)
-        private
+        internal
         returns (CrazyBalance)
     {
         return _rebaseFor(self.queue[account], account, shares, totalSupply, totalShares);
