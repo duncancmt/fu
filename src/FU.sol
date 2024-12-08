@@ -220,7 +220,6 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function _tax() private view returns (BasisPoints) {
-        // TODO: set tax to zero and prohibit `deliver` when the shares ratio gets to `Settings.MIN_SHARES_RATIO`
         revert("unimplemented");
     }
 
