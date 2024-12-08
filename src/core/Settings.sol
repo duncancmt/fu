@@ -27,7 +27,7 @@ library Settings {
     uint256 private constant _UNISWAPV2_MAX_BALANCE = type(uint112).max;
 
     uint8 internal constant DECIMALS = 36;
-    Tokens internal constant INITIAL_SUPPLY = Tokens.wrap(_UNISWAPV2_MAX_BALANCE * (2 ** 33 - 1));
+    Tokens internal constant INITIAL_SUPPLY = Tokens.wrap(_UNISWAPV2_MAX_BALANCE * (2 ** 31 - 1) * ANTI_WHALE_DIVISOR);
     Shares internal constant INITIAL_SHARES = Shares.wrap(Tokens.unwrap(INITIAL_SUPPLY) << 32);
 
     uint256 internal constant INITIAL_SHARES_RATIO = Shares.unwrap(INITIAL_SHARES) / Tokens.unwrap(INITIAL_SUPPLY);
