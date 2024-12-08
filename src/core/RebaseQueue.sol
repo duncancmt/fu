@@ -11,6 +11,7 @@ import {UnsafeMath} from "../lib/UnsafeMath.sol";
 struct RebaseQueueElem {
     address prev;
     address next;
+    // TODO: introduce a new type that represents minted tokens (or balance relative to max address)
     CrazyBalance lastTokens;
 }
 
@@ -23,9 +24,11 @@ library LibRebaseQueue {
     using UnsafeMath for uint256;
     using CrazyBalanceArithmetic for Shares;
 
-    function enqueue(RebaseQueue storage self, address account, CrazyBalance tokens) internal {
+    function enqueue(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares)
+        internal
+    {
         RebaseQueueElem storage elem = self.queue[account];
-        elem.lastTokens = tokens;
+        elem.lastTokens = shares.toCrazyBalance(totalSupply, totalShares);
         elem.prev = self.queue[self.head].prev;
     }
 
@@ -42,9 +45,15 @@ library LibRebaseQueue {
         elem.next = address(0);
     }
 
-    function moveToBack(RebaseQueue storage self, address account, CrazyBalance tokens) internal {
+    function moveToBack(
+        RebaseQueue storage self,
+        address account,
+        Shares shares,
+        Tokens totalSupply,
+        Shares totalShares
+    ) internal {
         RebaseQueueElem storage elem = self.queue[account];
-        elem.lastTokens = tokens;
+        elem.lastTokens = shares.toCrazyBalance(totalSupply, totalShares);
         address prev;
         if (account == self.head) {
             self.head = elem.next;

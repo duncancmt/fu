@@ -85,8 +85,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             emit Transfer(
                 address(0),
                 address(pair),
-                _sharesOf[address(pair)].toCrazyBalance(address(type(uint160).max), _totalSupply, _totalShares)
-                    .toExternal()
+                _sharesOf[address(pair)].toCrazyBalance(_totalSupply, _totalShares).toExternal()
             );
         }
         {
@@ -121,9 +120,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     function _mintShares(address to, Shares shares) private {
         assert(_sharesOf[to] == ZERO_SHARES);
         _sharesOf[to] = shares;
-        CrazyBalance mintedTokens = shares.toCrazyBalance(address(type(uint160).max), _totalSupply, _totalShares);
-        emit Transfer(address(0), to, mintedTokens.toExternal());
-        _rebaseQueue.enqueue(to, mintedTokens);
+        emit Transfer(address(0), to, shares.toCrazyBalance(_totalSupply, _totalShares).toExternal());
+        _rebaseQueue.enqueue(to, shares, _totalSupply, _totalShares);
     }
 
     function _check() private view returns (bool) {
@@ -319,62 +317,66 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             pair.sync();
         }
 
-        if (from != address(pair)) {
-            _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
-        }
-        if (to != address(pair)) {
-            _rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
-        }
-
-        {
-            // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
-            // units as if it were held by `from`. Also note that when `to` is a whale, the `amount`
-            // emitted in the event does not accurately reflect the change in balance.
-            CrazyBalance transferAmount = newToShares.toCrazyBalance(from, cachedTotalSupply, newTotalShares)
-                - cachedToShares.toCrazyBalance(from, cachedTotalSupply, cachedTotalShares);
-            CrazyBalance burnAmount = amount - transferAmount;
-            emit Transfer(from, to, transferAmount.toExternal());
-            emit Transfer(from, address(0), burnAmount.toExternal());
-        }
-        _sharesOf[from] = newFromShares;
+        // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
+        // units as if it were held by `from`. Also note that when `to` is a whale, the `amount`
+        // emitted in the event does not accurately reflect the change in balance.
+        CrazyBalance transferAmount = newToShares.toCrazyBalance(from, cachedTotalSupply, newTotalShares)
+            - cachedToShares.toCrazyBalance(from, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance burnAmount = amount - transferAmount;
 
         // In these first two cases, the computation in `ReflectMath.getTransferShares` (whichever
         // version we used) enforces the postcondition that `from` and `to` come in under the whale
         // limit. So we don't need to check, we can just write the values to storage.
         if (from == address(pair)) {
+            _rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
+
+            _sharesOf[from] = newFromShares;
             _sharesOf[to] = newToShares;
             _totalShares = newTotalShares;
+            emit Transfer(from, to, transferAmount.toExternal());
+            emit Transfer(from, address(0), burnAmount.toExternal());
+
             _checkpoints.mint(delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), clock());
 
-            {
-                // TODO: introduce a new type that represents minted tokens (or balance relative to max address)
-                CrazyBalance newToTokens =
-                    newToShares.toCrazyBalance(address(type(uint160).max), cachedTotalSupply, newTotalShares);
-                if (cachedToShares == ZERO_SHARES) {
-                    _rebaseQueue.enqueue(to, newToTokens);
-                } else {
-                    _rebaseQueue.moveToBack(to, newToTokens);
-                }
+            if (cachedToShares == ZERO_SHARES) {
+                _rebaseQueue.enqueue(to, newToShares, cachedTotalSupply, newTotalShares);
+            } else {
+                _rebaseQueue.moveToBack(to, newToShares, cachedTotalSupply, newTotalShares);
             }
         } else if (to == address(pair)) {
+            _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+
+            _sharesOf[from] = newFromShares;
             _sharesOf[to] = newToShares;
             _totalShares = newTotalShares;
+            emit Transfer(from, to, transferAmount.toExternal());
+            emit Transfer(from, address(0), burnAmount.toExternal());
+
             _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
 
             if (amount == fromBalance) {
                 _rebaseQueue.dequeue(from);
             } else {
-                _rebaseQueue.moveToBack(
-                    from, newFromShares.toCrazyBalance(address(type(uint160).max), cachedTotalSupply, newTotalShares)
-                );
+                _rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
             }
         } else {
             // However, in this last case, it's possible that because we burned some shares, `pair`
             // is now over the whale limit, even though we applied the limit when we loaded
             // it. Therefore, we have to apply the whale limit yet again.
             // TODO: what happens if `from` is a whale? could this push them over the limit?
-            (_sharesOf[to], _sharesOf[address(pair)], _totalShares) =
+            (newToShares, cachedPairShares, newTotalShares) =
                 _applyWhaleLimit(newToShares, cachedPairShares, newTotalShares);
+
+            _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+            _rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
+
+            _sharesOf[from] = newFromShares;
+            _sharesOf[to] = newToShares;
+            _sharesOf[address(pair)] = cachedPairShares;
+            _totalShares = newTotalShares;
+            emit Transfer(from, to, transferAmount.toExternal());
+            emit Transfer(from, address(0), burnAmount.toExternal());
+
             _checkpoints.transfer(
                 delegates[from],
                 delegates[to],
@@ -384,21 +386,17 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             );
 
             {
-                CrazyBalance newToTokens =
-                    newToShares.toCrazyBalance(address(type(uint160).max), cachedTotalSupply, newTotalShares);
                 if (cachedToShares == ZERO_SHARES) {
-                    _rebaseQueue.enqueue(to, newToTokens);
+                    _rebaseQueue.enqueue(to, newToShares, cachedTotalSupply, newTotalShares);
                 } else {
-                    _rebaseQueue.moveToBack(to, newToTokens);
+                    _rebaseQueue.moveToBack(to, newToShares, cachedTotalSupply, newTotalShares);
                 }
             }
 
             if (amount == fromBalance) {
                 _rebaseQueue.dequeue(from);
             } else {
-                _rebaseQueue.moveToBack(
-                    from, newFromShares.toCrazyBalance(address(type(uint160).max), cachedTotalSupply, newTotalShares)
-                );
+                _rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
             }
 
             pair.sync();
@@ -582,12 +580,11 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             }
         }
 
+        _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+
         _sharesOf[from] = newFromShares;
         _totalShares = newTotalShares;
         _totalSupply = newTotalSupply;
-
-        _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
-
         emit Transfer(from, address(0), amount.toExternal());
 
         _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
@@ -595,9 +592,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         if (amount == fromBalance) {
             _rebaseQueue.dequeue(from);
         } else {
-            _rebaseQueue.moveToBack(
-                from, newFromShares.toCrazyBalance(address(type(uint160).max), newTotalSupply, newTotalShares)
-            );
+            _rebaseQueue.moveToBack(from, newFromShares, newTotalSupply, newTotalShares);
         }
 
         if (newPairShares != cachedPairShares) {
@@ -645,11 +640,10 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             }
         }
 
-        _sharesOf[from] = newFromShares;
-        _totalShares = newTotalShares;
-
         _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
 
+        _sharesOf[from] = newFromShares;
+        _totalShares = newTotalShares;
         emit Transfer(from, address(0), amount.toExternal());
 
         _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
@@ -662,9 +656,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         if (amount == fromBalance) {
             _rebaseQueue.dequeue(from);
         } else {
-            _rebaseQueue.moveToBack(
-                from, newFromShares.toCrazyBalance(address(type(uint160).max), cachedTotalSupply, newTotalShares)
-            );
+            _rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
         }
 
         _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
