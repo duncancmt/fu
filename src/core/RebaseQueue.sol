@@ -67,9 +67,9 @@ library LibRebaseQueue {
         Shares totalShares
     ) private returns (CrazyBalance newBalance) {
         CrazyBalance oldBalance = elem.lastBalance;
-        newBalance = shares.toCrazyBalance(account, totalSupply, totalShares);
+        newBalance = shares.toCrazyBalance(address(type(uint160).max), totalSupply, totalShares);
         if (oldBalance != newBalance) {
-            emit IERC20.Transfer(address(0), account, Tokens.unwrap((newBalance - oldBalance).toTokens(account)));
+            emit IERC20.Transfer(address(0), account, (newBalance - oldBalance).toExternal());
         }
     }
 
