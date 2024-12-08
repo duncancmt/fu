@@ -35,8 +35,10 @@ library LibRebaseQueue {
         internal
     {
         RebaseQueueElem storage elem = self.queue[account];
+        RebaseQueueElem storage head = self.queue[self.head];
+        address tail = head.prev;
         elem.lastTokens = shares.toCrazyBalance(totalSupply, totalShares);
-        address tail = self.queue[self.head].prev;
+        head.prev = account;
         elem.prev = tail;
         self.queue[tail].next = account;
     }
