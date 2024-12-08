@@ -68,7 +68,7 @@ library LibRebaseQueue {
     }
 
 
-    function rebaseFor(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares) internal returns (CrazyBalance) {
+    function rebaseFor(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares) private returns (CrazyBalance) {
         return _rebaseFor(self.queue[account], account, shares, totalSupply, totalShares);
     }
 
