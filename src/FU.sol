@@ -134,7 +134,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function _check() private view returns (bool) {
-        return block.prevrandao & 1 == 0;
+        return block.prevrandao & 1 == 1;
     }
 
     function _success() internal view override returns (bool) {
