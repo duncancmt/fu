@@ -112,6 +112,9 @@ library LibRebaseQueue {
                 break;
             }
             cursor = elem.next;
+            if (cursor == address(0)) {
+                return;
+            }
             elem = self.queue[cursor];
         }
         elem.next = address(0);
