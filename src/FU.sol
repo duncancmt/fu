@@ -235,6 +235,12 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             }
             return false;
         }
+        if (from == DEAD) {
+            if (_check()) {
+                revert ERC20InvalidSender(from);
+            }
+            return false;
+        }
         if (to == address(this)) {
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
@@ -547,6 +553,13 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function _burn(address from, CrazyBalance amount) internal override returns (bool) {
+        if (from == DEAD) {
+            if (_check()) {
+                revert ERC20InvalidSender(from);
+            }
+            return false;
+        }
+
         (
             CrazyBalance fromBalance,
             Shares originalFromShares,
@@ -615,6 +628,13 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function _deliver(address from, CrazyBalance amount) internal override returns (bool) {
+        if (from == DEAD) {
+            if (_check()) {
+                revert ERC20InvalidSender(from);
+            }
+            return false;
+        }
+
         (
             CrazyBalance fromBalance,
             Shares originalFromShares,
