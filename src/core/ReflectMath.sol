@@ -169,15 +169,13 @@ library ReflectMath {
             if (newFromShares > newToShares) {
                 //console.log("clamp from");
                 decrFrom = Shares.wrap(
-                    Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares)
-                        / Shares.unwrap(newFromShares + newToShares)
+                    Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares) / Shares.unwrap(newFromShares + newToShares)
                 );
                 decrTo = decrTotal - decrFrom;
             } else {
                 //console.log("clamp to");
                 decrTo = Shares.wrap(
-                    Shares.unwrap(decrTotal) * Shares.unwrap(newToShares)
-                        / Shares.unwrap(newFromShares + newToShares)
+                    Shares.unwrap(decrTotal) * Shares.unwrap(newToShares) / Shares.unwrap(newFromShares + newToShares)
                 );
                 decrFrom = decrTotal - decrTo;
             }
