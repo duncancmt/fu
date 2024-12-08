@@ -95,16 +95,17 @@ library LibRebaseQueue {
         Shares totalShares
     ) internal {
         address cursor = self.head;
+        RebaseQueueElem storage elem = self.queue[cursor];
+        self.queue[elem.prev].next = cursor;
         for (uint256 i = gasleft() & 7;; i = i.unsafeDec()) {
-            RebaseQueueElem storage elem = self.queue[cursor];
-
             elem.lastTokens = _rebaseFor(elem, cursor, sharesOf[cursor], totalSupply, totalShares);
             if (i == 0) {
                 break;
             }
             cursor = elem.next;
+            elem = self.queue[cursor];
         }
+        elem.next = address(0);
         self.head = cursor;
-        // TODO: fixup `self.queue[self.queue[self.head].prev].next` and `self.queue[cursor].next`
     }
 }
