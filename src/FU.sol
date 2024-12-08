@@ -56,7 +56,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     // manipulated by the `TransientStorageLayout` base contract (in assembly)
     mapping(address owner => mapping(address spender => CrazyBalance allowed)) private _temporaryAllowance;
 
-    constructor(address[] memory initialHolders) payable {
+    event GitCommit(bytes20 indexed gitCommit);
+
+    constructor(bytes20 gitCommit, address[] memory initialHolders) payable {
         require(Settings.SHARES_TO_VOTES_DIVISOR >= Settings.INITIAL_SHARES_RATIO);
 
         require(msg.value >= 1 ether);
@@ -64,6 +66,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
         pair = pairFor(WETH, this);
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
+
+        emit GitCommit(gitCommit);
 
         // slither-disable-next-line low-level-calls
         (bool success,) = address(WETH).call{value: address(this).balance}("");
