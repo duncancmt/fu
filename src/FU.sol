@@ -117,6 +117,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         }
     }
 
+    // This function is *REALLY* gas inefficient. No attempts at optimization have been made because
+    // it only runs at deploy time.
     function _mintShares(address to, Shares shares) private {
         assert(_sharesOf[to] == ZERO_SHARES);
         _sharesOf[to] = shares;
