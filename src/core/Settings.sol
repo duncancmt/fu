@@ -34,6 +34,11 @@ library Settings {
 
     uint256 internal constant INITIAL_SHARES_RATIO = Shares.unwrap(INITIAL_SHARES) / Tokens.unwrap(INITIAL_SUPPLY);
     uint256 internal constant MIN_SHARES_RATIO = 5; // below this, `ReflectMath` breaks down
+    // It is not possible for the shares ratio to get as low as `MIN_SHARES_RATIO`. 1 whole token is
+    // sent to the `DEAD` address on construction (effectively locked forever). Therefore, the
+    // maximum possible relative decrease of the shares ratio is the number of tokens, approximately
+    // 44.6 million. This is considerably smaller than the ratio between the initial shares ratio
+    // and the minimum shares ratio, approximately 859 million.
 
     uint256 internal constant ADDRESS_DIVISOR = 2 ** 160 / (CRAZY_BALANCE_BASIS + 1);
 
