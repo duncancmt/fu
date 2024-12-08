@@ -59,17 +59,17 @@ library LibRebaseQueue {
         self.queue[prev].next = account;
     }
 
-    function rebaseFor(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares) internal returns (CrazyBalance newBalance) {
-        /*
-        if (account == address(pair)) {
-            return;
-        }
-        */
-        CrazyBalance oldBalance = self.queue[account].lastBalance;
+    function _rebaseFor(RebaseQueueElem storage elem, address account, Shares shares, Tokens totalSupply, Shares totalShares) internal returns (CrazyBalance newBalance) {
+        CrazyBalance oldBalance = elem.lastBalance;
         newBalance = shares.toCrazyBalance(account, totalSupply, totalShares);
         if (oldBalance != newBalance) {
-            emit IERC20.Transfer(address(0), account, (newBalance - oldBalance).toExternal());
+            emit IERC20.Transfer(address(0), account, Tokens.unwrap((newBalance - oldBalance).toTokens(account)));
         }
+    }
+
+
+    function rebaseFor(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares) internal returns (CrazyBalance) {
+        return _rebaseFor(self.queue[account], account, shares, totalSupply, totalShares);
     }
 
     function processQueue(RebaseQueue storage self, mapping(address => Shares) storage sharesOf, Tokens totalSupply, Shares totalShares) internal {
@@ -77,12 +77,7 @@ library LibRebaseQueue {
         for (uint256 i = gasleft() & 7; ; i = i.unsafeDec()) {
             RebaseQueueElem storage elem = self.queue[cursor];
 
-            CrazyBalance oldBalance = elem.lastBalance;
-            CrazyBalance newBalance = sharesOf[cursor].toCrazyBalance(cursor, totalSupply, totalShares);
-            if (oldBalance != newBalance) {
-                emit IERC20.Transfer(address(0), cursor, (newBalance - oldBalance).toExternal());
-            }
-            elem.lastBalance = newBalance;
+            elem.lastBalance = _rebaseFor(elem, cursor, sharesOf[cursor], totalSupply, totalShares);
             if (i == 0) {
                 break;
             }

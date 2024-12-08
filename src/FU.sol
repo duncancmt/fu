@@ -314,8 +314,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             pair.sync();
         }
 
-        CrazyBalance newFromBalance = _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
-        CrazyBalance newToBalance = _rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance newFromBalance = from == address(pair) ? ZERO_BALANCE : _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance newToBalance = to == address(pair) ? ZERO_BALANCE : _rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
 
         {
             // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
@@ -560,11 +560,12 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             }
         }
 
-        CrazyBalance newFromBalance = _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
-
         _sharesOf[from] = newFromShares;
         _totalShares = newTotalShares;
         _totalSupply = newTotalSupply;
+
+        CrazyBalance newFromBalance = _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+
         emit Transfer(from, address(0), amount.toExternal());
 
         _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
@@ -620,10 +621,11 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             }
         }
 
-        CrazyBalance newFromBalance = _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
-
         _sharesOf[from] = newFromShares;
         _totalShares = newTotalShares;
+
+        CrazyBalance newFromBalance = _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+
         emit Transfer(from, address(0), amount.toExternal());
 
         _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
