@@ -8,85 +8,87 @@ import {Shares} from "../types/Shares.sol";
 import {Tokens} from "../types/Tokens.sol";
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
-// TODO: this should be a library, not an abstract contract
-abstract contract RebaseQueue {
+struct RebaseQueueElem {
+    address prev;
+    address next;
+    CrazyBalance lastBalance;
+}
+
+struct RebaseQueue {
+    mapping(address => RebaseQueueElem) queue;
+    address head;
+}
+
+library LibRebaseQueue {
     using UnsafeMath for uint256;
     using CrazyBalanceArithmetic for Shares;
 
-    struct RebaseQueue {
-        address prev;
-        address next;
-        CrazyBalance lastBalance;
-    }
-    mapping(address => RebaseQueue) internal rebaseQueue;
-    address internal rebaseQueueHead;
-
-    function _enqueue(address account, CrazyBalance balance) internal {
-        RebaseQueue storage self = rebaseQueue[account];
-        self.lastBalance = balance;
-        self.prev = rebaseQueue[rebaseQueueHead].prev;
+    function enqueue(RebaseQueue storage self, address account, CrazyBalance balance) internal {
+        RebaseQueueElem storage elem = self.queue[account];
+        elem.lastBalance = balance;
+        elem.prev = self.queue[self.head].prev;
     }
 
-    function _dequeue(address account) internal {
-        RebaseQueue storage self = rebaseQueue[account];
-        self.lastBalance = ZERO_BALANCE;
-        rebaseQueue[self.next].prev = self.prev;
-        if (account == rebaseQueueHead) {
-            rebaseQueueHead = self.next;
+    function dequeue(RebaseQueue storage self, address account) internal {
+        RebaseQueueElem storage elem = self.queue[account];
+        elem.lastBalance = ZERO_BALANCE;
+        self.queue[elem.next].prev = elem.prev;
+        if (account == self.head) {
+            self.head = elem.next;
         } else {
-            rebaseQueue[self.prev].next = self.next;
+            self.queue[elem.prev].next = elem.next;
         }
-        self.prev = address(0);
-        self.next = address(0);
+        elem.prev = address(0);
+        elem.next = address(0);
     }
 
-    function _moveToBack(address account, CrazyBalance balance) internal {
-        RebaseQueue storage self = rebaseQueue[account];
-        self.lastBalance = balance;
+    function moveToBack(RebaseQueue storage self, address account, CrazyBalance balance) internal {
+        RebaseQueueElem storage elem = self.queue[account];
+        elem.lastBalance = balance;
         address prev;
-        if (account == rebaseQueueHead) {
-            rebaseQueueHead = self.next;
-            prev = self.prev;
+        if (account == self.head) {
+            self.head = elem.next;
+            prev = elem.prev;
         } else {
-            rebaseQueue[self.next].prev = self.prev;
-            rebaseQueue[self.prev].next = self.next;
-            prev = rebaseQueue[rebaseQueueHead].prev;
-            self.prev = prev;
+            self.queue[elem.next].prev = elem.prev;
+            self.queue[elem.prev].next = elem.next;
+            prev = self.queue[self.head].prev;
+            elem.prev = prev;
         }
-        self.next = address(0);
-        rebaseQueue[prev].next = account;
+        elem.next = address(0);
+        self.queue[prev].next = account;
     }
 
-    function _rebaseFor(address account, Shares shares, Tokens totalSupply, Shares totalShares) internal returns (CrazyBalance newBalance) {
+    function rebaseFor(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares) internal returns (CrazyBalance newBalance) {
         /*
         if (account == address(pair)) {
             return;
         }
         */
-        CrazyBalance oldBalance = rebaseQueue[account].lastBalance;
+        CrazyBalance oldBalance = self.queue[account].lastBalance;
         newBalance = shares.toCrazyBalance(account, totalSupply, totalShares);
         if (oldBalance != newBalance) {
             emit IERC20.Transfer(address(0), account, (newBalance - oldBalance).toExternal());
         }
     }
 
-    function _processQueue(mapping(address => Shares) storage sharesOf, Tokens totalSupply, Shares totalShares) internal {
-        address cursor = rebaseQueueHead;
+    function processQueue(RebaseQueue storage self, mapping(address => Shares) storage sharesOf, Tokens totalSupply, Shares totalShares) internal {
+        address cursor = self.head;
         for (uint256 i = gasleft() & 7; ; i = i.unsafeDec()) {
-            RebaseQueue storage self = rebaseQueue[cursor];
+            RebaseQueueElem storage elem = self.queue[cursor];
 
-            CrazyBalance oldBalance = self.lastBalance;
+            CrazyBalance oldBalance = elem.lastBalance;
             CrazyBalance newBalance = sharesOf[cursor].toCrazyBalance(cursor, totalSupply, totalShares);
             if (oldBalance != newBalance) {
                 emit IERC20.Transfer(address(0), cursor, (newBalance - oldBalance).toExternal());
             }
-            self.lastBalance = newBalance;
+            elem.lastBalance = newBalance;
             if (i == 0) {
                 break;
             }
-            cursor = self.next;
+            cursor = elem.next;
         }
-        rebaseQueueHead = cursor;
-        // TODO: fixup `rebaseQueue[rebaseQueue[rebaseQueueHead].prev].next` and `rebaseQueue[cursor].next`
+        self.head = cursor;
+        // TODO: fixup `self.queue[self.queue[self.head].prev].next` and `self.queue[cursor].next`
     }
 }

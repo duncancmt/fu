@@ -9,6 +9,7 @@ import {Shares} from "./types/Shares.sol";
 import {CrazyBalance} from "./types/CrazyBalance.sol";
 
 import {Checkpoints} from "./core/Checkpoints.sol";
+import {RebaseQueue} from "./core/RebaseQueue.sol";
 
 abstract contract FUStorage is INonces, IERC5805 {
     mapping(address account => Shares shares) internal _sharesOf;
@@ -16,6 +17,7 @@ abstract contract FUStorage is INonces, IERC5805 {
     Shares internal _totalShares;
     mapping(address owner => mapping(address spender => CrazyBalance allowed)) internal _allowance;
     mapping(address account => address delegatee) public override delegates;
-    Checkpoints _checkpoints;
+    Checkpoints internal _checkpoints;
+    RebaseQueue internal _rebaseQueue;
     mapping(address account => uint256 nonce) public override nonces;
 }

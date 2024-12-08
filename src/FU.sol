@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import {ERC20Base} from "./core/ERC20Base.sol";
 import {FUStorage} from "./FUStorage.sol";
-import {RebaseQueue} from "./core/RebaseQueue.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IERC6372} from "./interfaces/IERC6372.sol";
@@ -15,6 +14,7 @@ import {Settings} from "./core/Settings.sol";
 import {ReflectMath} from "./core/ReflectMath.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 import {Checkpoints, LibCheckpoints} from "./core/Checkpoints.sol";
+import {RebaseQueue, LibRebaseQueue} from "./core/RebaseQueue.sol";
 
 import {BasisPoints} from "./types/BasisPoints.sol";
 import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./types/Shares.sol";
@@ -36,13 +36,14 @@ IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
-contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
+contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     using ChecksumAddress for address;
     using {toCrazyBalance} for uint256;
     using SharesToTokens for Shares;
     using CrazyBalanceArithmetic for Shares;
     using {toVotes} for Shares;
     using LibCheckpoints for Checkpoints;
+    using LibRebaseQueue for RebaseQueue;
 
     function totalSupply() external view override returns (uint256) {
         return Tokens.unwrap(_totalSupply);
@@ -117,7 +118,7 @@ contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
         _sharesOf[to] = shares;
         CrazyBalance mintedTokens = shares.toCrazyBalance(address(type(uint160).max), _totalSupply, _totalShares);
         emit Transfer(address(0), to, mintedTokens.toExternal());
-        _enqueue(to, mintedTokens);
+        _rebaseQueue.enqueue(to, mintedTokens);
     }
 
     function _check() private view returns (bool) {
@@ -313,8 +314,8 @@ contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
             pair.sync();
         }
 
-        CrazyBalance newFromBalance = _rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
-        CrazyBalance newToBalance = _rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance newFromBalance = _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance newToBalance = _rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
 
         {
             // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
@@ -337,9 +338,9 @@ contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
             _checkpoints.mint(delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), clock());
 
             if (cachedToShares == ZERO_SHARES) {
-                _enqueue(to, newToBalance);
+                _rebaseQueue.enqueue(to, newToBalance);
             } else {
-                _moveToBack(to, newToBalance);
+                _rebaseQueue.moveToBack(to, newToBalance);
             }
         } else if (to == address(pair)) {
             _sharesOf[to] = newToShares;
@@ -347,9 +348,9 @@ contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
             _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
 
             if (amount == fromBalance) {
-                _dequeue(from);
+                _rebaseQueue.dequeue(from);
             } else {
-                _moveToBack(from, newFromBalance);
+                _rebaseQueue.moveToBack(from, newFromBalance);
             }
         } else {
             // However, in this last case, it's possible that because we burned some shares, `pair`
@@ -367,21 +368,21 @@ contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
             );
 
             if (cachedToShares == ZERO_SHARES) {
-                _enqueue(to, newToBalance);
+                _rebaseQueue.enqueue(to, newToBalance);
             } else {
-                _moveToBack(to, newToBalance);
+                _rebaseQueue.moveToBack(to, newToBalance);
             }
 
             if (amount == fromBalance) {
-                _dequeue(from);
+                _rebaseQueue.dequeue(from);
             } else {
-                _moveToBack(from, newFromBalance);
+                _rebaseQueue.moveToBack(from, newFromBalance);
             }
 
             pair.sync();
         }
 
-        _processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+        _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
 
         return true;
     }
@@ -559,7 +560,7 @@ contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
             }
         }
 
-        CrazyBalance newFromBalance = _rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance newFromBalance = _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
 
         _sharesOf[from] = newFromShares;
         _totalShares = newTotalShares;
@@ -569,9 +570,9 @@ contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
         _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
 
         if (amount == fromBalance) {
-            _dequeue(from);
+            _rebaseQueue.dequeue(from);
         } else {
-            _moveToBack(from, newFromBalance);
+            _rebaseQueue.moveToBack(from, newFromBalance);
         }
 
         if (newPairShares != cachedPairShares) {
@@ -579,7 +580,7 @@ contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
             pair.sync();
         }
 
-        _processQueue(_sharesOf, newTotalSupply, newTotalShares);
+        _rebaseQueue.processQueue(_sharesOf, newTotalSupply, newTotalShares);
 
         return true;
     }
@@ -619,7 +620,7 @@ contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
             }
         }
 
-        CrazyBalance newFromBalance = _rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance newFromBalance = _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
 
         _sharesOf[from] = newFromShares;
         _totalShares = newTotalShares;
@@ -633,12 +634,12 @@ contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
         pair.sync();
 
         if (amount == fromBalance) {
-            _dequeue(from);
+            _rebaseQueue.dequeue(from);
         } else {
-            _moveToBack(from, newFromBalance);
+            _rebaseQueue.moveToBack(from, newFromBalance);
         }
 
-        _processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+        _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
 
         return true;
     }
