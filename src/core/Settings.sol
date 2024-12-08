@@ -28,7 +28,8 @@ library Settings {
 
     uint8 internal constant DECIMALS = 36;
     uint256 internal constant CRAZY_BALANCE_BASIS = 2 ** 31 - 1; // This ensures no overflow in ReflectMath
-    Tokens internal constant INITIAL_SUPPLY = Tokens.wrap(_UNISWAPV2_MAX_BALANCE * CRAZY_BALANCE_BASIS * ANTI_WHALE_DIVISOR);
+    Tokens internal constant INITIAL_SUPPLY =
+        Tokens.wrap(_UNISWAPV2_MAX_BALANCE * CRAZY_BALANCE_BASIS * ANTI_WHALE_DIVISOR);
     Shares internal constant INITIAL_SHARES = Shares.wrap(Tokens.unwrap(INITIAL_SUPPLY) << 32);
 
     uint256 internal constant INITIAL_SHARES_RATIO = Shares.unwrap(INITIAL_SHARES) / Tokens.unwrap(INITIAL_SUPPLY);

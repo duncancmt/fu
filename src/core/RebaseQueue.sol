@@ -59,7 +59,13 @@ library LibRebaseQueue {
         self.queue[prev].next = account;
     }
 
-    function _rebaseFor(RebaseQueueElem storage elem, address account, Shares shares, Tokens totalSupply, Shares totalShares) internal returns (CrazyBalance newBalance) {
+    function _rebaseFor(
+        RebaseQueueElem storage elem,
+        address account,
+        Shares shares,
+        Tokens totalSupply,
+        Shares totalShares
+    ) internal returns (CrazyBalance newBalance) {
         CrazyBalance oldBalance = elem.lastBalance;
         newBalance = shares.toCrazyBalance(account, totalSupply, totalShares);
         if (oldBalance != newBalance) {
@@ -67,14 +73,21 @@ library LibRebaseQueue {
         }
     }
 
-
-    function rebaseFor(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares) private returns (CrazyBalance) {
+    function rebaseFor(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares)
+        private
+        returns (CrazyBalance)
+    {
         return _rebaseFor(self.queue[account], account, shares, totalSupply, totalShares);
     }
 
-    function processQueue(RebaseQueue storage self, mapping(address => Shares) storage sharesOf, Tokens totalSupply, Shares totalShares) internal {
+    function processQueue(
+        RebaseQueue storage self,
+        mapping(address => Shares) storage sharesOf,
+        Tokens totalSupply,
+        Shares totalShares
+    ) internal {
         address cursor = self.head;
-        for (uint256 i = gasleft() & 7; ; i = i.unsafeDec()) {
+        for (uint256 i = gasleft() & 7;; i = i.unsafeDec()) {
             RebaseQueueElem storage elem = self.queue[cursor];
 
             elem.lastBalance = _rebaseFor(elem, cursor, sharesOf[cursor], totalSupply, totalShares);

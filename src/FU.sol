@@ -82,7 +82,12 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         {
             // We don't want to enqueue pair, so we have to do this a little jank
             _sharesOf[address(pair)] = _totalShares.div(Settings.INITIAL_LIQUIDITY_DIVISOR);
-            emit Transfer(address(0), address(pair), _sharesOf[address(pair)].toCrazyBalance(address(type(uint160).max), _totalSupply, _totalShares).toExternal());
+            emit Transfer(
+                address(0),
+                address(pair),
+                _sharesOf[address(pair)].toCrazyBalance(address(type(uint160).max), _totalSupply, _totalShares)
+                    .toExternal()
+            );
         }
         {
             Shares toMint = _totalShares - _sharesOf[DEAD] - _sharesOf[address(pair)];
@@ -314,8 +319,12 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             pair.sync();
         }
 
-        CrazyBalance newFromBalance = from == address(pair) ? ZERO_BALANCE : _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
-        CrazyBalance newToBalance = to == address(pair) ? ZERO_BALANCE : _rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance newFromBalance = from == address(pair)
+            ? ZERO_BALANCE
+            : _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance newToBalance = to == address(pair)
+            ? ZERO_BALANCE
+            : _rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
 
         {
             // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
@@ -564,7 +573,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         _totalShares = newTotalShares;
         _totalSupply = newTotalSupply;
 
-        CrazyBalance newFromBalance = _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance newFromBalance =
+            _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
 
         emit Transfer(from, address(0), amount.toExternal());
 
@@ -624,7 +634,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         _sharesOf[from] = newFromShares;
         _totalShares = newTotalShares;
 
-        CrazyBalance newFromBalance = _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance newFromBalance =
+            _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
 
         emit Transfer(from, address(0), amount.toExternal());
 
