@@ -11,7 +11,7 @@ import {UnsafeMath} from "../lib/UnsafeMath.sol";
 struct RebaseQueueElem {
     address prev;
     address next;
-    CrazyBalance lastBalance;
+    CrazyBalance lastTokens;
 }
 
 struct RebaseQueue {
@@ -23,15 +23,15 @@ library LibRebaseQueue {
     using UnsafeMath for uint256;
     using CrazyBalanceArithmetic for Shares;
 
-    function enqueue(RebaseQueue storage self, address account, CrazyBalance balance) internal {
+    function enqueue(RebaseQueue storage self, address account, CrazyBalance tokens) internal {
         RebaseQueueElem storage elem = self.queue[account];
-        elem.lastBalance = balance;
+        elem.lastTokens = tokens;
         elem.prev = self.queue[self.head].prev;
     }
 
     function dequeue(RebaseQueue storage self, address account) internal {
         RebaseQueueElem storage elem = self.queue[account];
-        elem.lastBalance = ZERO_BALANCE;
+        elem.lastTokens = ZERO_BALANCE;
         self.queue[elem.next].prev = elem.prev;
         if (account == self.head) {
             self.head = elem.next;
@@ -42,9 +42,9 @@ library LibRebaseQueue {
         elem.next = address(0);
     }
 
-    function moveToBack(RebaseQueue storage self, address account, CrazyBalance balance) internal {
+    function moveToBack(RebaseQueue storage self, address account, CrazyBalance tokens) internal {
         RebaseQueueElem storage elem = self.queue[account];
-        elem.lastBalance = balance;
+        elem.lastTokens = tokens;
         address prev;
         if (account == self.head) {
             self.head = elem.next;
@@ -65,19 +65,18 @@ library LibRebaseQueue {
         Shares shares,
         Tokens totalSupply,
         Shares totalShares
-    ) private returns (CrazyBalance newBalance) {
-        CrazyBalance oldBalance = elem.lastBalance;
-        newBalance = shares.toCrazyBalance(address(type(uint160).max), totalSupply, totalShares);
-        if (oldBalance != newBalance) {
-            emit IERC20.Transfer(address(0), account, (newBalance - oldBalance).toExternal());
+    ) private returns (CrazyBalance newTokens) {
+        CrazyBalance oldTokens = elem.lastTokens;
+        newTokens = shares.toCrazyBalance(address(type(uint160).max), totalSupply, totalShares);
+        if (oldTokens != newTokens) {
+            emit IERC20.Transfer(address(0), account, (newTokens - oldTokens).toExternal());
         }
     }
 
     function rebaseFor(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares)
         internal
-        returns (CrazyBalance)
     {
-        return _rebaseFor(self.queue[account], account, shares, totalSupply, totalShares);
+        _rebaseFor(self.queue[account], account, shares, totalSupply, totalShares);
     }
 
     function processQueue(
@@ -90,7 +89,7 @@ library LibRebaseQueue {
         for (uint256 i = gasleft() & 7;; i = i.unsafeDec()) {
             RebaseQueueElem storage elem = self.queue[cursor];
 
-            elem.lastBalance = _rebaseFor(elem, cursor, sharesOf[cursor], totalSupply, totalShares);
+            elem.lastTokens = _rebaseFor(elem, cursor, sharesOf[cursor], totalSupply, totalShares);
             if (i == 0) {
                 break;
             }
