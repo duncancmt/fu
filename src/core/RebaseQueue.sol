@@ -91,6 +91,8 @@ library LibRebaseQueue {
         newTokens = shares.toCrazyBalance(address(type(uint160).max), totalSupply, totalShares);
         if (newTokens > oldTokens) {
             emit IERC20.Transfer(address(0), account, (newTokens - oldTokens).toExternal());
+        } else {
+            newTokens = oldTokens;
         }
     }
 
