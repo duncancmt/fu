@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {ERC20Base} from "./core/ERC20Base.sol";
 import {FUStorage} from "./FUStorage.sol";
+import {RebaseQueue} from "./core/RebaseQueue.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IERC6372} from "./interfaces/IERC6372.sol";
@@ -35,7 +36,7 @@ IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
-contract FU is FUStorage, TransientStorageLayout, ERC20Base {
+contract FU is FUStorage, RebaseQueue, TransientStorageLayout, ERC20Base {
     using ChecksumAddress for address;
     using {toCrazyBalance} for uint256;
     using SharesToTokens for Shares;
@@ -77,7 +78,11 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         _totalSupply = Settings.INITIAL_SUPPLY;
         _totalShares = Settings.INITIAL_SHARES;
         _mintShares(DEAD, Settings.oneTokenInShares());
-        _mintShares(address(pair), _totalShares.div(Settings.INITIAL_LIQUIDITY_DIVISOR));
+        {
+            // We don't want to enqueue pair, so we have to do this a little jank
+            _sharesOf[address(pair)] = _totalShares.div(Settings.INITIAL_LIQUIDITY_DIVISOR);
+            emit Transfer(address(0), address(pair), _sharesOf[address(pair)].toCrazyBalance(address(type(uint160).max), _totalSupply, _totalShares).toExternal());
+        }
         {
             Shares toMint = _totalShares - _sharesOf[DEAD] - _sharesOf[address(pair)];
             // slither-disable-next-line divide-before-multiply
@@ -108,14 +113,11 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function _mintShares(address to, Shares shares) private {
-        Shares oldShares = _sharesOf[to];
-        Shares newShares = oldShares + shares;
-        _sharesOf[to] = newShares;
-        emit Transfer(
-            address(0),
-            to,
-            newShares.toCrazyBalance(address(type(uint160).max), _totalSupply, _totalShares).toExternal()
-        );
+        assert(_sharesOf[to] == ZERO_SHARES);
+        _sharesOf[to] = shares;
+        CrazyBalance mintedTokens = shares.toCrazyBalance(address(type(uint160).max), _totalSupply, _totalShares);
+        emit Transfer(address(0), to, mintedTokens.toExternal());
+        _enqueue(to, mintedTokens);
     }
 
     function _check() private view returns (bool) {
@@ -311,6 +313,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             pair.sync();
         }
 
+        CrazyBalance newFromBalance = _rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+        CrazyBalance newToBalance = _rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
+
         {
             // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
             // units as if it were held by `from`. Also note that when `to` is a whale, the `amount`
@@ -330,10 +335,22 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             _sharesOf[to] = newToShares;
             _totalShares = newTotalShares;
             _checkpoints.mint(delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), clock());
+
+            if (cachedToShares == ZERO_SHARES) {
+                _enqueue(to, newToBalance);
+            } else {
+                _moveToBack(to, newToBalance);
+            }
         } else if (to == address(pair)) {
             _sharesOf[to] = newToShares;
             _totalShares = newTotalShares;
             _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
+
+            if (amount == fromBalance) {
+                _dequeue(from);
+            } else {
+                _moveToBack(from, newFromBalance);
+            }
         } else {
             // However, in this last case, it's possible that because we burned some shares, `pair`
             // is now over the whale limit, even though we applied the limit when we loaded
@@ -348,8 +365,23 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
                 originalFromShares.toVotes() - newFromShares.toVotes(),
                 clock()
             );
+
+            if (cachedToShares == ZERO_SHARES) {
+                _enqueue(to, newToBalance);
+            } else {
+                _moveToBack(to, newToBalance);
+            }
+
+            if (amount == fromBalance) {
+                _dequeue(from);
+            } else {
+                _moveToBack(from, newFromBalance);
+            }
+
             pair.sync();
         }
+
+        _processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
 
         return true;
     }
@@ -527,6 +559,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             }
         }
 
+        CrazyBalance newFromBalance = _rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+
         _sharesOf[from] = newFromShares;
         _totalShares = newTotalShares;
         _totalSupply = newTotalSupply;
@@ -534,10 +568,18 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
         _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
 
+        if (amount == fromBalance) {
+            _dequeue(from);
+        } else {
+            _moveToBack(from, newFromBalance);
+        }
+
         if (newPairShares != cachedPairShares) {
             _sharesOf[address(pair)] = newPairShares;
             pair.sync();
         }
+
+        _processQueue(_sharesOf, newTotalSupply, newTotalShares);
 
         return true;
     }
@@ -577,6 +619,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             }
         }
 
+        CrazyBalance newFromBalance = _rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+
         _sharesOf[from] = newFromShares;
         _totalShares = newTotalShares;
         emit Transfer(from, address(0), amount.toExternal());
@@ -585,8 +629,16 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
         if (newPairShares != cachedPairShares) {
             _sharesOf[address(pair)] = cachedPairShares;
-            pair.sync();
         }
+        pair.sync();
+
+        if (amount == fromBalance) {
+            _dequeue(from);
+        } else {
+            _moveToBack(from, newFromBalance);
+        }
+
+        _processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
 
         return true;
     }
