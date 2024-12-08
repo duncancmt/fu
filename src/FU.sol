@@ -78,7 +78,14 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
         _totalSupply = Settings.INITIAL_SUPPLY;
         _totalShares = Settings.INITIAL_SHARES;
-        _mintShares(DEAD, Settings.oneTokenInShares());
+        {
+            // The queue is empty, so we have to special-case the first insertion. `DEAD` will
+            // always hold a token balance, which makes many things simpler.
+            _sharesOf[DEAD] = Settings.oneTokenInShares();
+            CrazyBalance balance = _sharesOf[DEAD].toCrazyBalance(_totalSupply, _totalShares);
+            emit Transfer(address(0), DEAD, balance.toExternal());
+            _rebaseQueue.initialize(DEAD, balance);
+        }
         {
             // We don't want to enqueue pair, so we have to do this a little jank
             _sharesOf[address(pair)] = _totalShares.div(Settings.INITIAL_LIQUIDITY_DIVISOR);

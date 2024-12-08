@@ -24,6 +24,13 @@ library LibRebaseQueue {
     using UnsafeMath for uint256;
     using CrazyBalanceArithmetic for Shares;
 
+    function initialize(RebaseQueue storage self, address account, CrazyBalance tokens) internal {
+        self.head = account;
+        RebaseQueueElem storage elem = self.queue[account];
+        elem.prev = account;
+        elem.lastTokens = tokens;
+    }
+
     function enqueue(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares)
         internal
     {
