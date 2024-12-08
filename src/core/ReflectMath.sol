@@ -79,31 +79,6 @@ library ReflectMath {
                 newTotalShares = newTotalShares + incr;
                 //console.log("incr", Shares.unwrap(incr));
             }
-            if (newTotalShares > totalShares) {
-                // TODO: check to see if this branch is still necessary
-                //console.log("clamp");
-                Shares decrTotal = newTotalShares - totalShares;
-                Shares decrFrom;
-                Shares decrTo;
-                if (newFromShares > newToShares) {
-                    //console.log("clamp from");
-                    decrFrom = Shares.wrap(
-                        Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares)
-                            / Shares.unwrap(newFromShares + newToShares)
-                    );
-                    decrTo = decrTotal - decrFrom;
-                } else {
-                    //console.log("clamp to");
-                    decrTo = Shares.wrap(
-                        Shares.unwrap(decrTotal) * Shares.unwrap(newToShares)
-                            / Shares.unwrap(newFromShares + newToShares)
-                    );
-                    decrFrom = decrTotal - decrTo;
-                }
-                newTotalShares = totalShares;
-                newFromShares = newFromShares - decrFrom;
-                newToShares = newToShares - decrTo;
-            }
         }
         // TODO: previously the block below was an `else` block. This is more accurate, but it is *MUCH* less gas efficient
         {
@@ -145,12 +120,6 @@ library ReflectMath {
                 newToShares = newToShares.inc(condition);
                 newTotalShares = newTotalShares.inc(condition);
             }
-            if (newToShares < toShares) {
-                // TODO: maybe remove this branch?
-                //console.log("clamp to");
-                newTotalShares = newTotalShares + (toShares - newToShares);
-                newToShares = toShares;
-            }
 
             afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
             {
@@ -169,7 +138,54 @@ library ReflectMath {
                 newFromShares = newFromShares.inc(condition);
                 newTotalShares = newTotalShares.inc(condition);
             }
+
+            /*
+            afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
+            {
+                bool condition = afterToBalance > expectedAfterToBalanceLo;
+                if (condition) {
+                    //console.log("to round down");
+                }
+                newToShares = newToShares.dec(condition);
+                newTotalShares = newTotalShares.dec(condition);
+            }
+            {
+                bool condition = afterToBalance < expectedAfterToBalanceLo;
+                if (condition) {
+                    //console.log("to round up");
+                }
+                newToShares = newToShares.inc(condition);
+                newTotalShares = newTotalShares.inc(condition);
+            }
+            */
         }
+
+        if (newTotalShares > totalShares) {
+            // TODO: check to see if this branch is still necessary
+            //console.log("clamp");
+            Shares decrTotal = newTotalShares - totalShares;
+            Shares decrFrom;
+            Shares decrTo;
+            if (newFromShares > newToShares) {
+                //console.log("clamp from");
+                decrFrom = Shares.wrap(
+                    Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares)
+                        / Shares.unwrap(newFromShares + newToShares)
+                );
+                decrTo = decrTotal - decrFrom;
+            } else {
+                //console.log("clamp to");
+                decrTo = Shares.wrap(
+                    Shares.unwrap(decrTotal) * Shares.unwrap(newToShares)
+                        / Shares.unwrap(newFromShares + newToShares)
+                );
+                decrFrom = decrTotal - decrTo;
+            }
+            newTotalShares = totalShares;
+            newFromShares = newFromShares - decrFrom;
+            newToShares = newToShares - decrTo;
+        }
+
         //console.log("===");
         //console.log("           taxRate", BasisPoints.unwrap(taxRate));
         //console.log("       totalSupply", Tokens.unwrap(totalSupply));
