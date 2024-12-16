@@ -130,6 +130,20 @@ library CrazyBalanceArithmetic {
             );
         }
     }
+
+    function toPairBalance(Tokens tokens) internal pure returns (CrazyBalance) {
+        return CrazyBalance.wrap(Tokens.unwrap(tokens) / Settings.CRAZY_BALANCE_BASIS);
+    }
+
+    function toPairBalance(Tokens tokens, address account) internal pure returns (CrazyBalance) {
+        return CrazyBalance.wrap(Tokens.unwrap(tokens) / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR));
+    }
+
+    function toPairTokens(CrazyBalance balance) internal pure returns (Tokens) {
+        unchecked {
+            return Tokens.wrap(CrazyBalance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS);
+        }
+    }
 }
 
 using CrazyBalanceArithmetic for CrazyBalance global;

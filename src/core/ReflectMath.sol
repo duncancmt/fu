@@ -336,14 +336,6 @@ library ReflectMath {
 
     // getDeliverShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
 
-    function getDeliverSharesPairWhale(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
-        internal
-        view
-        returns (Shares newFromShares, Shares newTotalShares)
-    {
-        revert("unimplemented");
-    }
-
     function getBurnShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
         internal
         view
@@ -356,12 +348,4 @@ library ReflectMath {
     }
 
     // getBurnShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
-
-    function getBurnSharesPairWhale(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
-        internal
-        view
-        returns (Shares newFromShares, Shares newTotalShares)
-    {
-        revert("unimplemented");
-    }
 }

@@ -3,6 +3,8 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
+import {Settings} from "./Settings.sol";
+
 import {CrazyBalance, ZERO as ZERO_BALANCE, CrazyBalanceArithmetic} from "../types/CrazyBalance.sol";
 import {Shares} from "../types/Shares.sol";
 import {Tokens} from "../types/Tokens.sol";
@@ -127,7 +129,11 @@ library LibRebaseQueue {
         address cursor = self.head;
         RebaseQueueElem storage elem = self.queue[cursor];
         for (uint256 i = gasleft() & 7;; i = i.unsafeDec()) {
-            elem.lastTokens = _rebaseFor(elem, cursor, sharesOf[cursor], totalSupply, totalShares);
+            Shares shares = sharesOf[cursor];
+            if (shares > totalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
+                shares = totalShares.div(Settings.ANTI_WHALE_DIVISOR);
+            }
+            elem.lastTokens = _rebaseFor(elem, cursor, shares, totalSupply, totalShares);
             cursor = elem.next;
             if (i == 0) {
                 break;

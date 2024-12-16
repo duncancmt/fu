@@ -14,6 +14,7 @@ import {RebaseQueue} from "./core/RebaseQueue.sol";
 abstract contract FUStorage is INonces, IERC5805 {
     mapping(address account => Shares shares) internal _sharesOf;
     Tokens internal _totalSupply;
+    CrazyBalance internal _pairBalance;
     Shares internal _totalShares;
     mapping(address owner => mapping(address spender => CrazyBalance allowed)) internal _allowance;
     mapping(address account => address delegatee) public override delegates;
