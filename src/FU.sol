@@ -244,7 +244,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             Shares cachedTotalShares
         )
     {
-        (originalShares0, cachedShares0, originalShares1, cachedShares1, cachedTotalShares) = _loadAccounts(account0, account1);
+        (originalShares0, cachedShares0, originalShares1, cachedShares1, cachedTotalShares) =
+            _loadAccounts(account0, account1);
         cachedTotalSupply = _totalSupply;
         balance0 = cachedShares0.toCrazyBalance(account0, cachedTotalSupply, cachedTotalShares);
     }
@@ -272,10 +273,13 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         Tokens amountTokens = amount.toPairTokens();
         Tokens newTotalSupply = cachedTotalSupply + amountTokens;
 
-        (Shares newShares, Shares newTotalShares) = ReflectMath.getTransferShares(taxRate, cachedTotalSupply, cachedTotalShares, amount.toPairTokens(), cachedShares);
+        (Shares newShares, Shares newTotalShares) = ReflectMath.getTransferShares(
+            taxRate, cachedTotalSupply, cachedTotalShares, amount.toPairTokens(), cachedShares
+        );
 
         // TODO: specialize `toCrazyBalance`
-        CrazyBalance transferAmount = newShares.toCrazyBalance(address(pair), newTotalSupply, newTotalShares) - cachedTotalShares.toCrazyBalance(address(pair), cachedTotalSupply, cachedTotalShares);
+        CrazyBalance transferAmount = newShares.toCrazyBalance(address(pair), newTotalSupply, newTotalShares)
+            - cachedTotalShares.toCrazyBalance(address(pair), cachedTotalSupply, cachedTotalShares);
         CrazyBalance burnAmount = amount - transferAmount;
 
         (newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);

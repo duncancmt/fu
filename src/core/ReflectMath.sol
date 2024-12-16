@@ -310,7 +310,13 @@ library ReflectMath {
         revert("unimplemented");
     }
 
-    function getTransferShares(BasisPoints taxRate, Tokens totalSupply, Shares totalShares, Tokens amount, Shares toShares) internal view returns (Shares newToShares, Shares newTotalShares) {
+    function getTransferShares(
+        BasisPoints taxRate,
+        Tokens totalSupply,
+        Shares totalShares,
+        Tokens amount,
+        Shares toShares
+    ) internal view returns (Shares newToShares, Shares newTotalShares) {
         revert("unimplemented");
     }
 
