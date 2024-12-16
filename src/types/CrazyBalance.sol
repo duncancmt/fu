@@ -110,6 +110,12 @@ library CrazyBalanceArithmetic {
         return toCrazyBalance(shares, address(type(uint160).max), totalSupply, totalShares);
     }
 
+    function toCrazyBalance(Tokens tokens, address account) internal pure returns (CrazyBalance) {
+        unchecked {
+            return CrazyBalance.wrap(Tokens.unwrap(tokens) / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR));
+        }
+    }
+
     function toTokens(CrazyBalance balance, address account) internal pure returns (Tokens) {
         unchecked {
             // Checking for overflow in the multiplication is unnecessary. Checking for division by

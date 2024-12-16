@@ -224,6 +224,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function balanceOf(address account) external view override returns (uint256) {
+        if (account == address(pair)) {
+            return _pairBalance.toExternal();
+        }
         (CrazyBalance balance,,,,) = _balanceOf(account);
         return balance.toExternal();
     }
@@ -255,28 +258,53 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function _transferFromPair(address to, CrazyBalance amount) private returns (bool) {
-        revert("unimplemented");
-        /*
-            _rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
-
-            _sharesOf[from] = newFromShares;
-            _sharesOf[to] = newToShares;
-            _totalShares = newTotalShares;
-            emit Transfer(from, to, transferAmount.toExternal());
-            emit Transfer(from, address(0), burnAmount.toExternal());
-
-            _checkpoints.mint(delegates[to], newToShares.toVotes() - cachedToShares.toVotes(), clock());
-
-            if (cachedToShares == ZERO_SHARES) {
-                _rebaseQueue.enqueue(to, newToShares, cachedTotalSupply, newTotalShares);
-            } else {
-                _rebaseQueue.moveToBack(to, newToShares, cachedTotalSupply, newTotalShares);
+        CrazyBalance pairBalance = _pairBalance;
+        if (amount > pairBalance) {
+            if (_check()) {
+                revert ERC20InsufficientBalance(address(pair), pairBalance.toExternal(), amount.toExternal());
             }
+            return false;
+        }
 
-            _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+        BasisPoints taxRate = _tax();
+        (Shares originalShares, Shares cachedShares, Shares cachedTotalShares) = _loadAccount(to);
+        Tokens cachedTotalSupply = _totalSupply;
+        Tokens amountTokens = amount.toPairTokens();
+        Tokens newTotalSupply = cachedTotalSupply + amountTokens;
 
-            return true;
-        */
+        (Shares newShares, Shares newTotalShares) = ReflectMath.getTransferShares(taxRate, cachedTotalSupply, cachedTotalShares, amount.toPairTokens(), cachedShares);
+
+        // TODO: specialize `toCrazyBalance`
+        CrazyBalance transferAmount = newShares.toCrazyBalance(address(pair), newTotalSupply, newTotalShares) - cachedTotalShares.toCrazyBalance(address(pair), cachedTotalSupply, cachedTotalShares);
+        CrazyBalance burnAmount = amount - transferAmount;
+
+        (newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);
+
+        _rebaseQueue.rebaseFor(to, cachedShares, cachedTotalSupply, cachedTotalShares);
+
+        _pairBalance = pairBalance - amount;
+        _sharesOf[to] = newShares;
+        _totalSupply = newTotalSupply;
+        _totalShares = newTotalShares;
+
+        emit Transfer(address(pair), to, transferAmount.toExternal());
+        emit Transfer(address(pair), address(0), burnAmount.toExternal());
+
+        if (newShares >= originalShares) {
+            _checkpoints.mint(delegates[to], newShares.toVotes() - originalShares.toVotes(), clock());
+        } else {
+            _checkpoints.burn(delegates[to], originalShares.toVotes() - newShares.toVotes(), clock());
+        }
+
+        if (originalShares == ZERO_SHARES) {
+            _rebaseQueue.enqueue(to, newShares, newTotalSupply, newTotalShares);
+        } else {
+            _rebaseQueue.moveToBack(to, newShares, newTotalSupply, newTotalShares);
+        }
+
+        _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+
+        return true;
     }
 
     function _transferToPair(address from, CrazyBalance amount) private returns (bool) {
