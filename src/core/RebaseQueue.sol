@@ -28,6 +28,7 @@ library LibRebaseQueue {
         self.head = account;
         RebaseQueueElem storage elem = self.queue[account];
         elem.prev = account;
+        elem.next = account;
         elem.lastTokens = tokens;
     }
 
@@ -35,26 +36,33 @@ library LibRebaseQueue {
         internal
     {
         RebaseQueueElem storage elem = self.queue[account];
-        RebaseQueueElem storage head = self.queue[self.head];
-        address tail = head.prev;
+        address head = self.head;
+        RebaseQueueElem storage headElem = self.queue[head];
+        address tail = headElem.prev;
 
-        elem.lastTokens = shares.toCrazyBalance(totalSupply, totalShares);
-        head.prev = account;
         elem.prev = tail;
+        elem.next = head;
+        elem.lastTokens = shares.toCrazyBalance(totalSupply, totalShares);
+
         self.queue[tail].next = account;
+        headElem.prev = account;
     }
 
     function dequeue(RebaseQueue storage self, address account) internal {
         RebaseQueueElem storage elem = self.queue[account];
         elem.lastTokens = ZERO_BALANCE;
-        self.queue[elem.next].prev = elem.prev;
-        if (account == self.head) {
-            self.head = elem.next;
-        } else {
-            self.queue[elem.prev].next = elem.next;
-        }
+        address prev = elem.prev;
+        address next = elem.next;
+
         elem.prev = address(0);
         elem.next = address(0);
+
+        self.queue[prev].next = next;
+        self.queue[next].prev = prev;
+
+        if (self.head == account) {
+            self.head = next;
+        }
     }
 
     function moveToBack(
@@ -65,19 +73,27 @@ library LibRebaseQueue {
         Shares totalShares
     ) internal {
         RebaseQueueElem storage elem = self.queue[account];
-        elem.lastTokens = shares.toCrazyBalance(totalSupply, totalShares);
-        address prev;
-        if (account == self.head) {
+
+        if (self.head == account) {
             self.head = elem.next;
-            prev = elem.prev;
-        } else {
-            self.queue[elem.next].prev = elem.prev;
-            self.queue[elem.prev].next = elem.next;
-            prev = self.queue[self.head].prev;
-            elem.prev = prev;
+            return;
         }
-        elem.next = address(0);
-        self.queue[prev].next = account;
+
+        address prev = elem.prev;
+        address next = elem.next;
+        address head = self.head;
+        RebaseQueueElem storage headElem = self.queue[head];
+        address tail = headElem.prev;
+
+        elem.prev = tail;
+        elem.next = head;
+        elem.lastTokens = shares.toCrazyBalance(totalSupply, totalShares);
+
+        self.queue[prev].next = next;
+        self.queue[next].prev = prev;
+
+        self.queue[tail].next = account;
+        headElem.prev = account;
     }
 
     function _rebaseFor(
@@ -110,19 +126,14 @@ library LibRebaseQueue {
     ) internal {
         address cursor = self.head;
         RebaseQueueElem storage elem = self.queue[cursor];
-        self.queue[elem.prev].next = cursor;
         for (uint256 i = gasleft() & 7;; i = i.unsafeDec()) {
             elem.lastTokens = _rebaseFor(elem, cursor, sharesOf[cursor], totalSupply, totalShares);
+            cursor = elem.next;
             if (i == 0) {
                 break;
             }
-            cursor = elem.next;
-            if (cursor == address(0)) {
-                return;
-            }
             elem = self.queue[cursor];
         }
-        elem.next = address(0);
         self.head = cursor;
     }
 }
