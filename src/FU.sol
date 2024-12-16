@@ -63,6 +63,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     constructor(bytes20 gitCommit, address[] memory initialHolders) payable {
         require(Settings.SHARES_TO_VOTES_DIVISOR >= Settings.INITIAL_SHARES_RATIO);
 
+        require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
         require(msg.value >= 1 ether);
         require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
