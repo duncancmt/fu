@@ -271,9 +271,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         (Shares originalShares, Shares cachedShares, Shares cachedTotalShares) = _loadAccount(to);
         Tokens cachedTotalSupply = _totalSupply;
         Tokens amountTokens = amount.toPairTokens();
-        Tokens newTotalSupply = cachedTotalSupply + amountTokens;
 
-        (Shares newShares, Shares newTotalShares) = ReflectMath.getTransferShares(
+        (Shares newShares, Tokens newTotalSupply, Shares newTotalShares) = ReflectMath.getTransferShares(
             taxRate, cachedTotalSupply, cachedTotalShares, amount.toPairTokens(), cachedShares
         );
 

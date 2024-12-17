@@ -173,6 +173,54 @@ contract ReflectMathTest is Boilerplate, Test {
         }
     }
 
+    function testTransferSomePair(
+        Tokens totalSupply,
+        Shares totalShares,
+        Shares toShares,
+        Tokens amount,
+        BasisPoints taxRate/*,
+        uint256 sharesRatio*/
+    ) public view virtual {
+        Tokens toBalance;
+        (totalSupply, totalShares, toShares, toBalance) =
+            _boundCommon(totalSupply, totalShares, toShares, /* sharesRatio */ 0);
+        amount = Tokens.wrap(bound(Tokens.unwrap(amount), 1 wei, Tokens.unwrap(totalSupply.div(Settings.ANTI_WHALE_DIVISOR)) - 1 wei));
+
+        taxRate = BasisPoints.wrap(
+            uint16(
+                bound(
+                    BasisPoints.unwrap(taxRate),
+                    BasisPoints.unwrap(Settings.MIN_TAX),
+                    BasisPoints.unwrap(Settings.MAX_TAX)
+                )
+            )
+        );
+
+        (Shares newToShares, Tokens newTotalSupply, Shares newTotalShares) = ReflectMath.getTransferShares(taxRate, totalSupply, totalShares, amount, toShares);
+
+        assertGe(Shares.unwrap(newToShares), Shares.unwrap(toShares), "to shares decreased");
+        assertGe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares decreased");
+        assertEq(
+            Shares.unwrap(newTotalShares - totalShares),
+            Shares.unwrap(newToShares - toShares),
+            "shares delta"
+        );
+
+        Tokens newToBalance = newToShares.toTokens(newTotalSupply, newTotalShares);
+
+        // TODO: tighter bounds
+        Tokens expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, taxRate));
+        Tokens expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - taxRate));
+        //if (newToShares == toShares) {
+            assertGe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
+            assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi), "newToBalance upper");
+        /*
+        } else {
+            assertEq(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance");
+        }
+        */
+    }
+
     function testDeliver(
         Tokens totalSupply,
         Shares totalShares,
