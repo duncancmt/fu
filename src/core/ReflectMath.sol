@@ -317,7 +317,19 @@ library ReflectMath {
         Tokens amount,
         Shares toShares
     ) internal view returns (Shares newToShares, Shares newTotalShares) {
-        revert("unimplemented");
+        TokensXBasisPointsXShares t2 = alloc3().omul(scale(amount, BASIS - taxRate), totalShares); // d * b * (1-f)
+        TokensXBasisPointsXShares t4 = alloc3().omul(scale(totalSupply, BASIS), toShares); // a * c * BASIS
+        TokensXBasisPointsXShares t5 = alloc3().oadd(t2, t4);
+        Shares uninvolvedShares = totalShares - toShares;
+        TokensXBasisPointsXShares2 n = alloc4().omul(t5, uninvolvedShares);
+
+        TokensXBasisPointsXShares t7 = alloc3().omul(scale(totalSupply, BASIS), totalShares); // b * c * BASIS
+        TokensXBasisPointsXShares t9 = alloc3().omul(scale(amount, taxRate), totalShares); // b * d * f
+        TokensXBasisPointsXShares t10 = alloc3().oadd(t9, t7);
+        TokensXBasisPointsXShares d = alloc3().osub(t10, t4);
+
+        newToShares = n.div(d);
+        newTotalShares = newToShares - toShares + totalShares;
     }
 
     function getDeliverShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
