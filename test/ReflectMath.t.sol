@@ -184,7 +184,9 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens toBalance;
         (totalSupply, totalShares, toShares, toBalance) =
             _boundCommon(totalSupply, totalShares, toShares, /* sharesRatio */ 0);
-        amount = Tokens.wrap(bound(Tokens.unwrap(amount), 1 wei, Tokens.unwrap(totalSupply.div(Settings.ANTI_WHALE_DIVISOR)) - 1 wei));
+        amount = Tokens.wrap(
+            bound(Tokens.unwrap(amount), 1 wei, Tokens.unwrap(totalSupply.div(Settings.ANTI_WHALE_DIVISOR)) - 1 wei)
+        );
 
         taxRate = BasisPoints.wrap(
             uint16(
@@ -196,15 +198,12 @@ contract ReflectMathTest is Boilerplate, Test {
             )
         );
 
-        (Shares newToShares, Tokens newTotalSupply, Shares newTotalShares) = ReflectMath.getTransferShares(taxRate, totalSupply, totalShares, amount, toShares);
+        (Shares newToShares, Tokens newTotalSupply, Shares newTotalShares) =
+            ReflectMath.getTransferShares(taxRate, totalSupply, totalShares, amount, toShares);
 
         assertGe(Shares.unwrap(newToShares), Shares.unwrap(toShares), "to shares decreased");
         assertGe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares decreased");
-        assertEq(
-            Shares.unwrap(newTotalShares - totalShares),
-            Shares.unwrap(newToShares - toShares),
-            "shares delta"
-        );
+        assertEq(Shares.unwrap(newTotalShares - totalShares), Shares.unwrap(newToShares - toShares), "shares delta");
 
         Tokens newToBalance = newToShares.toTokens(newTotalSupply, newTotalShares);
 
