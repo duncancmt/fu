@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
+import {IERC1046} from "../interfaces/IERC1046.sol";
 import {IERC2612} from "../interfaces/IERC2612.sol";
 import {IERC5267} from "../interfaces/IERC5267.sol";
 import {IERC5805} from "../interfaces/IERC5805.sol";
@@ -10,7 +11,7 @@ import {IERC7674} from "../interfaces/IERC7674.sol";
 
 import {CrazyBalance, toCrazyBalance} from "../types/CrazyBalance.sol";
 
-abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 {
+abstract contract ERC20Base is IERC1046, IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 {
     using {toCrazyBalance} for uint256;
 
     constructor() {

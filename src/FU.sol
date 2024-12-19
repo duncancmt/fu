@@ -31,6 +31,7 @@ import {
 
 import {Math} from "./lib/Math.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
+import {IPFS} from "./lib/IPFS.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
@@ -45,6 +46,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     using {toVotes} for Shares;
     using LibCheckpoints for Checkpoints;
     using LibRebaseQueue for RebaseQueue;
+    using IPFS for string;
+    using IPFS for bytes32;
 
     function totalSupply() external view override returns (uint256) {
         return Tokens.unwrap(_totalSupply + _pairBalance.toPairTokens());
@@ -52,6 +55,12 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
     /// @custom:security non-reentrant
     IUniswapV2Pair public immutable pair;
+
+    bytes32 internal immutable _logoHash;
+
+    function tokenURI() external view override returns (string memory) {
+        return _logoHash.CIDv0();
+    }
 
     // This mapping is actually in transient storage. It's placed here so that
     // solc reserves a slot for it during storage layout generation. Solc 0.8.28
@@ -61,7 +70,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
     event GitCommit(bytes20 indexed gitCommit);
 
-    constructor(bytes20 gitCommit, address[] memory initialHolders) payable {
+    constructor(bytes20 gitCommit, string memory logo, address[] memory initialHolders) payable {
         require(Settings.SHARES_TO_VOTES_DIVISOR >= Settings.INITIAL_SHARES_RATIO);
 
         require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
@@ -72,6 +81,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
 
         emit GitCommit(gitCommit);
+        _logoHash = logo.dagPbUnixFsHash();
 
         // slither-disable-next-line low-level-calls
         (bool success,) = address(WETH).call{value: address(this).balance}("");
