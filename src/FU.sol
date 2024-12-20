@@ -372,6 +372,12 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             }
             return false;
         }
+        if (to == DEAD) {
+            if (_check()) {
+                revert ERC20InvalidReceiver(to);
+            }
+            return false;
+        }
         if (to == address(this)) {
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
