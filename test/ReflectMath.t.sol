@@ -8,7 +8,7 @@ import {BasisPoints, BASIS} from "src/types/BasisPoints.sol";
 import {Shares} from "src/types/Shares.sol";
 import {Tokens} from "src/types/Tokens.sol";
 import {TokensXShares, tmp, alloc, SharesToTokens} from "src/types/TokensXShares.sol";
-import {TokensXBasisPoints, scale, castUp} from "src/types/TokensXBasisPoints.sol";
+import {TokensXBasisPoints, scale, cast, castUp} from "src/types/TokensXBasisPoints.sol";
 
 import {UnsafeMath} from "src/lib/UnsafeMath.sol";
 
@@ -173,7 +173,7 @@ contract ReflectMathTest is Boilerplate, Test {
         }
     }
 
-    function testTransferSomePair(
+    function testTransferSomeFromPair(
         Tokens totalSupply,
         Shares totalShares,
         Shares toShares,
@@ -199,7 +199,7 @@ contract ReflectMathTest is Boilerplate, Test {
         );
 
         (Shares newToShares, Shares newTotalShares) =
-            ReflectMath.getTransferShares(taxRate, totalSupply, totalShares, amount, toShares);
+            ReflectMath.getTransferSharesFromPair(taxRate, totalSupply, totalShares, amount, toShares);
         Tokens newTotalSupply = totalSupply + amount;
 
         assertGe(Shares.unwrap(newToShares), Shares.unwrap(toShares), "to shares decreased");
@@ -219,6 +219,52 @@ contract ReflectMathTest is Boilerplate, Test {
             assertEq(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance");
         }
         */
+    }
+
+    function testTransferSomeToPair(
+        Tokens totalSupply,
+        Shares totalShares,
+        Shares fromShares,
+        Tokens amount,
+        BasisPoints taxRate/*,
+        uint256 sharesRatio*/
+    ) public view virtual {
+        Tokens fromBalance;
+        (totalSupply, totalShares, fromShares, fromBalance, amount) =
+            _boundCommon(totalSupply, totalShares, fromShares, amount, /* sharesRatio */ 0);
+
+        taxRate = BasisPoints.wrap(
+            uint16(
+                bound(
+                    BasisPoints.unwrap(taxRate),
+                    BasisPoints.unwrap(Settings.MIN_TAX),
+                    BasisPoints.unwrap(Settings.MAX_TAX)
+                )
+            )
+        );
+
+        //console.log("===");
+        //console.log("totalSupply", Tokens.unwrap(totalSupply));
+        //console.log("taxRate    ", BasisPoints.unwrap(taxRate));
+        //console.log("amount     ", Tokens.unwrap(amount));
+        //console.log("===");
+        //console.log("fromBalance", Tokens.unwrap(fromBalance));
+        //console.log("===");
+
+        (Shares newFromShares, Shares newTotalShares) =
+            ReflectMath.getTransferSharesToPair(taxRate, totalSupply, totalShares, amount, fromShares);
+        Tokens newTotalSupply = totalSupply - cast(scale(amount, BASIS - taxRate));
+
+        assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
+        assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
+        assertEq(Shares.unwrap(totalShares - newTotalShares), Shares.unwrap(fromShares - newFromShares), "shares delta");
+
+        Tokens newFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
+        //console.log("newFromBalance", Tokens.unwrap(newFromBalance));
+
+        Tokens expectedNewFromBalance = fromBalance - amount;
+        assertGe(Tokens.unwrap(newFromBalance) + 1, Tokens.unwrap(expectedNewFromBalance), "newFromBalance lo");
+        assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance) + 1, "newFromBalance hi");
     }
 
     function testDeliver(

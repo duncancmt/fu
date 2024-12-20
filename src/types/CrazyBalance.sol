@@ -130,10 +130,11 @@ library CrazyBalanceArithmetic {
     /*
     function toTokens(CrazyBalance balance, address account, BasisPoints proportion) internal pure returns (Tokens) {
         unchecked {
+            // Checking for overflow in the multiplication is unnecessary. Checking for division by
+            // zero is required.
             // slither-disable-next-line divide-before-multiply
             return Tokens.wrap(
-                (CrazyBalance.unwrap(balance) * BasisPoints.unwrap(proportion) * Settings.CRAZY_BALANCE_BASIS)
-                    .unsafeDivUp(BasisPoints.unwrap(BASIS) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR))
+                CrazyBalance.unwrap(balance) * BasisPoints.unwrap(proportion) * Settings.CRAZY_BALANCE_BASIS / (BasisPoints.unwrap(BASIS) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR))
             );
         }
     }

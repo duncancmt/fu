@@ -15,6 +15,10 @@ function scale(Tokens s, BasisPoints bp) pure returns (TokensXBasisPoints) {
     }
 }
 
-function castUp(TokensXBasisPoints sbp) pure returns (Tokens) {
-    return Tokens.wrap(UnsafeMath.unsafeDivUp(TokensXBasisPoints.unwrap(sbp), BasisPoints.unwrap(BASIS)));
+function cast(TokensXBasisPoints tbp) pure returns (Tokens) {
+    return Tokens.wrap(UnsafeMath.unsafeDiv(TokensXBasisPoints.unwrap(tbp), BasisPoints.unwrap(BASIS)));
+}
+
+function castUp(TokensXBasisPoints tbp) pure returns (Tokens) {
+    return Tokens.wrap(UnsafeMath.unsafeDivUp(TokensXBasisPoints.unwrap(tbp), BasisPoints.unwrap(BASIS)));
 }

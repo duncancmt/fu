@@ -5,7 +5,7 @@ import {BasisPoints, BASIS} from "../types/BasisPoints.sol";
 import {Shares} from "../types/Shares.sol";
 import {Tokens} from "../types/Tokens.sol";
 import {scale} from "../types/SharesXBasisPoints.sol";
-import {scale, castUp} from "../types/TokensXBasisPoints.sol";
+import {TokensXBasisPoints, scale, castUp} from "../types/TokensXBasisPoints.sol";
 import {TokensXShares, tmp, alloc, SharesToTokens} from "../types/TokensXShares.sol";
 import {TokensXShares2, tmp as tmp2, alloc as alloc2} from "../types/TokensXShares2.sol";
 import {TokensXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "../types/TokensXBasisPointsXShares.sol";
@@ -310,7 +310,7 @@ library ReflectMath {
         revert("unimplemented");
     }
 
-    function getTransferShares(
+    function getTransferSharesFromPair(
         BasisPoints taxRate,
         Tokens totalSupply,
         Shares totalShares,
@@ -329,6 +329,26 @@ library ReflectMath {
 
         newToShares = n.div(d);
         newTotalShares = newToShares - toShares + totalShares;
+    }
+
+    function getTransferSharesToPair(
+        BasisPoints taxRate,
+        Tokens totalSupply,
+        Shares totalShares,
+        Tokens amount,
+        Shares fromShares
+    ) internal view returns (Shares newFromShares, Shares newTotalShares) {
+        TokensXBasisPointsXShares t1 = alloc3().omul(scale(fromShares, BASIS), totalSupply);
+        TokensXBasisPointsXShares t2 = alloc3().omul(scale(totalShares, BASIS), amount);
+        TokensXBasisPointsXShares t3 = alloc3().osub(t1, t2);
+        TokensXBasisPointsXShares2 n = alloc4().omul(t3, totalShares - fromShares);
+
+        TokensXBasisPointsXShares t4 = alloc3().omul(scale(totalShares, taxRate), amount);
+        TokensXBasisPointsXShares t5 = alloc3().omul(scale(totalShares - fromShares, BASIS), totalSupply);
+        TokensXBasisPointsXShares d = alloc3().oadd(t4, t5);
+
+        newFromShares = n.div(d);
+        newTotalShares = totalShares - (fromShares - newFromShares);
     }
 
     function getDeliverShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)

@@ -22,6 +22,7 @@ import {Tokens} from "./types/Tokens.sol";
 import {SharesToTokens} from "./types/TokensXShares.sol";
 import {SharesToTokensProportional} from "./types/TokensXBasisPointsXShares.sol";
 import {Votes, toVotes} from "./types/Votes.sol";
+import {scale, cast} from "./types/TokensXBasisPoints.sol";
 import {SharesXBasisPoints, scale} from "./types/SharesXBasisPoints.sol";
 import {
     CrazyBalance,
@@ -295,7 +296,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         Tokens cachedTotalSupply = _totalSupply;
         Tokens amountTokens = amount.toPairTokens();
 
-        (Shares newShares, Shares newTotalShares) = ReflectMath.getTransferShares(
+        // TODO: does this break down if `amount` is incredibly large?
+        (Shares newShares, Shares newTotalShares) = ReflectMath.getTransferSharesFromPair(
             taxRate, cachedTotalSupply, cachedTotalShares, amount.toPairTokens(), cachedShares
         );
         Tokens newTotalSupply = cachedTotalSupply + amountTokens;
@@ -359,7 +361,11 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             newShares = ZERO_SHARES;
             newTotalShares = cachedTotalShares - cachedShares;
         } else {
-            revert("unimplemented");
+            transferTokens = amount.toTokens(from);
+            (newShares, newTotalShares) = ReflectMath.getTransferSharesToPair(
+                taxRate, cachedTotalSupply, cachedTotalShares, transferTokens, cachedShares
+            );
+            transferTokens = cast(scale(transferTokens, BASIS - taxRate));
         }
         Tokens newPairTokens = cachedPairTokens + transferTokens;
 

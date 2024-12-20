@@ -75,12 +75,20 @@ library TokensXBasisPointsXSharesArithmetic {
     {
         return cast(cast(r).omul(TokensXBasisPoints.unwrap(b), Shares.unwrap(s)));
     }
+
+    function div(TokensXBasisPointsXShares n, SharesXBasisPoints d) internal pure returns (Tokens) {
+        return Tokens.wrap(cast(n).div(SharesXBasisPoints.unwrap(d)));
+    }
+
+    function div(TokensXBasisPointsXShares n, TokensXBasisPoints d) internal pure returns (Shares) {
+        return Shares.wrap(cast(n).div(TokensXBasisPoints.unwrap(d)));
+    }
 }
 
 using TokensXBasisPointsXSharesArithmetic for TokensXBasisPointsXShares global;
 
 library SharesToTokensProportional {
     function toTokens(SharesXBasisPoints sharesBp, Tokens totalSupply, Shares totalShares) internal pure returns (Tokens) {
-        return Tokens.wrap(cast(tmp().omul(sharesBp, totalSupply)).div(SharesXBasisPoints.unwrap(scale(totalShares, BASIS))));
+        return tmp().omul(sharesBp, totalSupply).div(scale(totalShares, BASIS));
     }
 }
