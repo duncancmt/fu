@@ -335,28 +335,60 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function _transferToPair(address from, CrazyBalance amount) private returns (bool) {
-        revert("unimplemented");
-        /*
-            _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
-
-            _sharesOf[from] = newFromShares;
-            _sharesOf[to] = newToShares;
-            _totalShares = newTotalShares;
-            emit Transfer(from, to, transferAmount.toExternal());
-            emit Transfer(from, address(0), burnAmount.toExternal());
-
-            _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
-
-            if (amount == fromBalance) {
-                _rebaseQueue.dequeue(from);
-            } else {
-                _rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
+        (
+            CrazyBalance balance,
+            Shares originalShares,
+            Shares cachedShares,
+            Tokens cachedTotalSupply,
+            Shares cachedTotalShares
+        ) = _balanceOf(from);
+        if (amount > balance) {
+            if (_check()) {
+                revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
             }
+            return false;
+        }
 
-            _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+        Tokens cachedPairTokens = _pairTokens;
+        BasisPoints taxRate = _tax();
+        Shares newShares;
+        Shares newTotalShares;
+        Tokens transferTokens;
+        if (amount == balance) {
+            transferTokens = scale(cachedShares, BASIS - taxRate).toTokens(cachedTotalSupply, cachedTotalShares);
+            newShares = ZERO_SHARES;
+            newTotalShares = cachedTotalShares - cachedShares;
+        } else {
+            revert("unimplemented");
+        }
+        Tokens newPairTokens = cachedPairTokens + transferTokens;
 
-            return true;
-        */
+        CrazyBalance transferAmount = newPairTokens.toPairBalance() - cachedPairTokens.toPairBalance();
+        CrazyBalance burnAmount = amount - transferAmount;
+
+        // There is no need to apply the whale limit
+
+        _rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
+
+        _sharesOf[from] = newShares;
+        _pairTokens = newPairTokens;
+        _totalSupply = cachedTotalSupply - transferTokens;
+        _totalShares = newTotalShares;
+
+        emit Transfer(from, address(pair), transferAmount.toExternal());
+        emit Transfer(from, address(0), burnAmount.toExternal());
+
+        _checkpoints.burn(delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
+
+        if (amount == balance) {
+            _rebaseQueue.dequeue(from);
+        } else {
+            _rebaseQueue.moveToBack(from, newShares, cachedTotalSupply, newTotalShares);
+        }
+
+        _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+
+        return true;
     }
 
     function _transfer(address from, address to, CrazyBalance amount) internal override returns (bool) {
