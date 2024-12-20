@@ -80,6 +80,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         pair = pairFor(WETH, this);
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
 
+        assembly ("memory-safe") {
+            log0(add(0x20, logo), mload(logo))
+        }
         emit GitCommit(gitCommit);
         _logoHash = logo.dagPbUnixFsHash();
 
