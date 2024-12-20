@@ -23,7 +23,14 @@ being technically correct.
 * The shares-to-tokens ratio depends on the address of the holder
   * Consequently, `totalSupply` is merely an upper bound on the sum of all
     `balanceOf(...)`
+  * Balances are not comparable among addresses
 * Anti-whale
+  * The anti-whale doesn't prohibit transfers, it just turns transfers above the
+    limit into a `deliver`
+* Emits extraneous `Transfer` events on each call
+  * This breaks some off-chain data pipelines
+* Consumes a random, hard-to-predict amount of gas on each call
+  * This makes `eth_estimateGas` unreliable
 
 ## Restrictions
 
