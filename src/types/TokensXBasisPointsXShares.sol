@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {BASIS} from "./BasisPoints.sol";
 import {Shares} from "./Shares.sol";
 import {Tokens} from "./Tokens.sol";
-import {SharesXBasisPoints} from "./SharesXBasisPoints.sol";
+import {SharesXBasisPoints, scale} from "./SharesXBasisPoints.sol";
 import {TokensXBasisPoints} from "./TokensXBasisPoints.sol";
 
 import {uint512, tmp as baseTmp, alloc as baseAlloc} from "../lib/512Math.sol";
@@ -77,3 +78,9 @@ library TokensXBasisPointsXSharesArithmetic {
 }
 
 using TokensXBasisPointsXSharesArithmetic for TokensXBasisPointsXShares global;
+
+library SharesToTokensProportional {
+    function toTokens(SharesXBasisPoints sharesBp, Tokens totalSupply, Shares totalShares) internal pure returns (Tokens) {
+        return Tokens.wrap(cast(tmp().omul(sharesBp, totalSupply)).div(SharesXBasisPoints.unwrap(scale(totalShares, BASIS))));
+    }
+}

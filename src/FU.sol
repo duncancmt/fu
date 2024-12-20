@@ -16,11 +16,13 @@ import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 import {Checkpoints, LibCheckpoints} from "./core/Checkpoints.sol";
 import {RebaseQueue, LibRebaseQueue} from "./core/RebaseQueue.sol";
 
-import {BasisPoints} from "./types/BasisPoints.sol";
+import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
 import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./types/Shares.sol";
 import {Tokens} from "./types/Tokens.sol";
 import {SharesToTokens} from "./types/TokensXShares.sol";
+import {SharesToTokensProportional} from "./types/TokensXBasisPointsXShares.sol";
 import {Votes, toVotes} from "./types/Votes.sol";
+import {SharesXBasisPoints, scale} from "./types/SharesXBasisPoints.sol";
 import {
     CrazyBalance,
     toCrazyBalance,
@@ -41,6 +43,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     using ChecksumAddress for address;
     using {toCrazyBalance} for uint256;
     using SharesToTokens for Shares;
+    using SharesToTokensProportional for SharesXBasisPoints;
     using CrazyBalanceArithmetic for Shares;
     using CrazyBalanceArithmetic for Tokens;
     using {toVotes} for Shares;
@@ -50,7 +53,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     using IPFS for bytes32;
 
     function totalSupply() external view override returns (uint256) {
-        return Tokens.unwrap(_totalSupply + _pairBalance.toPairTokens());
+        unchecked {
+            return Tokens.unwrap(_totalSupply + _pairTokens);
+        }
     }
 
     /// @custom:security non-reentrant
@@ -91,29 +96,31 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         require(success);
         require(WETH.transfer(address(pair), WETH.balanceOf(address(this))));
 
-        _pairBalance = Settings.INITIAL_SUPPLY.div(Settings.INITIAL_LIQUIDITY_DIVISOR).toPairBalance();
-        emit Transfer(
-            address(0), address(pair), Tokens.unwrap(_pairBalance.toPairTokens())
-        );
+        Tokens pairTokens = Settings.INITIAL_SUPPLY.div(Settings.INITIAL_LIQUIDITY_DIVISOR);
+        pairTokens = pairTokens - Tokens.wrap(Tokens.unwrap(pairTokens) % Settings.CRAZY_BALANCE_BASIS);
+        _pairTokens = pairTokens;
+        emit Transfer(address(0), address(pair), Tokens.unwrap(pairTokens));
 
-        _totalSupply = Settings.INITIAL_SUPPLY - _pairBalance.toPairTokens();
-        _totalShares = Shares.wrap(Tokens.unwrap(_totalSupply) * Settings.INITIAL_SHARES_RATIO);
+        Tokens totalSupply_ = Settings.INITIAL_SUPPLY - pairTokens;
+        _totalSupply = totalSupply_;
+        Shares totalShares = Shares.wrap(Tokens.unwrap(totalSupply_) * Settings.INITIAL_SHARES_RATIO);
+        _totalShares = totalShares;
 
         {
             // The queue is empty, so we have to special-case the first insertion. `DEAD` will
             // always hold a token balance, which makes many things simpler.
             _sharesOf[DEAD] = Settings.oneTokenInShares();
-            CrazyBalance balance = _sharesOf[DEAD].toCrazyBalance(_totalSupply, _totalShares);
+            CrazyBalance balance = _sharesOf[DEAD].toCrazyBalance(totalSupply_, totalShares);
             emit Transfer(address(0), DEAD, balance.toExternal());
             _rebaseQueue.initialize(DEAD, balance);
         }
         {
-            Shares toMint = _totalShares - _sharesOf[DEAD];
+            Shares toMint = totalShares - _sharesOf[DEAD];
             // slither-disable-next-line divide-before-multiply
             Shares sharesRest = toMint.div(initialHolders.length);
             {
                 Shares sharesFirst = toMint - sharesRest.mul(initialHolders.length - 1);
-                CrazyBalance amount = sharesFirst.toCrazyBalance(_totalSupply, _totalShares);
+                CrazyBalance amount = sharesFirst.toCrazyBalance(totalSupply_, totalShares);
 
                 address to = initialHolders[0];
                 assert(_sharesOf[to] == ZERO_SHARES);
@@ -122,7 +129,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
                 _rebaseQueue.enqueue(to, amount);
             }
             {
-                CrazyBalance amount = sharesRest.toCrazyBalance(_totalSupply, _totalShares);
+                CrazyBalance amount = sharesRest.toCrazyBalance(totalSupply_, totalShares);
                 for (uint256 i = 1; i < initialHolders.length; i++) {
                     address to = initialHolders[i];
                     assert(_sharesOf[to] == ZERO_SHARES);
@@ -245,7 +252,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
     function balanceOf(address account) external view override returns (uint256) {
         if (account == address(pair)) {
-            return _pairBalance.toExternal();
+            return _pairTokens.toPairBalance().toExternal();
         }
         (CrazyBalance balance,,,,) = _balanceOf(account);
         return balance.toExternal();
@@ -279,22 +286,19 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function _transferFromPair(address to, CrazyBalance amount) private returns (bool) {
-        CrazyBalance pairBalance = _pairBalance;
-        if (amount > pairBalance) {
-            if (_check()) {
-                revert ERC20InsufficientBalance(address(pair), pairBalance.toExternal(), amount.toExternal());
-            }
-            return false;
-        }
+        // We don't need to check that `pair` is transferring less than its balance. The
+        // `UniswapV2Pair` code does that for us. Additionally, `pair`'s balance can never reach
+        // zero.
 
         BasisPoints taxRate = _tax();
         (Shares originalShares, Shares cachedShares, Shares cachedTotalShares) = _loadAccount(to);
         Tokens cachedTotalSupply = _totalSupply;
         Tokens amountTokens = amount.toPairTokens();
 
-        (Shares newShares, Tokens newTotalSupply, Shares newTotalShares) = ReflectMath.getTransferShares(
+        (Shares newShares, Shares newTotalShares) = ReflectMath.getTransferShares(
             taxRate, cachedTotalSupply, cachedTotalShares, amount.toPairTokens(), cachedShares
         );
+        Tokens newTotalSupply = cachedTotalSupply + amountTokens;
 
         // TODO: specialize `toCrazyBalance`
         CrazyBalance transferAmount = newShares.toCrazyBalance(address(pair), newTotalSupply, newTotalShares)
@@ -305,7 +309,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
         _rebaseQueue.rebaseFor(to, cachedShares, cachedTotalSupply, cachedTotalShares);
 
-        _pairBalance = pairBalance - amount;
+        _pairTokens = _pairTokens - amountTokens;
         _sharesOf[to] = newShares;
         _totalSupply = newTotalSupply;
         _totalShares = newTotalShares;

@@ -127,6 +127,7 @@ library CrazyBalanceArithmetic {
         }
     }
 
+    /*
     function toTokens(CrazyBalance balance, address account, BasisPoints proportion) internal pure returns (Tokens) {
         unchecked {
             // slither-disable-next-line divide-before-multiply
@@ -136,6 +137,7 @@ library CrazyBalanceArithmetic {
             );
         }
     }
+    */
 
     function toPairBalance(Tokens tokens) internal pure returns (CrazyBalance) {
         return CrazyBalance.wrap(Tokens.unwrap(tokens) / Settings.CRAZY_BALANCE_BASIS);
@@ -159,6 +161,7 @@ library CrazyBalanceArithmetic {
         }
     }
 
+    /*
     function toPairTokens(CrazyBalance balance, BasisPoints proportion) internal pure returns (Tokens) {
         unchecked {
             return Tokens.wrap(
@@ -167,6 +170,7 @@ library CrazyBalanceArithmetic {
             );
         }
     }
+    */
 }
 
 using CrazyBalanceArithmetic for CrazyBalance global;
