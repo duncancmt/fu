@@ -93,7 +93,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
         _pairBalance = Settings.INITIAL_SUPPLY.div(Settings.INITIAL_LIQUIDITY_DIVISOR).toPairBalance();
         emit Transfer(
-            address(0), address(pair), Tokens.unwrap(Settings.INITIAL_SUPPLY.div(Settings.INITIAL_LIQUIDITY_DIVISOR))
+            address(0), address(pair), Tokens.unwrap(_pairBalance.toPairTokens())
         );
 
         _totalSupply = Settings.INITIAL_SUPPLY - _pairBalance.toPairTokens();
@@ -110,10 +110,26 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         {
             Shares toMint = _totalShares - _sharesOf[DEAD];
             // slither-disable-next-line divide-before-multiply
-            Shares toMintEach = toMint.div(initialHolders.length);
-            _mintShares(initialHolders[0], toMint - toMintEach.mul(initialHolders.length - 1));
-            for (uint256 i = 1; i < initialHolders.length; i++) {
-                _mintShares(initialHolders[i], toMintEach);
+            Shares sharesRest = toMint.div(initialHolders.length);
+            {
+                Shares sharesFirst = toMint - sharesRest.mul(initialHolders.length - 1);
+                CrazyBalance amount = sharesFirst.toCrazyBalance(_totalSupply, _totalShares);
+
+                address to = initialHolders[0];
+                assert(_sharesOf[to] == ZERO_SHARES);
+                _sharesOf[to] = sharesFirst;
+                emit Transfer(address(0), to, amount.toExternal());
+                _rebaseQueue.enqueue(to, amount);
+            }
+            {
+                CrazyBalance amount = sharesRest.toCrazyBalance(_totalSupply, _totalShares);
+                for (uint256 i = 1; i < initialHolders.length; i++) {
+                    address to = initialHolders[i];
+                    assert(_sharesOf[to] == ZERO_SHARES);
+                    _sharesOf[to] = sharesRest;
+                    emit Transfer(address(0), to, amount.toExternal());
+                    _rebaseQueue.enqueue(to, amount);
+                }
             }
         }
 
@@ -134,15 +150,6 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         unchecked {
             return nonces[account]++;
         }
-    }
-
-    // This function is *REALLY* gas inefficient. No attempts at optimization have been made because
-    // it only runs at deploy time.
-    function _mintShares(address to, Shares shares) private {
-        assert(_sharesOf[to] == ZERO_SHARES);
-        _sharesOf[to] = shares;
-        emit Transfer(address(0), to, shares.toCrazyBalance(_totalSupply, _totalShares).toExternal());
-        _rebaseQueue.enqueue(to, shares, _totalSupply, _totalShares);
     }
 
     function _check() private view returns (bool) {

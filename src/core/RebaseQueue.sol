@@ -34,9 +34,7 @@ library LibRebaseQueue {
         elem.lastTokens = tokens;
     }
 
-    function enqueue(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares)
-        internal
-    {
+    function enqueue(RebaseQueue storage self, address account, CrazyBalance balance) internal {
         RebaseQueueElem storage elem = self.queue[account];
         address head = self.head;
         RebaseQueueElem storage headElem = self.queue[head];
@@ -44,10 +42,17 @@ library LibRebaseQueue {
 
         elem.prev = tail;
         elem.next = head;
-        elem.lastTokens = shares.toCrazyBalance(totalSupply, totalShares);
+        elem.lastTokens = balance;
 
         self.queue[tail].next = account;
         headElem.prev = account;
+
+    }
+
+    function enqueue(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares)
+        internal
+    {
+        return enqueue(self, account, shares.toCrazyBalance(totalSupply, totalShares));
     }
 
     function dequeue(RebaseQueue storage self, address account) internal {
