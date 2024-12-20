@@ -263,6 +263,7 @@ contract ReflectMathTest is Boilerplate, Test {
         //console.log("newFromBalance", Tokens.unwrap(newFromBalance));
 
         Tokens expectedNewFromBalance = fromBalance - amount;
+        // TODO: tighter bounds
         assertGe(Tokens.unwrap(newFromBalance) + 1, Tokens.unwrap(expectedNewFromBalance), "newFromBalance lo");
         assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance) + 1, "newFromBalance hi");
     }

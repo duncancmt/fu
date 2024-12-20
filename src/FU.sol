@@ -297,8 +297,12 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         Tokens amountTokens = amount.toPairTokens();
 
         // TODO: does this break down if `amount` is incredibly large?
+        // Tokens transferTokens = amount.toPairTokens();
+        // if (transferTokens > cachedTotalSupply.div(Settings.ANTI_WHALE_DIVISOR)) {
+        //     transferTokens = cachedTotalSupply.div(Settings.ANTI_WHALE_DIVISOR);
+        // }
         (Shares newShares, Shares newTotalShares) = ReflectMath.getTransferSharesFromPair(
-            taxRate, cachedTotalSupply, cachedTotalShares, amount.toPairTokens(), cachedShares
+            taxRate, cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
         );
         Tokens newTotalSupply = cachedTotalSupply + amountTokens;
 
@@ -372,7 +376,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         CrazyBalance transferAmount = newPairTokens.toPairBalance() - cachedPairTokens.toPairBalance();
         CrazyBalance burnAmount = amount - transferAmount;
 
-        // There is no need to apply the whale limit
+        // There is no need to apply the whale limit. `pair` holds tokens directly and is allowed to
+        // go over the limit.
 
         _rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
 
@@ -422,7 +427,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             }
             return false;
         }
-        if (uint256(uint160(to)) < Settings.ADDRESS_DIVISOR) {
+        if (uint160(to) < Settings.ADDRESS_DIVISOR) {
             // "efficient" addresses can't hold tokens because they have zero multiplier
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
