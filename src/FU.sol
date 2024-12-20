@@ -373,7 +373,10 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         }
         Tokens newPairTokens = cachedPairTokens + transferTokens;
 
-        CrazyBalance transferAmount = newPairTokens.toPairBalance() - cachedPairTokens.toPairBalance();
+        // Take note of the mismatch between who is holding the tokens (`pair`) and the address for
+        // whom the `CrazyBalance` is being calculated (`from`). We're converting `pair`'s balance
+        // delta into units as if it were held by `from`.
+        CrazyBalance transferAmount = newPairTokens.toCrazyBalance(from) - cachedPairTokens.toCrazyBalance(from);
         CrazyBalance burnAmount = amount - transferAmount;
 
         // There is no need to apply the whale limit. `pair` holds tokens directly and is allowed to
