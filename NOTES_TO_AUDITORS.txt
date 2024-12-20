@@ -1,0 +1,22 @@
+I need help writing a bounded invariant test for the token as a whole
+
+I know there's a lot of unused code, but I can't get Slither to run reliably. Help me out?
+
+While ReflectMath.t.sol thoroughly tests the various functions in ReflectMath, the overall transfer
+logic has crucial components that are implemented in FU. This reduces confidence that the actual
+transfer logic/math is correct.
+
+Probably the biggest opportunity for bugs is in corrupting various data structures (the rebase queue
+circular linked list; the list of voting snapshots) as well as failing to keep `_totalShares`
+correctly synchronized.
+
+The fact that `pair` and `DEAD` are special-cased and that ERC20 requires that `transferFrom(...,
+0)` is a no-op that still emits an event leads to a proliferation of edge cases.
+
+I probably haven't thoroughly tested the zero `amount` case.
+
+I probably haven't tested the extrema of balances enough. E.g. what happens if from and to are both
+above the whale limit? Or when buying 75% of the supply from `pair`
+
+The code that handles rounding error in `ReflectMath` is _really_ inefficient. Is there a better way
+to handle this? Is my implementation of the reflection arithmetic faulty?
