@@ -680,7 +680,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         if (from == address(pair)) {
             // `amount` is zero or we would not have passed `_checkAllowance`
             emit Transfer(from, address(0), 0);
-            _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+            _rebaseQueue.processQueue(_sharesOf, _totalSupply, _totalShares);
             return true;
         }
 
@@ -747,7 +747,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         if (from == address(pair)) {
             // `amount` is zero or we would not have passed `_checkAllowance`
             emit Transfer(from, address(0), 0);
-            _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+            _rebaseQueue.processQueue(_sharesOf, _totalSupply, _totalShares);
             return true;
         }
 
