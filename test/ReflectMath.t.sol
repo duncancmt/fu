@@ -183,7 +183,7 @@ contract ReflectMathTest is Boilerplate, Test {
         (totalSupply, totalShares, toShares, toBalance) =
             _boundCommon(totalSupply, totalShares, toShares, /* sharesRatio */ 0);
         amount = Tokens.wrap(
-            bound(Tokens.unwrap(amount), 1 wei, Tokens.unwrap(totalSupply.div(Settings.ANTI_WHALE_DIVISOR)) - 1 wei)
+            bound(Tokens.unwrap(amount), 1 wei, Tokens.unwrap(Settings.INITIAL_SUPPLY - toBalance) - 1 wei)
         );
 
         taxRate = BasisPoints.wrap(
@@ -206,17 +206,20 @@ contract ReflectMathTest is Boilerplate, Test {
 
         Tokens newToBalance = newToShares.toTokens(newTotalSupply, newTotalShares);
 
-        // TODO: tighter bounds
-        Tokens expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, taxRate));
-        Tokens expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - taxRate));
-        //if (newToShares == toShares) {
-            assertGe(Tokens.unwrap(newToBalance) + 1, Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
-            assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi) + 1, "newToBalance upper");
-        /*
-        } else {
-            assertEq(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance");
+        if (amount <= totalSupply.div(Settings.ANTI_WHALE_DIVISOR - 1)) { // anti-whale criterion
+            // TODO: tighter bounds
+            uint256 fudge = 1;
+            Tokens expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, taxRate));
+            Tokens expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - taxRate));
+            //if (newToShares == toShares) {
+                assertGe(Tokens.unwrap(newToBalance) + fudge, Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
+                assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi) + fudge, "newToBalance upper");
+            /*
+            } else {
+                assertEq(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance");
+            }
+            */
         }
-        */
     }
 
     function testTransferSomeToPair(

@@ -20,3 +20,5 @@ above the whale limit? Or when buying 75% of the supply from `pair`
 
 The code that handles rounding error in `ReflectMath` is _really_ inefficient. Is there a better way
 to handle this? Is my implementation of the reflection arithmetic faulty?
+
+I may have missed using `unchecked` some places where it really ought to be.
