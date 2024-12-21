@@ -330,7 +330,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         }
 
         if (originalShares == ZERO_SHARES) {
-            _rebaseQueue.enqueue(to, newShares, newTotalSupply, newTotalShares);
+            if (amount != ZERO_BALANCE) {
+                _rebaseQueue.enqueue(to, newShares, newTotalSupply, newTotalShares);
+            }
         } else {
             _rebaseQueue.moveToBack(to, newShares, newTotalSupply, newTotalShares);
         }
@@ -395,7 +397,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         _checkpoints.burn(delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
         if (amount == balance) {
-            _rebaseQueue.dequeue(from);
+            if (originalShares != ZERO_SHARES) {
+                _rebaseQueue.dequeue(from);
+            }
         } else {
             _rebaseQueue.moveToBack(from, newShares, cachedTotalSupply, newTotalShares);
         }
@@ -524,13 +528,17 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         }
 
         if (originalToShares == ZERO_SHARES) {
-            _rebaseQueue.enqueue(to, newToShares, cachedTotalSupply, newTotalShares);
+            if (amount != ZERO_BALANCE) {
+                _rebaseQueue.enqueue(to, newToShares, cachedTotalSupply, newTotalShares);
+            }
         } else {
             _rebaseQueue.moveToBack(to, newToShares, cachedTotalSupply, newTotalShares);
         }
 
         if (amount == fromBalance) {
-            _rebaseQueue.dequeue(from);
+            if (originalShares != ZERO_SHARES) {
+                _rebaseQueue.dequeue(from);
+            }
         } else {
             _rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
         }
@@ -727,7 +735,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
 
         if (amount == fromBalance) {
-            _rebaseQueue.dequeue(from);
+            if (originalFromShares != ZERO_SHARES) {
+                _rebaseQueue.dequeue(from);
+            }
         } else {
             _rebaseQueue.moveToBack(from, newFromShares, newTotalSupply, newTotalShares);
         }
@@ -785,7 +795,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
 
         if (amount == fromBalance) {
-            _rebaseQueue.dequeue(from);
+            if (originalShares != ZERO_SHARES) {
+                _rebaseQueue.dequeue(from);
+            }
         } else {
             _rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
         }

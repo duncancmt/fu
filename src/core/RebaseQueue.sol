@@ -35,10 +35,6 @@ library LibRebaseQueue {
     }
 
     function enqueue(RebaseQueue storage self, address account, CrazyBalance balance) internal {
-        if (balance == ZERO_BALANCE) {
-            return;
-        }
-
         RebaseQueueElem storage elem = self.queue[account];
         address head = self.head;
         RebaseQueueElem storage headElem = self.queue[head];
@@ -61,10 +57,6 @@ library LibRebaseQueue {
 
     function dequeue(RebaseQueue storage self, address account) internal {
         RebaseQueueElem storage elem = self.queue[account];
-        if (elem.lastTokens == ZERO_BALANCE) {
-            return;
-        }
-
         elem.lastTokens = ZERO_BALANCE;
         address prev = elem.prev;
         address next = elem.next;
