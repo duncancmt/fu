@@ -286,6 +286,10 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return BasisPoints.unwrap(_tax());
     }
 
+    function whaleLimit(address potentialWhale) external view returns (uint256) {
+        return _totalSupply.div(Settings.ANTI_WHALE_DIVISOR).toCrazyBalance(potentialWhale).toExternal();
+    }
+
     function _transferFromPair(address to, CrazyBalance amount) private returns (bool) {
         // We don't need to check that `pair` is transferring less than its balance. The
         // `UniswapV2Pair` code does that for us. Additionally, `pair`'s balance can never reach

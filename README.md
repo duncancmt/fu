@@ -76,6 +76,7 @@ The allowance from each account to Permit2
 (`type(uint256).max`).
 
  * `tax()(uint256)` (view)
+ * `whaleLimit(address)(uint256)` (view)
  * `burn(uint256)(bool)`
  * `burnFrom(address,uint256)(bool)`
  * `deliver(uint256)(bool)`
