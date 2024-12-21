@@ -693,53 +693,53 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         }
 
         (
-            CrazyBalance fromBalance,
-            Shares originalFromShares,
-            Shares cachedFromShares,
+            CrazyBalance balance,
+            Shares originalShares,
+            Shares cachedShares,
             Tokens cachedTotalSupply,
             Shares cachedTotalShares
         ) = _balanceOf(from);
-        if (amount > fromBalance) {
+        if (amount > balance) {
             if (_check()) {
-                revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
+                revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
             }
             return false;
         }
 
-        Shares newFromShares;
+        Shares newShares;
         Shares newTotalShares;
         Tokens newTotalSupply;
-        if (amount == fromBalance) {
+        if (amount == balance) {
             // The amount to be deducted from `_totalSupply` is *NOT* the same as
             // `amount.toTokens(from)`. That would not correctly account for dust that is below the
             // "crazy balance" scaling factor for `from`. We have to explicitly recompute the
             // un-crazy balance of `from` and deduct *THAT* instead.
-            newTotalSupply = cachedTotalSupply - cachedFromShares.toTokens(cachedTotalSupply, cachedTotalShares);
-            newTotalShares = cachedTotalShares - cachedFromShares;
-            newFromShares = ZERO_SHARES;
+            newTotalSupply = cachedTotalSupply - cachedShares.toTokens(cachedTotalSupply, cachedTotalShares);
+            newTotalShares = cachedTotalShares - cachedShares;
+            newShares = ZERO_SHARES;
         } else {
             Tokens amountUnCrazy = amount.toTokens(from);
-            newFromShares =
-                ReflectMath.getBurnShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedFromShares);
-            newTotalShares = newTotalShares - (cachedFromShares - newFromShares);
+            newShares =
+                ReflectMath.getBurnShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedShares);
+            newTotalShares = newTotalShares - (cachedShares - newShares);
             newTotalSupply = cachedTotalSupply - amountUnCrazy;
         }
 
-        _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+        _rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
 
-        _sharesOf[from] = newFromShares;
+        _sharesOf[from] = newShares;
         _totalShares = newTotalShares;
         _totalSupply = newTotalSupply;
         emit Transfer(from, address(0), amount.toExternal());
 
-        _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
+        _checkpoints.burn(delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        if (amount == fromBalance) {
-            if (originalFromShares != ZERO_SHARES) {
+        if (amount == balance) {
+            if (originalShares != ZERO_SHARES) {
                 _rebaseQueue.dequeue(from);
             }
         } else {
-            _rebaseQueue.moveToBack(from, newFromShares, newTotalSupply, newTotalShares);
+            _rebaseQueue.moveToBack(from, newShares, newTotalSupply, newTotalShares);
         }
 
         _rebaseQueue.processQueue(_sharesOf, newTotalSupply, newTotalShares);
@@ -762,44 +762,44 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         }
 
         (
-            CrazyBalance fromBalance,
-            Shares originalFromShares,
-            Shares cachedFromShares,
+            CrazyBalance balance,
+            Shares originalShares,
+            Shares cachedShares,
             Tokens cachedTotalSupply,
             Shares cachedTotalShares
         ) = _balanceOf(from);
-        if (amount > fromBalance) {
+        if (amount > balance) {
             if (_check()) {
-                revert ERC20InsufficientBalance(from, fromBalance.toExternal(), amount.toExternal());
+                revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
             }
             return false;
         }
 
-        Shares newFromShares;
+        Shares newShares;
         Shares newTotalShares;
-        if (amount == fromBalance) {
-            newTotalShares = cachedTotalShares - cachedFromShares;
-            newFromShares = ZERO_SHARES;
+        if (amount == balance) {
+            newTotalShares = cachedTotalShares - cachedShares;
+            newShares = ZERO_SHARES;
         } else {
             Tokens amountUnCrazy = amount.toTokens(from);
-            (newFromShares, newTotalShares) =
-                ReflectMath.getDeliverShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedFromShares);
+            (newShares, newTotalShares) =
+                ReflectMath.getDeliverShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedShares);
         }
 
-        _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+        _rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
 
-        _sharesOf[from] = newFromShares;
+        _sharesOf[from] = newShares;
         _totalShares = newTotalShares;
         emit Transfer(from, address(0), amount.toExternal());
 
-        _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
+        _checkpoints.burn(delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        if (amount == fromBalance) {
+        if (amount == balance) {
             if (originalShares != ZERO_SHARES) {
                 _rebaseQueue.dequeue(from);
             }
         } else {
-            _rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
+            _rebaseQueue.moveToBack(from, newShares, cachedTotalSupply, newTotalShares);
         }
 
         _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
