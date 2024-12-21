@@ -46,7 +46,6 @@ library LibRebaseQueue {
 
         self.queue[tail].next = account;
         headElem.prev = account;
-
     }
 
     function enqueue(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares)

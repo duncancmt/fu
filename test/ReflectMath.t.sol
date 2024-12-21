@@ -182,9 +182,8 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens toBalance;
         (totalSupply, totalShares, toShares, toBalance) =
             _boundCommon(totalSupply, totalShares, toShares, /* sharesRatio */ 0);
-        amount = Tokens.wrap(
-            bound(Tokens.unwrap(amount), 1 wei, Tokens.unwrap(Settings.INITIAL_SUPPLY - toBalance) - 1 wei)
-        );
+        amount =
+            Tokens.wrap(bound(Tokens.unwrap(amount), 1 wei, Tokens.unwrap(Settings.INITIAL_SUPPLY - toBalance) - 1 wei));
 
         taxRate = BasisPoints.wrap(
             uint16(

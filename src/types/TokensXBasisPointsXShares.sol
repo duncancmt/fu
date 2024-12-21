@@ -88,7 +88,11 @@ library TokensXBasisPointsXSharesArithmetic {
 using TokensXBasisPointsXSharesArithmetic for TokensXBasisPointsXShares global;
 
 library SharesToTokensProportional {
-    function toTokens(SharesXBasisPoints sharesBp, Tokens totalSupply, Shares totalShares) internal pure returns (Tokens) {
+    function toTokens(SharesXBasisPoints sharesBp, Tokens totalSupply, Shares totalShares)
+        internal
+        pure
+        returns (Tokens)
+    {
         return tmp().omul(sharesBp, totalSupply).div(scale(totalShares, BASIS));
     }
 }

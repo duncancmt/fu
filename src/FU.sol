@@ -297,8 +297,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
         Shares newShares;
         Shares newTotalShares;
-        if (amountTokens >= cachedTotalSupply.div(Settings.ANTI_WHALE_DIVISOR-1)) {
-            newShares = cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR-1) - ONE_SHARE;
+        if (amountTokens >= cachedTotalSupply.div(Settings.ANTI_WHALE_DIVISOR - 1)) {
+            newShares = cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
             newTotalShares = cachedTotalShares + newShares - cachedShares;
         } else {
             (newShares, newTotalShares) = ReflectMath.getTransferSharesFromPair(
@@ -721,8 +721,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             newShares = ZERO_SHARES;
         } else {
             Tokens amountUnCrazy = amount.toTokens(from);
-            newShares =
-                ReflectMath.getBurnShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedShares);
+            newShares = ReflectMath.getBurnShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedShares);
             newTotalShares = newTotalShares - (cachedShares - newShares);
             newTotalSupply = cachedTotalSupply - amountUnCrazy;
         }
