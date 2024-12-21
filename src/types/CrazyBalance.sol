@@ -156,6 +156,17 @@ library CrazyBalanceArithmetic {
     }
     */
 
+    function toPairBalance(Shares shares, Tokens totalSupply, Shares totalShares) internal pure returns (CrazyBalance) {
+        unchecked {
+            return CrazyBalance.wrap(
+                tmp().omul(
+                    Shares.unwrap(shares),
+                    Tokens.unwrap(totalSupply)
+                ).div(Shares.unwrap(totalShares) * Settings.CRAZY_BALANCE_BASIS)
+            );
+        }
+    }
+
     function toPairTokens(CrazyBalance balance) internal pure returns (Tokens) {
         unchecked {
             return Tokens.wrap(CrazyBalance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS);

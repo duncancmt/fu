@@ -309,9 +309,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         }
         Tokens newTotalSupply = cachedTotalSupply + amountTokens;
 
-        // TODO: specialize `toCrazyBalance`
-        CrazyBalance transferAmount = newShares.toCrazyBalance(address(pair), newTotalSupply, newTotalShares)
-            - cachedTotalShares.toCrazyBalance(address(pair), cachedTotalSupply, cachedTotalShares);
+        CrazyBalance transferAmount = newShares.toPairBalance(newTotalSupply, newTotalShares)
+            - cachedTotalShares.toPairBalance(cachedTotalSupply, cachedTotalShares);
         CrazyBalance burnAmount = amount - transferAmount;
 
         (newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);
