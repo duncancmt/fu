@@ -301,8 +301,12 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
         Shares newShares;
         Shares newTotalShares;
-        if (amountTokens >= cachedTotalSupply.div(Settings.ANTI_WHALE_DIVISOR - 1)) {
-            newShares = cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
+        // TODO: I haven't thoroughly thought through the rounding behavior of this check. there may
+        // be an off-by-one. but also maybe it doesn't matter because `getTransferSharesFromPair`
+        // *mostly* works correctly when values aren't *too* extreme
+        Tokens balanceTokens = cachedShares.toTokens(cachedTotalSupply, cachedTotalShares);
+        if (amountTokens + balanceTokens >= (cachedTotalSupply - balanceTokens).div(Settings.ANTI_WHALE_DIVISOR - 1)) {
+            newShares = (cachedTotalShares - cachedShares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
             newTotalShares = cachedTotalShares + newShares - cachedShares;
         } else {
             (newShares, newTotalShares) = ReflectMath.getTransferSharesFromPair(
