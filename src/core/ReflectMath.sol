@@ -317,13 +317,13 @@ library ReflectMath {
         Tokens amount,
         Shares toShares
     ) internal view returns (Shares newToShares, Shares newTotalShares) {
-        TokensXBasisPointsXShares t2 = alloc3().omul(scale(amount, BASIS - taxRate), totalShares); // d * b * (1-f)
-        TokensXBasisPointsXShares t4 = alloc3().omul(scale(totalSupply, BASIS), toShares); // a * c * BASIS
+        TokensXBasisPointsXShares t2 = alloc3().omul(scale(amount, BASIS - taxRate), totalShares);
+        TokensXBasisPointsXShares t4 = alloc3().omul(scale(totalSupply, BASIS), toShares);
         TokensXBasisPointsXShares t5 = alloc3().oadd(t2, t4);
         TokensXBasisPointsXShares2 n = alloc4().omul(t5, totalShares - toShares);
 
-        TokensXBasisPointsXShares t7 = alloc3().omul(scale(totalSupply, BASIS), totalShares); // b * c * BASIS
-        TokensXBasisPointsXShares t9 = alloc3().omul(scale(amount, taxRate), totalShares); // b * d * f
+        TokensXBasisPointsXShares t7 = alloc3().omul(scale(totalSupply, BASIS), totalShares);
+        TokensXBasisPointsXShares t9 = alloc3().omul(scale(amount, taxRate), totalShares);
         TokensXBasisPointsXShares t10 = alloc3().oadd(t9, t7);
         TokensXBasisPointsXShares d = alloc3().osub(t10, t4);
 
@@ -338,6 +338,8 @@ library ReflectMath {
         Tokens amount,
         Shares fromShares
     ) internal view returns (Shares newFromShares, Shares newTotalShares) {
+        // TODO: return the amount of tokens transferred (the tax-decreased `amount`) from this
+        // function so that everybody is on the same page about the delta in `totalSupply`
         TokensXBasisPointsXShares t1 = alloc3().omul(scale(fromShares, BASIS), totalSupply);
         TokensXBasisPointsXShares t2 = alloc3().omul(scale(totalShares, BASIS), amount);
         TokensXBasisPointsXShares t3 = alloc3().osub(t1, t2);
