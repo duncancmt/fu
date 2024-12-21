@@ -291,19 +291,22 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         // `UniswapV2Pair` code does that for us. Additionally, `pair`'s balance can never reach
         // zero.
 
-        BasisPoints taxRate = _tax();
         (Shares originalShares, Shares cachedShares, Shares cachedTotalShares) = _loadAccount(to);
         Tokens cachedTotalSupply = _totalSupply;
         Tokens amountTokens = amount.toPairTokens();
 
-        // TODO: does this break down if `amount` is incredibly large?
-        // Tokens transferTokens = amount.toPairTokens();
-        // if (transferTokens > cachedTotalSupply.div(Settings.ANTI_WHALE_DIVISOR)) {
-        //     transferTokens = cachedTotalSupply.div(Settings.ANTI_WHALE_DIVISOR);
-        // }
-        (Shares newShares, Shares newTotalShares) = ReflectMath.getTransferSharesFromPair(
-            taxRate, cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
-        );
+        Shares newShares;
+        Shares newTotalShares;
+        if (amountTokens >= cachedTotalSupply.div(Settings.ANTI_WHALE_DIVISOR-1)) {
+            newShares = cachedTotalShares.div(Settings.ANTI_WHALE_DIVISOR-1) - ONE_SHARE;
+            newTotalShares = cachedTotalShares + newShares - cachedShares;
+        } else {
+            (newShares, newTotalShares) = ReflectMath.getTransferSharesFromPair(
+                _tax(), cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
+            );
+            // TODO: this is inelegant. can this be moved into the `if` statement immediately above?
+            (newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);
+        }
         Tokens newTotalSupply = cachedTotalSupply + amountTokens;
 
         // TODO: specialize `toCrazyBalance`
