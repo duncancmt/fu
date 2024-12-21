@@ -161,10 +161,8 @@ contract ReflectMathTest is Boilerplate, Test {
         //console.log("      newToShares", Shares.unwrap(newToShares));
         //console.log("         toShares", Shares.unwrap(toShares));
 
-        // TODO: tighter bounds
         Tokens expectedNewToBalanceLo = toBalance + fromBalance - castUp(scale(fromBalance, taxRate));
         Tokens expectedNewToBalanceHi = toBalance + castUp(scale(fromBalance, BASIS - taxRate));
-        //assertEq(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance");
         if (newToShares == toShares) {
             assertGe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
             assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi), "newToBalance upper");
