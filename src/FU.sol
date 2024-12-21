@@ -530,20 +530,20 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             _checkpoints.burn(delegates[to], originalToShares.toVotes() - newToShares.toVotes(), clock());
         }
 
+        if (amount == fromBalance) {
+            if (originalFromShares != ZERO_SHARES) {
+                _rebaseQueue.dequeue(from);
+            }
+        } else {
+            _rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
+        }
+
         if (originalToShares == ZERO_SHARES) {
             if (amount != ZERO_BALANCE) {
                 _rebaseQueue.enqueue(to, newToShares, cachedTotalSupply, newTotalShares);
             }
         } else {
             _rebaseQueue.moveToBack(to, newToShares, cachedTotalSupply, newTotalShares);
-        }
-
-        if (amount == fromBalance) {
-            if (originalShares != ZERO_SHARES) {
-                _rebaseQueue.dequeue(from);
-            }
-        } else {
-            _rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
         }
 
         _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
