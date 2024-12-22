@@ -22,7 +22,7 @@ import {Tokens} from "./types/Tokens.sol";
 import {SharesToTokens} from "./types/TokensXShares.sol";
 import {SharesToTokensProportional} from "./types/TokensXBasisPointsXShares.sol";
 import {Votes, toVotes} from "./types/Votes.sol";
-import {scale, cast} from "./types/TokensXBasisPoints.sol";
+import {scale, cast, castUp} from "./types/TokensXBasisPoints.sol";
 import {SharesXBasisPoints, scale} from "./types/SharesXBasisPoints.sol";
 import {
     CrazyBalance,
@@ -299,18 +299,19 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         Tokens cachedTotalSupply = _totalSupply;
         Tokens amountTokens = amount.toPairTokens();
 
+        BasisPoints taxRate = _tax();
         Shares newShares;
         Shares newTotalShares;
         // TODO: I haven't thoroughly thought through the rounding behavior of this check. there may
         // be an off-by-one. but also maybe it doesn't matter because `getTransferSharesFromPair`
         // *mostly* works correctly when values aren't *too* extreme
-        Tokens balanceTokens = cachedShares.toTokens(cachedTotalSupply, cachedTotalShares);
-        if (amountTokens + balanceTokens >= (cachedTotalSupply - balanceTokens).div(Settings.ANTI_WHALE_DIVISOR - 1)) {
+        Tokens balanceTokensHi = cachedShares.toTokensUp(cachedTotalSupply, cachedTotalShares);
+        if (castUp(scale(amountTokens, BASIS - taxRate)) + balanceTokensHi >= (cachedTotalSupply - balanceTokensHi).div(Settings.ANTI_WHALE_DIVISOR - 1)) {
             newShares = (cachedTotalShares - cachedShares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
             newTotalShares = cachedTotalShares + newShares - cachedShares;
         } else {
             (newShares, newTotalShares) = ReflectMath.getTransferSharesFromPair(
-                _tax(), cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
+                taxRate, cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
             );
             // TODO: this is inelegant. can this be moved into the `if` statement immediately above?
             (newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);

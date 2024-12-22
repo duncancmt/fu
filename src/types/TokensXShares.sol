@@ -82,4 +82,19 @@ library SharesToTokens {
     function toTokens(Shares shares, Tokens totalSupply, Shares totalShares) internal pure returns (Tokens) {
         return tmp().omul(shares, totalSupply).div(totalShares);
     }
+
+    function toTokensUp(Shares shares, Tokens totalSupply, Shares totalShares) internal pure returns (Tokens r) {
+        uint256 freePtr;
+        assembly ("memory-safe") {
+            freePtr := mload(0x40)
+        }
+
+        TokensXShares n = alloc().omul(shares, totalSupply);
+        r = n.div(totalShares);
+        r = r.inc(tmp().omul(r, totalShares) < n);
+
+        assembly ("memory-safe") {
+            mstore(0x40, freePtr)
+        }
+    }
 }

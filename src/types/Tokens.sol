@@ -1,8 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {UnsafeMath} from "../lib/UnsafeMath.sol";
+
 /// This type is given as `uint256` for efficiency, but it is capped at `type(uint144).max`.
 type Tokens is uint256;
+
+library TokensUnsafeMathAdapter {
+    using UnsafeMath for uint256;
+
+    function inc(Tokens x, bool c) internal pure returns (Tokens) {
+        return Tokens.wrap(Tokens.unwrap(x).unsafeInc(c));
+    }
+
+    function dec(Tokens x, bool c) internal pure returns (Tokens) {
+        return Tokens.wrap(Tokens.unwrap(x).unsafeDec(c));
+    }
+}
+
+using TokensUnsafeMathAdapter for Tokens global;
 
 library TokensArithmetic {
     function mul(Tokens x, uint256 y) internal pure returns (Tokens) {
