@@ -15,6 +15,7 @@ import {ReflectMath} from "./core/ReflectMath.sol";
 import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 import {Checkpoints, LibCheckpoints} from "./core/Checkpoints.sol";
 import {RebaseQueue, LibRebaseQueue} from "./core/RebaseQueue.sol";
+import {MoonPhase} from "./core/MoonPhase.sol";
 
 import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
 import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./types/Shares.sol";
@@ -279,7 +280,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function _tax() private view returns (BasisPoints) {
-        revert("unimplemented");
+        return MoonPhase.moonPhase(block.timestamp);
     }
 
     function tax() external view returns (uint256) {
