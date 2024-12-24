@@ -9,12 +9,12 @@ import {console} from "@forge-std/console.sol";
 
 contract MoonPhaseTest is Test {
     function testEpoch() external {
-        vm.warp(1735597605);
+        vm.warp(1740721485);
         assertEq(BasisPoints.unwrap(MoonPhase.moonPhase(vm.getBlockTimestamp())), 5000);
     }
 
     function testFullMoonAfterEpoch() external {
-        vm.warp(1735597605 + 1275721);
+        vm.warp(1740721485 + 1275721);
         assertEq(BasisPoints.unwrap(MoonPhase.moonPhase(vm.getBlockTimestamp())), 1);
     }
 

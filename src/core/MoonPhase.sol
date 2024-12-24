@@ -8,7 +8,7 @@ import {UnsafeMath} from "../lib/UnsafeMath.sol";
 library MoonPhase {
     using UnsafeMath for int256;
 
-    uint256 private constant _EPOCH = 1735597605; // 2024-12-30T22:26:45Z, the last new moon of 2024
+    uint256 private constant _EPOCH = 1740721485; // 2025-02-28T00:44:45Z, the last new moon of Februrary 2025
     uint256 private constant _SYNODIC_MONTH = 29.5305888531 * 10 ** 8 * 24 * 60 * 60;
     uint256 private constant _SCALE = 2 ** 64 * 10 ** 8;
 
