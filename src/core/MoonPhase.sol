@@ -12,12 +12,6 @@ library MoonPhase {
     uint256 private constant _SYNODIC_MONTH = 29.5305888531 * 10 ** 8 * 24 * 60 * 60;
     uint256 private constant _SCALE = 2 ** 64 * 10 ** 8;
 
-    function _tern(bool c, uint256 x, uint256 y) private pure returns (uint256 r) {
-        assembly ("memory-safe") {
-            r := xor(x, mul(xor(x, y), c))
-        }
-    }
-
     function _tern(bool c, int256 x, int256 y) private pure returns (int256 r) {
         assembly ("memory-safe") {
             r := xor(x, mul(xor(x, y), c))
@@ -43,12 +37,12 @@ library MoonPhase {
             // in turns (with a full circle represented by 1 instead of 2π). We first reduce the
             // range of `x` from 0 to 1 to 0 to 0.25 and reflect it so that we can compute `sign *
             // sin(x)` instead.
-            uint256 x;
+            int256 x;
             {
-                uint256 thresh = _tern(monthElapsed < 0.5 * 2 ** 64, uint256(0.75 * 2 ** 64), 0.25 * 2 ** 64);
-                x = _tern(monthElapsed < thresh, monthElapsed - thresh, thresh - monthElapsed);
+                int256 thresh = _tern(monthElapsed < 0.5 * 2 ** 64, 0.75 * 2 ** 64, 0.25 * 2 ** 64);
+                x = _tern(monthElapsed < uint256(thresh), int256(monthElapsed) - thresh, thresh - int256(monthElapsed));
             }
-            int256 sign = _tern(monthElapsed - 0.25 * 2 ** 64 < 0.5 * 2 ** 64, int256(1), -1);
+            int256 sign = _tern(monthElapsed - 0.25 * 2 ** 64 < 0.5 * 2 ** 64, 1, -1);
 
             // Now we approximate `sign * sin(x)` via a (4, 3)-term monic-numerator rational
             // polynomial. This technique was popularized by Remco Bloemen
@@ -59,18 +53,18 @@ library MoonPhase {
             // rounding error. This relatively small rational polynomial is only accurate to ~1e-5,
             // but that is more than sufficient for our purposes.
 
-            int256 p = int256(x);
+            int256 p = x;
             p += 1525700193226203185; // ~0.0827
-            p *= int256(x);
+            p *= x;
             p += -93284552137022849597343993509195607076; // ~-0.274
-            p *= int256(x);
+            p *= x;
             p += 2500426605410053227278254715722618320500226436344531; // ~3.98e-7
             p *= sign;
 
             int256 q = -2132527596694872609; // ~-0.116
-            q *= int256(x);
+            q *= x;
             q += 4216729355816757570957775670381316919; // ~0.0124
-            q *= int256(x);
+            q *= x;
             q += -273763917958281728795650899975241599620736138002175265032; // ~-0.0436
 
             // Now `p/q` if computed exactly represents `cos(x)`. What we actually want, though, is
