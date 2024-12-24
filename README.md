@@ -14,7 +14,7 @@ being technically correct.
 
 ## Features
 
-* Unreasonably high decimals (36)
+* Unreasonably high decimals (35)
 * Reflection (both tax _and_ rebase)
 * Tax rate changes depending on the phase of the moon
 * Randomly reverts or returns `false` to signal failure
@@ -48,7 +48,7 @@ what ERC20 literally requires.
     from the specified amount
   * Upper bound: exactly compute the specified amount minus the tax, round it up
 
-"Normal" reflection tokens do not have these properties, and the author adopted
+"Normal" reflection tokens do not have these properties, and the authors adopted
 these restrictions primarily to demonstrate mastery of the required numerical
 programming techniques. This creates some interesting game-theoretic interplay
 where it sometimes becomes advantageous to store tokens in multiple addresses,
@@ -97,8 +97,8 @@ tokens were delegated.
  * `getTotalVotes()(uint256)` (view)
  * `getPastTotalVotes(uint256)(uint256)` (view)
 
-FU is otherwise compatible with the OpenZeppelin Governor suite. The author
-recommends a Governor that inherits from the following OpenZeppelin contracts
+FU is otherwise compatible with the OpenZeppelin Governor suite. The authors
+recommend a Governor that inherits from the following OpenZeppelin contracts
 (version 5.1.0):
 
 * `Governor`
@@ -110,7 +110,7 @@ recommends a Governor that inherits from the following OpenZeppelin contracts
 * `GovernorPreventLateQuorum`
 
 Remember that FU uses `block.timestamp` for durations, with a quantum of 1
-day. The author recommends setting the voting delay to 2 days, the voting period
+day. The authors recommend setting the voting delay to 2 days, the voting period
 to 1 week, the vote extension period to 4 days, the quorum fraction to 33%, and
 the timelock min delay to 2 weeks.
 
@@ -195,3 +195,19 @@ forge test -vvv --fuzz-seed "$(python3 -c 'import secrets; print(secrets.randbel
 ./medusa fuzz # or use your system `medusa`
 slither .
 ```
+
+# Legal
+
+If you're looking for a hot new coin to ape that's gonna give you a good pump,
+then this is not the coin for you. The authors are not pumpooors (they're
+borderline incompetent with HTML/JS/CSS), and neither are they going to put any
+effort into promoting this token to increase it's price. If you want to tell
+your friends about it, we can't stop you, but you're probably going to lose them
+money by suggesting this to them. This is strictly an art project. Owning this
+token is like owning a participation trophy. The trophy is for being determined
+enough to actually make a swap happen in spite of all the roadblocks set in the
+way.
+
+For developers, if your dApp works with FU, then it will probably work with
+every other token on earth. Perhaps there is some utility in having a
+maximally-badly-behaved ERC20 token for testing purposes.
