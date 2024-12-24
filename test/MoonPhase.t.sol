@@ -53,7 +53,7 @@ contract MoonPhaseTest is Test {
     }
 
     function testRange(uint256 time) external {
-        time = bound(time, 1735597605, 64849501605);
+        time = bound(time, 1740721485, 64854625485);
         vm.warp(time);
         uint256 phase = BasisPoints.unwrap(MoonPhase.moonPhase(vm.getBlockTimestamp()));
         assertGe(phase, 1);
