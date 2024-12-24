@@ -185,8 +185,6 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return (shares, totalShares_);
     }
 
-    // TODO: because we enforce as a postcondition of every function that pair is under the limit,
-    // this function is kinda pointless
     function _applyWhaleLimit(Shares shares0, Shares shares1, Shares totalShares_)
         private
         pure
