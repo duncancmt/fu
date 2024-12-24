@@ -427,7 +427,11 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return true;
     }
 
-    function _transfer(Storage storage s, address from, address to, CrazyBalance amount) internal override returns (bool) {
+    function _transfer(Storage storage s, address from, address to, CrazyBalance amount)
+        internal
+        override
+        returns (bool)
+    {
         // TODO: the order of these checks could be tweaked to improve average-case gas consumption
         if (from == DEAD) {
             if (_check()) {
