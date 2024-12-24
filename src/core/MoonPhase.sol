@@ -25,7 +25,11 @@ library MoonPhase {
             // `monthElapsed` represents the position of the current moment within the current lunar
             // month. It's a linear value, even though the illumination of the moon is nonlinear in
             // time. The basis, `2 ** 64`, is chosen so that when we compute `sin` below, we can
-            // avoid some extraneous bit shifts.
+            // avoid some extraneous bit shifts. The author considered a higher-order polynomial
+            // approximation of the length of the synodic month, but concluded that it was excessive
+            // given the relatively small second and third moments (compared to "reasonable"
+            // timescales) as well as the significant additional complexity in taking the integral
+            // of that approximation from the epoch to the present.
             uint256 monthElapsed = (reEpoch * _SCALE / _SYNODIC_MONTH) & type(uint64).max;
 
             // Now that we have the sawtooth function `monthElapsed` that ranges from 0 at the new
