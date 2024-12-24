@@ -63,10 +63,10 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     /// @custom:security non-reentrant
     IUniswapV2Pair public immutable pair;
 
-    bytes32 internal immutable _logoHash;
+    bytes32 internal immutable _imageHash;
 
-    function tokenURI() external view override returns (string memory) {
-        return _logoHash.CIDv0();
+    function image() external view returns (string memory) {
+        return _imageHash.CIDv0();
     }
 
     // This mapping is actually in transient storage. It's placed here so that
@@ -77,7 +77,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
 
     event GitCommit(bytes20 indexed gitCommit);
 
-    constructor(bytes20 gitCommit, string memory logo, address[] memory initialHolders) payable {
+    constructor(bytes20 gitCommit, string memory image, address[] memory initialHolders) payable {
         require(Settings.SHARES_TO_VOTES_DIVISOR >= Settings.INITIAL_SHARES_RATIO);
 
         require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
@@ -88,10 +88,10 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
 
         assembly ("memory-safe") {
-            log0(add(0x20, logo), mload(logo))
+            log0(add(0x20, image), mload(image))
         }
         emit GitCommit(gitCommit);
-        _logoHash = logo.dagPbUnixFsHash();
+        _imageHash = image.dagPbUnixFsHash();
 
         // slither-disable-next-line low-level-calls
         (bool success,) = address(WETH).call{value: address(this).balance}("");
