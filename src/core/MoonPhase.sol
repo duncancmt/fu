@@ -7,9 +7,9 @@ import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
 library MoonPhase {
     using UnsafeMath for int256;
-    
+
     uint256 private constant _EPOCH = 1735597605; // 2024-12-30T22:26:45Z, the last new moon of 2024
-    uint256 private constant _SYNODIC_MONTH = 29.5305888531*10**8*24*60*60;
+    uint256 private constant _SYNODIC_MONTH = 29.5305888531 * 10 ** 8 * 24 * 60 * 60;
     uint256 private constant _SCALE = 2 ** 64 * 10 ** 8;
 
     function _tern(bool c, uint256 x, uint256 y) private pure returns (uint256 r) {
@@ -58,7 +58,7 @@ library MoonPhase {
             // rule to evaluate each polynomial because Knuth's and Winograd's algorithms give worse
             // rounding error. This relatively small rational polynomial is only accurate to ~1e-5,
             // but that is more than sufficient for our purposes.
-            
+
             int256 p = int256(x);
             p += 1525700193226203185; // ~0.0827
             p *= int256(x);

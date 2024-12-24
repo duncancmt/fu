@@ -307,7 +307,10 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         // be an off-by-one. but also maybe it doesn't matter because `getTransferSharesFromPair`
         // *mostly* works correctly when values aren't *too* extreme
         Tokens balanceTokensHi = cachedShares.toTokensUp(cachedTotalSupply, cachedTotalShares);
-        if (castUp(scale(amountTokens, BASIS - taxRate)) + balanceTokensHi >= (cachedTotalSupply - balanceTokensHi).div(Settings.ANTI_WHALE_DIVISOR - 1)) {
+        if (
+            castUp(scale(amountTokens, BASIS - taxRate)) + balanceTokensHi
+                >= (cachedTotalSupply - balanceTokensHi).div(Settings.ANTI_WHALE_DIVISOR - 1)
+        ) {
             newShares = (cachedTotalShares - cachedShares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
             newTotalShares = cachedTotalShares + newShares - cachedShares;
         } else {
