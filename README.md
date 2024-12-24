@@ -31,6 +31,8 @@ being technically correct.
   * This breaks some off-chain data pipelines
 * Consumes a random, hard-to-predict amount of gas on each call
   * This makes `eth_estimateGas` unreliable
+* [ERC7201](https://eips.ethereum.org/EIPS/eip-7201) support to make slot
+  detection more difficult
 
 ## Restrictions
 

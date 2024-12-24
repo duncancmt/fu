@@ -55,8 +55,9 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     using IPFS for bytes32;
 
     function totalSupply() external view override returns (uint256) {
+        Storage storage s = _s();
         unchecked {
-            return Tokens.unwrap(_totalSupply + _pairTokens);
+            return Tokens.unwrap(s.totalSupply + s.pairTokens);
         }
     }
 
@@ -73,11 +74,12 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     // solc reserves a slot for it during storage layout generation. Solc 0.8.28
     // doesn't support declaring mappings in transient storage. It is ultimately
     // manipulated by the `TransientStorageLayout` base contract (in assembly)
+    // TODO: make this use packed encoding rather than being compatible with Solidity's storage layout
     mapping(address owner => mapping(address spender => CrazyBalance allowed)) private _temporaryAllowance;
 
     event GitCommit(bytes20 indexed gitCommit);
 
-    constructor(bytes20 gitCommit, string memory image, address[] memory initialHolders) payable {
+    constructor(bytes20 gitCommit, string memory image_, address[] memory initialHolders) payable {
         require(Settings.SHARES_TO_VOTES_DIVISOR >= Settings.INITIAL_SHARES_RATIO);
 
         require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
@@ -89,36 +91,38 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
 
         assembly ("memory-safe") {
-            log0(add(0x20, image), mload(image))
+            log0(add(0x20, image_), mload(image_))
         }
         emit GitCommit(gitCommit);
-        _imageHash = image.dagPbUnixFsHash();
+        _imageHash = image_.dagPbUnixFsHash();
 
         // slither-disable-next-line low-level-calls
         (bool success,) = address(WETH).call{value: address(this).balance}("");
         require(success);
         require(WETH.transfer(address(pair), WETH.balanceOf(address(this))));
 
+        Storage storage s = _s();
+
         Tokens pairTokens = Settings.INITIAL_SUPPLY.div(Settings.INITIAL_LIQUIDITY_DIVISOR);
         pairTokens = pairTokens - Tokens.wrap(Tokens.unwrap(pairTokens) % Settings.CRAZY_BALANCE_BASIS);
-        _pairTokens = pairTokens;
+        s.pairTokens = pairTokens;
         emit Transfer(address(0), address(pair), Tokens.unwrap(pairTokens));
 
         Tokens totalSupply_ = Settings.INITIAL_SUPPLY - pairTokens;
-        _totalSupply = totalSupply_;
+        s.totalSupply = totalSupply_;
         Shares totalShares = Shares.wrap(Tokens.unwrap(totalSupply_) * Settings.INITIAL_SHARES_RATIO);
-        _totalShares = totalShares;
+        s.totalShares = totalShares;
 
         {
             // The queue is empty, so we have to special-case the first insertion. `DEAD` will
             // always hold a token balance, which makes many things simpler.
-            _sharesOf[DEAD] = Settings.oneTokenInShares();
-            CrazyBalance balance = _sharesOf[DEAD].toCrazyBalance(totalSupply_, totalShares);
+            s.sharesOf[DEAD] = Settings.oneTokenInShares();
+            CrazyBalance balance = s.sharesOf[DEAD].toCrazyBalance(totalSupply_, totalShares);
             emit Transfer(address(0), DEAD, balance.toExternal());
-            _rebaseQueue.initialize(DEAD, balance);
+            s.rebaseQueue.initialize(DEAD, balance);
         }
         {
-            Shares toMint = totalShares - _sharesOf[DEAD];
+            Shares toMint = totalShares - s.sharesOf[DEAD];
             // slither-disable-next-line divide-before-multiply
             Shares sharesRest = toMint.div(initialHolders.length);
             {
@@ -126,19 +130,19 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
                 CrazyBalance amount = sharesFirst.toCrazyBalance(totalSupply_, totalShares);
 
                 address to = initialHolders[0];
-                assert(_sharesOf[to] == ZERO_SHARES);
-                _sharesOf[to] = sharesFirst;
+                assert(s.sharesOf[to] == ZERO_SHARES);
+                s.sharesOf[to] = sharesFirst;
                 emit Transfer(address(0), to, amount.toExternal());
-                _rebaseQueue.enqueue(to, amount);
+                s.rebaseQueue.enqueue(to, amount);
             }
             {
                 CrazyBalance amount = sharesRest.toCrazyBalance(totalSupply_, totalShares);
                 for (uint256 i = 1; i < initialHolders.length; i++) {
                     address to = initialHolders[i];
-                    assert(_sharesOf[to] == ZERO_SHARES);
-                    _sharesOf[to] = sharesRest;
+                    assert(s.sharesOf[to] == ZERO_SHARES);
+                    s.sharesOf[to] = sharesRest;
                     emit Transfer(address(0), to, amount.toExternal());
-                    _rebaseQueue.enqueue(to, amount);
+                    s.rebaseQueue.enqueue(to, amount);
                 }
             }
         }
@@ -149,16 +153,16 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             require(pair == FACTORY.getPair(WETH, this));
         }
         {
-            (CrazyBalance pairBalance,,,,) = _balanceOf(address(pair));
+            (CrazyBalance pairBalance,,,,) = _balanceOf(s, address(pair));
             uint256 initialLiquidity =
                 Math.sqrt(CrazyBalance.unwrap(pairBalance) * WETH.balanceOf(address(pair))) - 1_000;
             require(pair.mint(address(0)) >= initialLiquidity);
         }
     }
 
-    function _consumeNonce(address account) internal override returns (uint256) {
+    function _consumeNonce(Storage storage s, address account) internal override returns (uint256) {
         unchecked {
-            return nonces[account]++;
+            return s.nonces[account]++;
         }
     }
 
@@ -176,11 +180,11 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function _applyWhaleLimit(Shares shares, Shares totalShares_) private pure returns (Shares, Shares) {
-        Shares whaleLimit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
-        if (shares > whaleLimit) {
-            whaleLimit = (totalShares_ - shares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
-            totalShares_ = totalShares_ - (shares - whaleLimit);
-            shares = whaleLimit;
+        Shares limit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+        if (shares > limit) {
+            limit = (totalShares_ - shares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
+            totalShares_ = totalShares_ - (shares - limit);
+            shares = limit;
         }
         return (shares, totalShares_);
     }
@@ -191,34 +195,34 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         returns (Shares, Shares, Shares)
     {
         (Shares sharesHi, Shares sharesLo) = (shares0 > shares1) ? (shares0, shares1) : (shares1, shares0);
-        Shares whaleLimit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
-        if (sharesHi > whaleLimit) {
-            whaleLimit = (totalShares_ - sharesHi).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
-            if (sharesLo > whaleLimit) {
-                whaleLimit = (totalShares_ - sharesHi - sharesLo).div(Settings.ANTI_WHALE_DIVISOR - 2) - ONE_SHARE;
-                totalShares_ = totalShares_ - (sharesHi + sharesLo - whaleLimit.mul(2));
-                sharesHi = whaleLimit;
-                sharesLo = whaleLimit;
+        Shares limit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+        if (sharesHi > limit) {
+            limit = (totalShares_ - sharesHi).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
+            if (sharesLo > limit) {
+                limit = (totalShares_ - sharesHi - sharesLo).div(Settings.ANTI_WHALE_DIVISOR - 2) - ONE_SHARE;
+                totalShares_ = totalShares_ - (sharesHi + sharesLo - limit.mul(2));
+                sharesHi = limit;
+                sharesLo = limit;
                 // TODO: verify that this *EXACTLY* satisfied the postcondition `sharesHi == sharesLo == totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE`
             } else {
-                totalShares_ = totalShares_ - (sharesHi - whaleLimit);
-                sharesHi = whaleLimit;
+                totalShares_ = totalShares_ - (sharesHi - limit);
+                sharesHi = limit;
             }
         }
         (shares0, shares1) = (shares0 > shares1) ? (sharesHi, sharesLo) : (sharesLo, sharesHi);
         return (shares0, shares1, totalShares_);
     }
 
-    function _loadAccount(address account)
+    function _loadAccount(Storage storage s, address account)
         private
         view
         returns (Shares originalShares, Shares cachedShares, Shares cachedTotalShares)
     {
-        originalShares = _sharesOf[account];
-        (cachedShares, cachedTotalShares) = _applyWhaleLimit(originalShares, _totalShares);
+        originalShares = s.sharesOf[account];
+        (cachedShares, cachedTotalShares) = _applyWhaleLimit(originalShares, s.totalShares);
     }
 
-    function _loadAccounts(address account0, address account1)
+    function _loadAccounts(Storage storage s, address account0, address account1)
         private
         view
         returns (
@@ -229,13 +233,13 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             Shares cachedTotalShares
         )
     {
-        originalShares0 = _sharesOf[account0];
-        originalShares1 = _sharesOf[account1];
+        originalShares0 = s.sharesOf[account0];
+        originalShares1 = s.sharesOf[account1];
         (cachedShares0, cachedShares1, cachedTotalShares) =
-            _applyWhaleLimit(originalShares0, originalShares1, _totalShares);
+            _applyWhaleLimit(originalShares0, originalShares1, s.totalShares);
     }
 
-    function _balanceOf(address account)
+    function _balanceOf(Storage storage s, address account)
         private
         view
         returns (
@@ -246,20 +250,21 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             Shares cachedTotalShares
         )
     {
-        (originalShares, cachedShares, cachedTotalShares) = _loadAccount(account);
-        cachedTotalSupply = _totalSupply;
+        (originalShares, cachedShares, cachedTotalShares) = _loadAccount(s, account);
+        cachedTotalSupply = s.totalSupply;
         balance = cachedShares.toCrazyBalance(account, cachedTotalSupply, cachedTotalShares);
     }
 
     function balanceOf(address account) external view override returns (uint256) {
+        Storage storage s = _s();
         if (account == address(pair)) {
-            return _pairTokens.toPairBalance().toExternal();
+            return s.pairTokens.toPairBalance().toExternal();
         }
-        (CrazyBalance balance,,,,) = _balanceOf(account);
+        (CrazyBalance balance,,,,) = _balanceOf(s, account);
         return balance.toExternal();
     }
 
-    function _balanceOf(address account0, address account1)
+    function _balanceOf(Storage storage s, address account0, address account1)
         private
         view
         returns (
@@ -273,8 +278,8 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         )
     {
         (originalShares0, cachedShares0, originalShares1, cachedShares1, cachedTotalShares) =
-            _loadAccounts(account0, account1);
-        cachedTotalSupply = _totalSupply;
+            _loadAccounts(s, account0, account1);
+        cachedTotalSupply = s.totalSupply;
         balance0 = cachedShares0.toCrazyBalance(account0, cachedTotalSupply, cachedTotalShares);
     }
 
@@ -287,16 +292,17 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function whaleLimit(address potentialWhale) external view returns (uint256) {
-        return _totalSupply.div(Settings.ANTI_WHALE_DIVISOR).toCrazyBalance(potentialWhale).toExternal();
+        Storage storage s = _s();
+        return s.totalSupply.div(Settings.ANTI_WHALE_DIVISOR).toCrazyBalance(potentialWhale).toExternal();
     }
 
-    function _transferFromPair(address to, CrazyBalance amount) private returns (bool) {
+    function _transferFromPair(Storage storage s, address to, CrazyBalance amount) private returns (bool) {
         // We don't need to check that `pair` is transferring less than its balance. The
         // `UniswapV2Pair` code does that for us. Additionally, `pair`'s balance can never reach
         // zero.
 
-        (Shares originalShares, Shares cachedShares, Shares cachedTotalShares) = _loadAccount(to);
-        Tokens cachedTotalSupply = _totalSupply;
+        (Shares originalShares, Shares cachedShares, Shares cachedTotalShares) = _loadAccount(s, to);
+        Tokens cachedTotalSupply = s.totalSupply;
         Tokens amountTokens = amount.toPairTokens();
 
         BasisPoints taxRate = _tax();
@@ -325,43 +331,43 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             - cachedTotalShares.toPairBalance(cachedTotalSupply, cachedTotalShares);
         CrazyBalance burnAmount = amount - transferAmount;
 
-        _rebaseQueue.rebaseFor(to, cachedShares, cachedTotalSupply, cachedTotalShares);
+        s.rebaseQueue.rebaseFor(to, cachedShares, cachedTotalSupply, cachedTotalShares);
 
-        _pairTokens = _pairTokens - amountTokens;
-        _sharesOf[to] = newShares;
-        _totalSupply = newTotalSupply;
-        _totalShares = newTotalShares;
+        s.pairTokens = s.pairTokens - amountTokens;
+        s.sharesOf[to] = newShares;
+        s.totalSupply = newTotalSupply;
+        s.totalShares = newTotalShares;
 
         emit Transfer(address(pair), to, transferAmount.toExternal());
         emit Transfer(address(pair), address(0), burnAmount.toExternal());
 
         if (newShares >= originalShares) {
-            _checkpoints.mint(delegates[to], newShares.toVotes() - originalShares.toVotes(), clock());
+            s.checkpoints.mint(s.delegates[to], newShares.toVotes() - originalShares.toVotes(), clock());
         } else {
-            _checkpoints.burn(delegates[to], originalShares.toVotes() - newShares.toVotes(), clock());
+            s.checkpoints.burn(s.delegates[to], originalShares.toVotes() - newShares.toVotes(), clock());
         }
 
         if (originalShares == ZERO_SHARES) {
             if (amount != ZERO_BALANCE) {
-                _rebaseQueue.enqueue(to, newShares, newTotalSupply, newTotalShares);
+                s.rebaseQueue.enqueue(to, newShares, newTotalSupply, newTotalShares);
             }
         } else {
-            _rebaseQueue.moveToBack(to, newShares, newTotalSupply, newTotalShares);
+            s.rebaseQueue.moveToBack(to, newShares, newTotalSupply, newTotalShares);
         }
 
-        _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+        s.rebaseQueue.processQueue(s.sharesOf, cachedTotalSupply, newTotalShares);
 
         return true;
     }
 
-    function _transferToPair(address from, CrazyBalance amount) private returns (bool) {
+    function _transferToPair(Storage storage s, address from, CrazyBalance amount) private returns (bool) {
         (
             CrazyBalance balance,
             Shares originalShares,
             Shares cachedShares,
             Tokens cachedTotalSupply,
             Shares cachedTotalShares
-        ) = _balanceOf(from);
+        ) = _balanceOf(s, from);
         if (amount > balance) {
             if (_check()) {
                 revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
@@ -369,7 +375,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             return false;
         }
 
-        Tokens cachedPairTokens = _pairTokens;
+        Tokens cachedPairTokens = s.pairTokens;
         BasisPoints taxRate = _tax();
         Shares newShares;
         Shares newTotalShares;
@@ -396,32 +402,32 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         // There is no need to apply the whale limit. `pair` holds tokens directly and is allowed to
         // go over the limit.
 
-        _rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
+        s.rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
 
-        _sharesOf[from] = newShares;
-        _pairTokens = newPairTokens;
-        _totalSupply = cachedTotalSupply - transferTokens;
-        _totalShares = newTotalShares;
+        s.sharesOf[from] = newShares;
+        s.pairTokens = newPairTokens;
+        s.totalSupply = cachedTotalSupply - transferTokens;
+        s.totalShares = newTotalShares;
 
         emit Transfer(from, address(pair), transferAmount.toExternal());
         emit Transfer(from, address(0), burnAmount.toExternal());
 
-        _checkpoints.burn(delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
+        s.checkpoints.burn(s.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
         if (amount == balance) {
             if (originalShares != ZERO_SHARES) {
-                _rebaseQueue.dequeue(from);
+                s.rebaseQueue.dequeue(from);
             }
         } else {
-            _rebaseQueue.moveToBack(from, newShares, cachedTotalSupply, newTotalShares);
+            s.rebaseQueue.moveToBack(from, newShares, cachedTotalSupply, newTotalShares);
         }
 
-        _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+        s.rebaseQueue.processQueue(s.sharesOf, cachedTotalSupply, newTotalShares);
 
         return true;
     }
 
-    function _transfer(address from, address to, CrazyBalance amount) internal override returns (bool) {
+    function _transfer(Storage storage s, address from, address to, CrazyBalance amount) internal override returns (bool) {
         // TODO: the order of these checks could be tweaked to improve average-case gas consumption
         if (from == DEAD) {
             if (_check()) {
@@ -456,10 +462,10 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         }
 
         if (from == address(pair)) {
-            return _transferFromPair(to, amount);
+            return _transferFromPair(s, to, amount);
         }
         if (to == address(pair)) {
-            return _transferToPair(from, amount);
+            return _transferToPair(s, from, amount);
         }
 
         (
@@ -470,7 +476,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             Shares cachedToShares,
             Tokens cachedTotalSupply,
             Shares cachedTotalShares
-        ) = _balanceOf(from, to);
+        ) = _balanceOf(s, from, to);
 
         if (amount > fromBalance) {
             if (_check()) {
@@ -518,53 +524,53 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         // The computation in `ReflectMath.getTransferShares` (whichever version we used) enforces
         // the postcondition that `from` and `to` come in under the whale limit. So we don't need to
         // check, we can just write the values to storage.
-        _rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
-        _rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
+        s.rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
+        s.rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
 
-        _sharesOf[from] = newFromShares;
-        _sharesOf[to] = newToShares;
-        _totalShares = newTotalShares;
+        s.sharesOf[from] = newFromShares;
+        s.sharesOf[to] = newToShares;
+        s.totalShares = newTotalShares;
         emit Transfer(from, to, transferAmount.toExternal());
         emit Transfer(from, address(0), burnAmount.toExternal());
 
         if (newToShares >= originalToShares) {
-            _checkpoints.transfer(
-                delegates[from],
-                delegates[to],
+            s.checkpoints.transfer(
+                s.delegates[from],
+                s.delegates[to],
                 newToShares.toVotes() - originalToShares.toVotes(),
                 originalFromShares.toVotes() - newFromShares.toVotes(),
                 clock()
             );
         } else {
-            _checkpoints.burn(delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
-            _checkpoints.burn(delegates[to], originalToShares.toVotes() - newToShares.toVotes(), clock());
+            s.checkpoints.burn(s.delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
+            s.checkpoints.burn(s.delegates[to], originalToShares.toVotes() - newToShares.toVotes(), clock());
         }
 
         // TODO: DRY
         if (amount == fromBalance) {
             if (originalFromShares != ZERO_SHARES) {
-                _rebaseQueue.dequeue(from);
+                s.rebaseQueue.dequeue(from);
             }
         } else {
-            _rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
+            s.rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
         }
 
         // TODO: DRY
         if (originalToShares == ZERO_SHARES) {
             if (amount != ZERO_BALANCE) {
-                _rebaseQueue.enqueue(to, newToShares, cachedTotalSupply, newTotalShares);
+                s.rebaseQueue.enqueue(to, newToShares, cachedTotalSupply, newTotalShares);
             }
         } else {
-            _rebaseQueue.moveToBack(to, newToShares, cachedTotalSupply, newTotalShares);
+            s.rebaseQueue.moveToBack(to, newToShares, cachedTotalSupply, newTotalShares);
         }
 
-        _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+        s.rebaseQueue.processQueue(s.sharesOf, cachedTotalSupply, newTotalShares);
 
         return true;
     }
 
-    function _approve(address owner, address spender, CrazyBalance amount) internal override {
-        _allowance[owner][spender] = amount;
+    function _approve(Storage storage s, address owner, address spender, CrazyBalance amount) internal override {
+        s.allowance[owner][spender] = amount;
         emit Approval(owner, spender, amount.toExternal());
     }
 
@@ -576,10 +582,10 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         if (temporaryAllowance.isMax()) {
             return temporaryAllowance.toExternal();
         }
-        return _allowance[owner][spender].saturatingAdd(temporaryAllowance).toExternal();
+        return _s().allowance[owner][spender].saturatingAdd(temporaryAllowance).toExternal();
     }
 
-    function _checkAllowance(address owner, CrazyBalance amount)
+    function _checkAllowance(Storage storage s, address owner, CrazyBalance amount)
         internal
         view
         override
@@ -592,7 +598,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         if (currentTempAllowance >= amount) {
             return (true, currentTempAllowance, ZERO_BALANCE);
         }
-        CrazyBalance currentAllowance = _allowance[owner][msg.sender];
+        CrazyBalance currentAllowance = s.allowance[owner][msg.sender];
         if (currentAllowance >= amount - currentTempAllowance) {
             return (true, currentTempAllowance, currentAllowance);
         }
@@ -603,6 +609,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     }
 
     function _spendAllowance(
+        Storage storage s,
         address owner,
         CrazyBalance amount,
         CrazyBalance currentTempAllowance,
@@ -623,7 +630,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         if (currentAllowance.isMax()) {
             return;
         }
-        _approve(owner, msg.sender, currentAllowance - amount);
+        _approve(s, owner, msg.sender, currentAllowance - amount);
     }
 
     function name() public pure override returns (string memory) {
@@ -664,28 +671,28 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
     string public constant override CLOCK_MODE = "mode=timestamp&epoch=1970-01-01T00%3A00%3A00Z&quantum=86400";
 
     function getVotes(address account) external view override returns (uint256) {
-        return _checkpoints.current(account).toExternal();
+        return _s().checkpoints.current(account).toExternal();
     }
 
     function getPastVotes(address account, uint256 timepoint) external view override returns (uint256) {
-        return _checkpoints.get(account, uint48(timepoint)).toExternal();
+        return _s().checkpoints.get(account, uint48(timepoint)).toExternal();
     }
 
     function getTotalVotes() external view returns (uint256) {
-        return _checkpoints.currentTotal().toExternal();
+        return _s().checkpoints.currentTotal().toExternal();
     }
 
     function getPastTotalVotes(uint256 timepoint) external view returns (uint256) {
-        return _checkpoints.getTotal(uint48(timepoint)).toExternal();
+        return _s().checkpoints.getTotal(uint48(timepoint)).toExternal();
     }
 
-    function _delegate(address delegator, address delegatee) internal override {
-        Shares shares = _sharesOf[delegator];
-        address oldDelegatee = delegates[delegator];
+    function _delegate(Storage storage s, address delegator, address delegatee) internal override {
+        Shares shares = s.sharesOf[delegator];
+        address oldDelegatee = s.delegates[delegator];
         emit DelegateChanged(delegator, oldDelegatee, delegatee);
-        delegates[delegator] = delegatee;
+        s.delegates[delegator] = delegatee;
         Votes votes = shares.toVotes();
-        _checkpoints.transfer(oldDelegatee, delegatee, votes, votes, clock());
+        s.checkpoints.transfer(oldDelegatee, delegatee, votes, votes, clock());
     }
 
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
@@ -693,7 +700,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return _success();
     }
 
-    function _burn(address from, CrazyBalance amount) internal override returns (bool) {
+    function _burn(Storage storage s, address from, CrazyBalance amount) internal override returns (bool) {
         if (from == DEAD) {
             if (_check()) {
                 revert ERC20InvalidSender(from);
@@ -703,7 +710,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         if (from == address(pair)) {
             // `amount` is zero or we would not have passed `_checkAllowance`
             emit Transfer(from, address(0), 0);
-            _rebaseQueue.processQueue(_sharesOf, _totalSupply, _totalShares);
+            s.rebaseQueue.processQueue(s.sharesOf, s.totalSupply, s.totalShares);
             return true;
         }
 
@@ -713,7 +720,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             Shares cachedShares,
             Tokens cachedTotalSupply,
             Shares cachedTotalShares
-        ) = _balanceOf(from);
+        ) = _balanceOf(s, from);
         if (amount > balance) {
             if (_check()) {
                 revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
@@ -739,29 +746,29 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             newTotalSupply = cachedTotalSupply - amountUnCrazy;
         }
 
-        _rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
+        s.rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
 
-        _sharesOf[from] = newShares;
-        _totalShares = newTotalShares;
-        _totalSupply = newTotalSupply;
+        s.sharesOf[from] = newShares;
+        s.totalShares = newTotalShares;
+        s.totalSupply = newTotalSupply;
         emit Transfer(from, address(0), amount.toExternal());
 
-        _checkpoints.burn(delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
+        s.checkpoints.burn(s.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
         if (amount == balance) {
             if (originalShares != ZERO_SHARES) {
-                _rebaseQueue.dequeue(from);
+                s.rebaseQueue.dequeue(from);
             }
         } else {
-            _rebaseQueue.moveToBack(from, newShares, newTotalSupply, newTotalShares);
+            s.rebaseQueue.moveToBack(from, newShares, newTotalSupply, newTotalShares);
         }
 
-        _rebaseQueue.processQueue(_sharesOf, newTotalSupply, newTotalShares);
+        s.rebaseQueue.processQueue(s.sharesOf, newTotalSupply, newTotalShares);
 
         return true;
     }
 
-    function _deliver(address from, CrazyBalance amount) internal override returns (bool) {
+    function _deliver(Storage storage s, address from, CrazyBalance amount) internal override returns (bool) {
         if (from == DEAD) {
             if (_check()) {
                 revert ERC20InvalidSender(from);
@@ -771,7 +778,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         if (from == address(pair)) {
             // `amount` is zero or we would not have passed `_checkAllowance`
             emit Transfer(from, address(0), 0);
-            _rebaseQueue.processQueue(_sharesOf, _totalSupply, _totalShares);
+            s.rebaseQueue.processQueue(s.sharesOf, s.totalSupply, s.totalShares);
             return true;
         }
 
@@ -781,7 +788,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
             Shares cachedShares,
             Tokens cachedTotalSupply,
             Shares cachedTotalShares
-        ) = _balanceOf(from);
+        ) = _balanceOf(s, from);
         if (amount > balance) {
             if (_check()) {
                 revert ERC20InsufficientBalance(from, balance.toExternal(), amount.toExternal());
@@ -800,23 +807,23 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
                 ReflectMath.getDeliverShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedShares);
         }
 
-        _rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
+        s.rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
 
-        _sharesOf[from] = newShares;
-        _totalShares = newTotalShares;
+        s.sharesOf[from] = newShares;
+        s.totalShares = newTotalShares;
         emit Transfer(from, address(0), amount.toExternal());
 
-        _checkpoints.burn(delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
+        s.checkpoints.burn(s.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
         if (amount == balance) {
             if (originalShares != ZERO_SHARES) {
-                _rebaseQueue.dequeue(from);
+                s.rebaseQueue.dequeue(from);
             }
         } else {
-            _rebaseQueue.moveToBack(from, newShares, cachedTotalSupply, newTotalShares);
+            s.rebaseQueue.moveToBack(from, newShares, cachedTotalSupply, newTotalShares);
         }
 
-        _rebaseQueue.processQueue(_sharesOf, cachedTotalSupply, newTotalShares);
+        s.rebaseQueue.processQueue(s.sharesOf, cachedTotalSupply, newTotalShares);
 
         return true;
     }

@@ -8,9 +8,11 @@ import {IERC5805} from "../interfaces/IERC5805.sol";
 import {IERC6093} from "../interfaces/IERC6093.sol";
 import {IERC7674} from "../interfaces/IERC7674.sol";
 
+import {FUStorage} from "../FUStorage.sol";
+
 import {CrazyBalance, toCrazyBalance} from "../types/CrazyBalance.sol";
 
-abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 {
+abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, FUStorage {
     using {toCrazyBalance} for uint256;
 
     constructor() {
@@ -25,18 +27,19 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 
 
     function _success() internal view virtual returns (bool);
 
-    function _transfer(address from, address to, CrazyBalance amount) internal virtual returns (bool);
-    function _burn(address from, CrazyBalance amount) internal virtual returns (bool);
-    function _deliver(address from, CrazyBalance amount) internal virtual returns (bool);
-    function _delegate(address delegator, address delegatee) internal virtual;
+    function _transfer(Storage storage s, address from, address to, CrazyBalance amount) internal virtual returns (bool);
+    function _burn(Storage storage s, address from, CrazyBalance amount) internal virtual returns (bool);
+    function _deliver(Storage storage s, address from, CrazyBalance amount) internal virtual returns (bool);
+    function _delegate(Storage storage s, address delegator, address delegatee) internal virtual;
 
-    function _approve(address owner, address spender, CrazyBalance amount) internal virtual;
-    function _checkAllowance(address owner, CrazyBalance amount)
+    function _approve(Storage storage s, address owner, address spender, CrazyBalance amount) internal virtual;
+    function _checkAllowance(Storage storage s, address owner, CrazyBalance amount)
         internal
         view
         virtual
         returns (bool, CrazyBalance, CrazyBalance);
     function _spendAllowance(
+        Storage storage s,
         address owner,
         CrazyBalance amount,
         CrazyBalance currentTempAllowance,
@@ -45,31 +48,32 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 
 
     function name() public pure virtual returns (string memory);
     function _NAME_HASH() internal pure virtual returns (bytes32);
-    function _consumeNonce(address account) internal virtual returns (uint256);
+    function _consumeNonce(Storage storage s, address account) internal virtual returns (uint256);
     function clock() public view virtual override returns (uint48);
 
     function transfer(address to, uint256 amount) external override returns (bool) {
-        if (!_transfer(msg.sender, to, amount.toCrazyBalance())) {
+        if (!_transfer(_s(), msg.sender, to, amount.toCrazyBalance())) {
             return false;
         }
         return _success();
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
-        _approve(msg.sender, spender, amount.toCrazyBalance());
+        _approve(_s(), msg.sender, spender, amount.toCrazyBalance());
         return _success();
     }
 
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
+        Storage storage s = _s();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance(from, amount.toCrazyBalance());
+            _checkAllowance(s, from, amount.toCrazyBalance());
         if (!success) {
             return false;
         }
-        if (!_transfer(from, to, amount.toCrazyBalance())) {
+        if (!_transfer(s, from, to, amount.toCrazyBalance())) {
             return false;
         }
-        _spendAllowance(from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
+        _spendAllowance(s, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
         return _success();
     }
 
@@ -122,7 +126,10 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 
         if (block.timestamp > deadline) {
             revert ERC2612ExpiredSignature(deadline);
         }
-        uint256 nonce = _consumeNonce(owner);
+
+        Storage storage s_ = _s();
+
+        uint256 nonce = _consumeNonce(s_, owner);
         bytes32 sep = DOMAIN_SEPARATOR();
         address signer;
         assembly ("memory-safe") {
@@ -148,13 +155,13 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 
         if (signer != owner) {
             revert ERC2612InvalidSigner(signer, owner);
         }
-        _approve(owner, spender, amount.toCrazyBalance());
+        _approve(s_, owner, spender, amount.toCrazyBalance());
     }
 
     bytes32 private constant _DELEGATION_TYPEHASH = 0xe48329057bfd03d55e49b547132e39cffd9c1820ad7b9d4c5307691425d15adf;
 
     function delegate(address delegatee) external override {
-        return _delegate(msg.sender, delegatee);
+        return _delegate(_s(), msg.sender, delegatee);
     }
 
     function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)
@@ -187,50 +194,55 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674 
         if (signer == address(0)) {
             revert ERC5805InvalidSignature();
         }
-        uint256 expectedNonce = _consumeNonce(signer);
+
+        Storage storage s_ = _s();
+
+        uint256 expectedNonce = _consumeNonce(s_, signer);
         if (nonce != expectedNonce) {
             revert ERC5805InvalidNonce(nonce, expectedNonce);
         }
-        return _delegate(signer, delegatee);
+        return _delegate(s_, signer, delegatee);
     }
 
     function burn(uint256 amount) external returns (bool) {
-        if (!_burn(msg.sender, amount.toCrazyBalance())) {
+        if (!_burn(_s(), msg.sender, amount.toCrazyBalance())) {
             return false;
         }
         return _success();
     }
 
     function deliver(uint256 amount) external returns (bool) {
-        if (!_deliver(msg.sender, amount.toCrazyBalance())) {
+        if (!_deliver(_s(), msg.sender, amount.toCrazyBalance())) {
             return false;
         }
         return _success();
     }
 
     function burnFrom(address from, uint256 amount) external returns (bool) {
+        Storage storage s = _s();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance(from, amount.toCrazyBalance());
+            _checkAllowance(s, from, amount.toCrazyBalance());
         if (!success) {
             return false;
         }
-        if (!_burn(from, amount.toCrazyBalance())) {
+        if (!_burn(s, from, amount.toCrazyBalance())) {
             return false;
         }
-        _spendAllowance(from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
+        _spendAllowance(s, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
         return _success();
     }
 
     function deliverFrom(address from, uint256 amount) external returns (bool) {
+        Storage storage s = _s();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance(from, amount.toCrazyBalance());
+            _checkAllowance(s, from, amount.toCrazyBalance());
         if (!success) {
             return false;
         }
-        if (!_deliver(from, amount.toCrazyBalance())) {
+        if (!_deliver(s, from, amount.toCrazyBalance())) {
             return false;
         }
-        _spendAllowance(from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
+        _spendAllowance(s, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
         return _success();
     }
 }
