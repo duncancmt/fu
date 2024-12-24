@@ -72,7 +72,9 @@ library MoonPhase {
             q += -273763917958281728795650899975241599620736138002175265032; // ~-0.0436
 
             // Now `p/q` if computed exactly represents `cos(x)`. What we actually want, though, is
-            // `(1 + cos(x)) / 4`.
+            // `(1 + cos(x)) / 2`. We also want to represent the output as a value from 1 to 5000
+            // inclusive; this gives rise to the awkward `2500` as well as the `+ 1`. `q` has no
+            // zeroes in the domain, so we don't need to worry about divide-by-zero.
             return BasisPoints.wrap(uint256(((p + q) * 2500).unsafeDiv(q)) + 1);
         }
     }
