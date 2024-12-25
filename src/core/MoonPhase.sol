@@ -15,6 +15,7 @@ library MoonPhase {
     uint256 private constant _SYNODIC_MONTH = 29.530588907 * 10 ** 7 * 24 * 60 * 60;
     uint256 private constant _SCALE = 2 ** 64 * 10 ** 7;
 
+    // TODO: this needs to be used a bunch of other places in this codebase to golf
     function _ternary(bool c, int256 x, int256 y) private pure returns (int256 r) {
         assembly ("memory-safe") {
             r := xor(y, mul(xor(x, y), c))

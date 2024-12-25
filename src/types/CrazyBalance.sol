@@ -81,9 +81,11 @@ using {
 library CrazyBalanceArithmetic {
     using UnsafeMath for uint256;
 
-    function saturatingAdd(CrazyBalance x, CrazyBalance y) internal pure returns (CrazyBalance) {
-        x = x + y;
-        return x < y ? CrazyBalance.wrap(type(uint256).max) : x;
+    function saturatingAdd(CrazyBalance x, CrazyBalance y) internal pure returns (CrazyBalance r) {
+        assembly ("memory-safe") {
+            r := add(x, y)
+            r := or(r, sub(0x00, lt(r, y)))
+        }
     }
 
     function toCrazyBalance(Shares shares, address account, Tokens totalSupply, Shares totalShares)
