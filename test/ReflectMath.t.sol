@@ -223,18 +223,17 @@ contract ReflectMathTest is Boilerplate, Test {
         console.log("totalShares", Shares.unwrap(newTotalShares));
         console.log("fromShares ", Shares.unwrap(newFromShares));
         console.log("toShares   ", Shares.unwrap(newToShares));
+        console.log("whale limit", Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)));
         console.log("counterfactual", Shares.unwrap(counterfactualToShares));
         console.log("===");
 
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
-        /*
         assertEq(
             Shares.unwrap(totalShares - newTotalShares),
             Shares.unwrap(fromShares + toShares - (newFromShares + newToShares)),
             "shares delta"
         );
-        */
 
         Tokens newFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
         Tokens newToBalance = newToShares.toTokens(totalSupply, newTotalShares);

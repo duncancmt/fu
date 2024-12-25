@@ -313,7 +313,8 @@ library ReflectMath {
         // TODO: divMulti
         newTotalShares = n1.div(d);
         newFromShares = n2.div(d);
-        newToShares = newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+        newToShares = newTotalShares.div(Settings.ANTI_WHALE_DIVISOR);// - ONE_SHARE;
+        newTotalShares = newTotalShares.dec(totalShares - newTotalShares < fromShares + toShares - (newFromShares + newToShares));
     }
 
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares)
