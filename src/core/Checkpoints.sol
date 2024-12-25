@@ -14,8 +14,8 @@ struct Checkpoint {
 }
 
 struct Checkpoints {
-    Checkpoint[] total;
     mapping(address => Checkpoint[]) each;
+    Checkpoint[] total;
 }
 
 library LibCheckpoints {
