@@ -4,11 +4,7 @@ pragma solidity ^0.8.28;
 import {CrazyBalance} from "../types/CrazyBalance.sol";
 
 abstract contract TransientStorageLayout {
-    function _setTemporaryAllowance(
-        address owner,
-        address spender,
-        CrazyBalance amount
-    ) internal {
+    function _setTemporaryAllowance(address owner, address spender, CrazyBalance amount) internal {
         assembly ("memory-safe") {
             mstore(0x14, spender)
             mstore(0x00, owner)
@@ -16,10 +12,7 @@ abstract contract TransientStorageLayout {
         }
     }
 
-    function _getTemporaryAllowance(
-        address owner,
-        address spender
-    ) internal view returns (CrazyBalance r) {
+    function _getTemporaryAllowance(address owner, address spender) internal view returns (CrazyBalance r) {
         assembly ("memory-safe") {
             mstore(0x14, spender)
             mstore(0x00, owner)
