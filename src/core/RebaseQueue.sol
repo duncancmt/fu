@@ -6,7 +6,7 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {Settings} from "./Settings.sol";
 
 import {CrazyBalance, ZERO as ZERO_BALANCE, CrazyBalanceArithmetic} from "../types/CrazyBalance.sol";
-import {Shares} from "../types/Shares.sol";
+import {Shares, ONE as ONE_SHARE} from "../types/Shares.sol";
 import {Tokens} from "../types/Tokens.sol";
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
@@ -132,10 +132,11 @@ library LibRebaseQueue {
     ) internal {
         address cursor = self.head;
         RebaseQueueElem storage elem = self.queue[cursor];
+        Shares limit = totalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         for (uint256 i = gasleft() & 7;; i = i.unsafeDec()) {
             Shares shares = sharesOf[cursor];
-            if (shares > totalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
-                shares = totalShares.div(Settings.ANTI_WHALE_DIVISOR);
+            if (shares > limit) {
+                shares = limit;
             }
             elem.lastTokens = _rebaseFor(elem, cursor, shares, totalSupply, totalShares);
             cursor = elem.next;
