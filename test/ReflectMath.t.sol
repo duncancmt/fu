@@ -227,7 +227,6 @@ contract ReflectMathTest is Boilerplate, Test {
         console.log("===");
 
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
-        //assertGe(Shares.unwrap(newToShares), Shares.unwrap(toShares), "to shares decreased");
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         /*
         assertEq(
@@ -238,10 +237,9 @@ contract ReflectMathTest is Boilerplate, Test {
         */
 
         Tokens newFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
-        //Tokens newToBalance = newToShares.toTokens(totalSupply, newTotalShares);
+        Tokens newToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedNewFromBalance = fromBalance - amount;
-        Tokens expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - taxRate));
-        Tokens expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, taxRate));
+        Tokens expectedNewToBalance = totalSupply.div(Settings.ANTI_WHALE_DIVISOR);
 
         // TODO: tighten these bounds to exact equality
         //assertEq(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "newFromBalance");
@@ -250,10 +248,8 @@ contract ReflectMathTest is Boilerplate, Test {
         assertGe(Tokens.unwrap(newFromBalance) + fudge, Tokens.unwrap(expectedNewFromBalance), "newFromBalance lower");
         assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance) + fudge, "newFromBalance upper");
 
-        /*
-        assertGe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
-        assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi), "newToBalance upper");
-        */
+        assertGe(Tokens.unwrap(newToBalance) + fudge, Tokens.unwrap(expectedNewToBalance), "newToBalance lower");
+        assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalance) + fudge, "newToBalance upper");
     }
 
     function testTransferSomeFromPair(

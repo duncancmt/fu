@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {Settings} from "../core/Settings.sol";
 
 import {BasisPoints, BASIS} from "../types/BasisPoints.sol";
-import {Shares} from "../types/Shares.sol";
+import {Shares, ONE as ONE_SHARE} from "../types/Shares.sol";
 import {Tokens} from "../types/Tokens.sol";
 import {scale} from "../types/SharesXBasisPoints.sol";
 import {TokensXBasisPoints, scale, castUp} from "../types/TokensXBasisPoints.sol";
@@ -313,6 +313,7 @@ library ReflectMath {
         // TODO: divMulti
         newTotalShares = n1.div(d);
         newFromShares = n2.div(d);
+        newToShares = newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
     }
 
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares)
