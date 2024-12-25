@@ -70,13 +70,6 @@ contract FU is ERC20Base, TransientStorageLayout {
         return _imageHash.CIDv0();
     }
 
-    // This mapping is actually in transient storage. It's placed here so that
-    // solc reserves a slot for it during storage layout generation. Solc 0.8.28
-    // doesn't support declaring mappings in transient storage. It is ultimately
-    // manipulated by the `TransientStorageLayout` base contract (in assembly)
-    // TODO: make this use packed encoding rather than being compatible with Solidity's storage layout
-    mapping(address owner => mapping(address spender => CrazyBalance allowed)) private _temporaryAllowance;
-
     event GitCommit(bytes20 indexed gitCommit);
 
     constructor(bytes20 gitCommit, string memory image_, address[] memory initialHolders) payable {
@@ -582,7 +575,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         if (spender == PERMIT2) {
             return type(uint256).max;
         }
-        CrazyBalance temporaryAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, spender);
+        CrazyBalance temporaryAllowance = _getTemporaryAllowance(owner, spender);
         if (temporaryAllowance.isMax()) {
             return temporaryAllowance.toExternal();
         }
@@ -598,7 +591,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         if (msg.sender == PERMIT2) {
             return (true, MAX_BALANCE, ZERO_BALANCE);
         }
-        CrazyBalance currentTempAllowance = _getTemporaryAllowance(_temporaryAllowance, owner, msg.sender);
+        CrazyBalance currentTempAllowance = _getTemporaryAllowance(owner, msg.sender);
         if (currentTempAllowance >= amount) {
             return (true, currentTempAllowance, ZERO_BALANCE);
         }
@@ -624,12 +617,12 @@ contract FU is ERC20Base, TransientStorageLayout {
             return;
         }
         if (currentAllowance == ZERO_BALANCE) {
-            _setTemporaryAllowance(_temporaryAllowance, owner, msg.sender, currentTempAllowance - amount);
+            _setTemporaryAllowance(owner, msg.sender, currentTempAllowance - amount);
             return;
         }
         if (currentTempAllowance != ZERO_BALANCE) {
             amount = amount - currentTempAllowance;
-            _setTemporaryAllowance(_temporaryAllowance, owner, msg.sender, ZERO_BALANCE);
+            _setTemporaryAllowance(owner, msg.sender, ZERO_BALANCE);
         }
         if (currentAllowance.isMax()) {
             return;
@@ -700,7 +693,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
-        _setTemporaryAllowance(_temporaryAllowance, msg.sender, spender, amount.toCrazyBalance());
+        _setTemporaryAllowance(msg.sender, spender, amount.toCrazyBalance());
         return _success();
     }
 
