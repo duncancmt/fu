@@ -66,7 +66,8 @@ library MoonPhase {
             p *= x;
             p += -93284552137022849597343993509195607076; // ~-0.274
             p *= x;
-            p += 2500426605410053227278254715722618320500226436344531; // ~3.98e-7
+            // The constant coefficient of `p` is so small (~3.98e-7) that it does not affect
+            // accuracy if it is elided
             p *= sign;
 
             int256 q = -2132527596694872609; // ~-0.116
