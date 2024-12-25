@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {Settings} from "../core/Settings.sol";
+
 import {BasisPoints, BASIS} from "../types/BasisPoints.sol";
 import {Shares} from "../types/Shares.sol";
 import {Tokens} from "../types/Tokens.sol";
@@ -286,22 +288,34 @@ library ReflectMath {
         //console.log("===");
     }
 
-    function getTransferShares(
+    function getTransferSharesToWhale(
         Tokens amount,
         BasisPoints taxRate,
         Tokens totalSupply,
         Shares totalShares,
-        Shares fromShares
+        Shares fromShares,
+        Shares toShares
     )
         internal
         view
         returns (Shares newFromShares, Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
         // Called when `to`'s final shares will be the whale limit
-        revert("unimplemented");
+        TokensXShares t1 = alloc().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply + amount);
+        TokensXShares t2 = alloc().omul(fromShares.mul(Settings.ANTI_WHALE_DIVISOR) + totalShares, totalSupply);
+        TokensXShares d = alloc().osub(t1, t2);
+        Shares uninvolvedShares = totalShares - fromShares - toShares;
+        TokensXShares2 n1 = alloc2().omul(tmp().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply), uninvolvedShares);
+        TokensXShares t3 = alloc().omul(fromShares, totalSupply);
+        TokensXShares t4 = alloc().omul(totalShares, amount);
+        TokensXShares2 n2 = alloc2().omul(uninvolvedShares.mul(Settings.ANTI_WHALE_DIVISOR), tmp().osub(t3, t4));
+
+        // TODO: divMulti
+        newTotalShares = n1.div(d);
+        newFromShares = n2.div(d);
     }
 
-    function getTransferShares(BasisPoints taxRate, Shares totalShares, Shares fromShares)
+    function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares)
         internal
         pure
         returns (Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
