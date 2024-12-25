@@ -73,7 +73,7 @@ FU is a full-featured token, supporting the following extensions to the ERC20 st
 ## Non-standard extensions
 
 The allowance from each account to Permit2
-(0x000000000022D473030F116dDEE9F6B43aC78BA3) is always infinity
+(`0x000000000022D473030F116dDEE9F6B43aC78BA3`) is always infinity
 (`type(uint256).max`).
 
  * `tax()(uint256)` (view)
