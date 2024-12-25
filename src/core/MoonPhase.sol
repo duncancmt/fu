@@ -15,9 +15,9 @@ library MoonPhase {
     uint256 private constant _SYNODIC_MONTH = 29.530588907497 * 10 ** 10 * 24 * 60 * 60;
     uint256 private constant _SCALE = 2 ** 64 * 10 ** 10;
 
-    function _tern(bool c, int256 x, int256 y) private pure returns (int256 r) {
+    function _ternary(bool c, int256 x, int256 y) private pure returns (int256 r) {
         assembly ("memory-safe") {
-            r := xor(x, mul(xor(x, y), c))
+            r := xor(y, mul(xor(x, y), c))
         }
     }
 
@@ -46,10 +46,10 @@ library MoonPhase {
             // sin(x)` instead.
             int256 x;
             {
-                int256 thresh = _tern(monthElapsed < 0.5 * 2 ** 64, 0.75 * 2 ** 64, 0.25 * 2 ** 64);
-                x = _tern(monthElapsed < uint256(thresh), int256(monthElapsed) - thresh, thresh - int256(monthElapsed));
+                int256 thresh = _ternary(monthElapsed < 0.5 * 2 ** 64, 0.25 * 2 ** 64, 0.75 * 2 ** 64);
+                x = _ternary(monthElapsed < uint256(thresh), thresh - int256(monthElapsed), int256(monthElapsed) - thresh);
             }
-            int256 sign = _tern(monthElapsed - 0.25 * 2 ** 64 < 0.5 * 2 ** 64, 1, -1);
+            int256 sign = _ternary(monthElapsed - 0.25 * 2 ** 64 < 0.5 * 2 ** 64, -1, 1);
 
             // Now we approximate `sign * sin(x)` via a (4, 3)-term monic-numerator rational
             // polynomial. This technique was popularized by Remco Bloemen
