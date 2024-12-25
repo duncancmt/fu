@@ -290,7 +290,6 @@ library ReflectMath {
 
     function getTransferSharesToWhale(
         Tokens amount,
-        BasisPoints taxRate,
         Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
@@ -316,7 +315,7 @@ library ReflectMath {
         newTotalShares = totalShares - (fromShares + toShares - newFromShares - newToShares);
     }
 
-    function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares)
+    function getTransferSharesToWhale(Shares totalShares, Shares fromShares)
         internal
         pure
         returns (Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)

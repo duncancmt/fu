@@ -217,7 +217,7 @@ contract ReflectMathTest is Boilerplate, Test {
 
         Shares counterfactualToShares;
         (newFromShares, counterfactualToShares, newToShares, newTotalShares) =
-            ReflectMath.getTransferSharesToWhale(amount, taxRate, totalSupply, totalShares, fromShares, toShares);
+            ReflectMath.getTransferSharesToWhale(amount, totalSupply, totalShares, fromShares, toShares);
 
         console.log("=== NEW ===");
         console.log("totalShares", Shares.unwrap(newTotalShares));
