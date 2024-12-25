@@ -12,8 +12,8 @@ library MoonPhase {
     // This is the AVERAGE length of the synodic month at the epoch. The duration between actual new
     // moons varies significantly over short periods of time. Over long periods of time, the average
     // length of the synodic month increases slightly.
-    uint256 private constant _SYNODIC_MONTH = 29.530588907497 * 10 ** 10 * 24 * 60 * 60;
-    uint256 private constant _SCALE = 2 ** 64 * 10 ** 10;
+    uint256 private constant _SYNODIC_MONTH = 29.530588907 * 10 ** 7 * 24 * 60 * 60;
+    uint256 private constant _SCALE = 2 ** 64 * 10 ** 7;
 
     function _ternary(bool c, int256 x, int256 y) private pure returns (int256 r) {
         assembly ("memory-safe") {
