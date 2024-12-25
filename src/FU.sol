@@ -41,7 +41,7 @@ IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
-contract FU is FUStorage, TransientStorageLayout, ERC20Base {
+contract FU is ERC20Base, TransientStorageLayout {
     using ChecksumAddress for address;
     using {toCrazyBalance} for uint256;
     using SharesToTokens for Shares;
@@ -664,7 +664,7 @@ contract FU is FUStorage, TransientStorageLayout, ERC20Base {
         return 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93694;
     }
 
-    function clock() public view override(IERC6372, ERC20Base) returns (uint48) {
+    function clock() public view override returns (uint48) {
         unchecked {
             // slither-disable-next-line divide-before-multiply
             return uint48(block.timestamp / 1 days * 1 days);

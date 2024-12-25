@@ -49,7 +49,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         CrazyBalance currentAllowance
     ) internal virtual;
 
-    function name() public pure virtual returns (string memory);
+    function name() public pure virtual override(FUStorage, IERC20) returns (string memory);
     function _NAME_HASH() internal pure virtual returns (bytes32);
     function _consumeNonce(Storage storage s, address account) internal virtual returns (uint256);
     function clock() public view virtual override returns (uint48);

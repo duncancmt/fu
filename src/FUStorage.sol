@@ -33,13 +33,15 @@ abstract contract FUStorage is INonces, IERC5805 {
         return _s().nonces[account];
     }
 
+    function name() public pure virtual returns (string memory);
+
     constructor() {
         Storage storage s = _s();
         uint256 sInt;
         assembly ("memory-safe") {
             sInt := s.slot
         }
-        assert(sInt == (uint256(keccak256("Fuck You!")) - 1) & uint256(int256(~0xff)));
+        assert(sInt == (uint256(keccak256(bytes(name()))) - 1) & ~uint256(0xff));
     }
 
     function _s() internal pure returns (Storage storage r) {
