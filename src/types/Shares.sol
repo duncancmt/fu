@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {BasisPoints} from "./BasisPoints.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
+import {Ternary} from "../lib/Ternary.sol";
 
 /// This type is given as `uint256` for efficiency, but it is capped at `type(uint176).max`.
 type Shares is uint256;
@@ -76,3 +77,7 @@ function __ge(Shares a, Shares b) pure returns (bool) {
 using {
     __add as +, __sub as -, __eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __gt as >=
 } for Shares global;
+
+function ternary(bool c, Shares x, Shares y) pure returns (Shares) {
+    return Shares.wrap(Ternary.ternary(c, Shares.unwrap(x), Shares.unwrap(y)));
+}
