@@ -1,11 +1,15 @@
 FU is a shitpost of a token. It was designed and implemented purely for the
 amusement of its authors and its participants. It is, in a sense, blockchain
 art. By holding FU, you are participating in this art project. The authors hope
-that it brings you joy, because it won't bring you wealth.
+that it brings you joy, because it won't bring you wealth. As a secondary
+utility, because FU is such a terrible token, it's useful to test against by
+dApp developers.
 
-While FU is ownerless, decentralized, and great pains have been taken to ensure
-that it is bug-free, its authors make no guarantees about its correctness. See
-[LICENSE.txt](./LICENSE.txt) for full terms.
+While FU is ownerless, decentralized, censorship-resistant, immutable,
+liquidity-locked, and great pains have been taken to ensure that it is bug-free,
+its authors make no guarantees about its correctness. See
+[LICENSE.txt](./LICENSE.txt) for full IP terms. See [the Legal section](#Legal)
+for disclaimers.
 
 # Goals
 
@@ -203,12 +207,18 @@ slither .
 If you're looking for a hot new coin to ape that's gonna give you a good pump,
 then this is not the coin for you. The authors are not pumpooors (they're
 borderline incompetent with HTML/JS/CSS), and neither are they going to put any
-effort into promoting this token to increase it's price. If you want to tell
-your friends about it, we can't stop you, but you're probably going to lose them
-money by suggesting this to them. This is strictly an art project. Owning this
-token is like owning a participation trophy. The trophy is for being determined
-enough to actually make a swap happen in spite of all the roadblocks set in the
-way.
+further development, management, or promotional effort into this token. If you
+want to tell your friends about it, the authors can't stop you, but you're
+probably going to lose them money by suggesting this to them. This is strictly
+an art project. FU has no inherent value. The pricing is set by an AMM with
+fully locked liquidity; the authors do not market make, entreat professional
+market makers, or stabilize/increase the price. Owning FU does not entitle you
+to some future income stream. There is no treasury, community fund, marketing
+fund, or other source of funds for ongoing operations.
+
+Owning FU is like owning a participation trophy. The trophy is for being
+determined enough to actually make a swap happen in spite of all the roadblocks
+set in the way.
 
 For developers, if your dApp works with FU, then it will probably work with
 every other token on earth. Perhaps there is some utility in having a
