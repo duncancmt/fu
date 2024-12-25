@@ -58,7 +58,7 @@ library MoonPhase {
             // rounding error. This relatively small rational polynomial is only accurate to ~1e-5,
             // but that is more than sufficient for our purposes.
 
-            int256 p = x;
+            int256 p = x; // `p` is monic; the leading coefficient is 1
             p += 1525700193226203185; // ~0.0827
             p *= x;
             p += -93284552137022849597343993509195607076; // ~-0.274
