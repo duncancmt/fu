@@ -26,27 +26,27 @@ abstract contract FUStorage is INonces, IERC5805 {
     }
 
     function delegates(address account) external view override returns (address delegatee) {
-        return _s().delegates[account];
+        return _$().delegates[account];
     }
 
     function nonces(address account) external view override returns (uint256 nonce) {
-        return _s().nonces[account];
+        return _$().nonces[account];
     }
 
     function name() public pure virtual returns (string memory);
 
     constructor() {
-        Storage storage s = _s();
-        uint256 sInt;
+        Storage storage $ = _$();
+        uint256 $int;
         assembly ("memory-safe") {
-            sInt := s.slot
+            $int := $.slot
         }
-        assert(sInt == (uint256(keccak256(bytes(name()))) - 1) & ~uint256(0xff));
+        assert($int == (uint256(keccak256(bytes(name()))) - 1) & ~uint256(0xff));
     }
 
-    function _s() internal pure returns (Storage storage r) {
+    function _$() internal pure returns (Storage storage $) {
         assembly ("memory-safe") {
-            r.slot := 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93600
+            $.slot := 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93600
         }
     }
 }
