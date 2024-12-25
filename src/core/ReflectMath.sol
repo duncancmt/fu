@@ -311,10 +311,9 @@ library ReflectMath {
         TokensXShares2 n2 = alloc2().omul(uninvolvedShares.mul(Settings.ANTI_WHALE_DIVISOR), tmp().osub(t3, t4));
 
         // TODO: divMulti
-        newTotalShares = n1.div(d);
+        newToShares = n1.div(d).div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newFromShares = n2.div(d);
-        newToShares = newTotalShares.div(Settings.ANTI_WHALE_DIVISOR);// - ONE_SHARE;
-        newTotalShares = newTotalShares.dec(totalShares - newTotalShares < fromShares + toShares - (newFromShares + newToShares));
+        newTotalShares = totalShares - (fromShares + toShares - newFromShares - newToShares);
     }
 
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares)
