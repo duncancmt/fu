@@ -3,9 +3,11 @@ pragma solidity ^0.8.28;
 
 import {BasisPoints} from "../types/BasisPoints.sol";
 
+import {Ternary} from "../lib/Ternary.sol";
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
 library MoonPhase {
+    using Ternary for bool;
     using UnsafeMath for int256;
 
     uint256 private constant _EPOCH = 1740721485; // 2025-02-28T00:44:45Z, the last new moon of February 2025
@@ -14,13 +16,6 @@ library MoonPhase {
     // length of the synodic month increases slightly.
     uint256 private constant _SYNODIC_MONTH = 29.530588907 * 10 ** 7 * 24 * 60 * 60;
     uint256 private constant _SCALE = 2 ** 64 * 10 ** 7;
-
-    // TODO: this needs to be used a bunch of other places in this codebase to golf
-    function _ternary(bool c, int256 x, int256 y) private pure returns (int256 r) {
-        assembly ("memory-safe") {
-            r := xor(y, mul(xor(x, y), c))
-        }
-    }
 
     function moonPhase(uint256 timestamp) internal pure returns (BasisPoints) {
         // This is performed outside the `unchecked` block because we want underflow checking
@@ -47,10 +42,10 @@ library MoonPhase {
             // sin(x)` instead.
             int256 x;
             {
-                int256 thresh = _ternary(monthElapsed < 0.5 * 2 ** 64, 0.25 * 2 ** 64, 0.75 * 2 ** 64);
-                x = _ternary(monthElapsed < uint256(thresh), thresh - int256(monthElapsed), int256(monthElapsed) - thresh);
+                int256 thresh = (monthElapsed < 0.5 * 2 ** 64).ternary(int256(0.25 * 2 ** 64), int256(0.75 * 2 ** 64));
+                x = (monthElapsed < uint256(thresh)).ternary(thresh - int256(monthElapsed), int256(monthElapsed) - thresh);
             }
-            int256 sign = _ternary(monthElapsed - 0.25 * 2 ** 64 < 0.5 * 2 ** 64, -1, 1);
+            int256 sign = (monthElapsed - 0.25 * 2 ** 64 < 0.5 * 2 ** 64).ternary(-1, 1);
 
             // Now we approximate `sign * sin(x)` via a (4, 3)-term monic-numerator rational
             // polynomial. This technique was popularized by Remco Bloemen
