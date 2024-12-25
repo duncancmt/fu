@@ -130,9 +130,9 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
             revert ERC2612ExpiredSignature(deadline);
         }
 
-        Storage storage $_ = _$();
+        Storage storage $ = _$();
 
-        uint256 nonce = _consumeNonce($_, owner);
+        uint256 nonce = _consumeNonce($, owner);
         bytes32 sep = DOMAIN_SEPARATOR();
         address signer;
         assembly ("memory-safe") {
@@ -158,7 +158,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         if (signer != owner) {
             revert ERC2612InvalidSigner(signer, owner);
         }
-        _approve($_, owner, spender, amount.toCrazyBalance());
+        _approve($, owner, spender, amount.toCrazyBalance());
     }
 
     bytes32 private constant _DELEGATION_TYPEHASH = 0xe48329057bfd03d55e49b547132e39cffd9c1820ad7b9d4c5307691425d15adf;
@@ -198,13 +198,13 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
             revert ERC5805InvalidSignature();
         }
 
-        Storage storage $_ = _$();
+        Storage storage $ = _$();
 
-        uint256 expectedNonce = _consumeNonce($_, signer);
+        uint256 expectedNonce = _consumeNonce($, signer);
         if (nonce != expectedNonce) {
             revert ERC5805InvalidNonce(nonce, expectedNonce);
         }
-        return _delegate($_, signer, delegatee);
+        return _delegate($, signer, delegatee);
     }
 
     function burn(uint256 amount) external returns (bool) {
