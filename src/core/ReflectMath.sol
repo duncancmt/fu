@@ -320,7 +320,7 @@ library ReflectMath {
         ).div(totalSupply.mul(Settings.ANTI_WHALE_DIVISOR));
     }
 
-    function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares)
+    function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
         internal
         pure
         returns (Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)

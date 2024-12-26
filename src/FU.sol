@@ -499,7 +499,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         if (newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
             if (amount == fromBalance) {
                 (cachedToShares, newToShares, newTotalShares) =
-                    ReflectMath.getTransferSharesToWhale(taxRate, cachedTotalShares, cachedFromShares);
+                    ReflectMath.getTransferSharesToWhale(taxRate, cachedTotalShares, cachedFromShares, cachedToShares);
                 newFromShares = ZERO_SHARES;
             } else {
                 (newFromShares, cachedToShares, newToShares, newTotalShares) = ReflectMath.getTransferSharesToWhale(
