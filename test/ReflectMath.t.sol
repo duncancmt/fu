@@ -203,29 +203,29 @@ contract ReflectMathTest is Boilerplate, Test {
 
         assume(newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR));
 
-        console.log("===");
-        console.log("totalSupply", Tokens.unwrap(totalSupply));
-        console.log("totalShares", Shares.unwrap(totalShares));
-        console.log("fromShares ", Shares.unwrap(fromShares));
-        console.log("toShares   ", Shares.unwrap(toShares));
-        console.log("amount     ", Tokens.unwrap(amount));
-        console.log("taxRate    ", BasisPoints.unwrap(taxRate));
-        console.log("===");
-        console.log("fromBalance", Tokens.unwrap(fromBalance));
-        console.log("toBalance  ", Tokens.unwrap(toBalance));
-        console.log("===");
+        //console.log("===");
+        //console.log("totalSupply", Tokens.unwrap(totalSupply));
+        //console.log("totalShares", Shares.unwrap(totalShares));
+        //console.log("fromShares ", Shares.unwrap(fromShares));
+        //console.log("toShares   ", Shares.unwrap(toShares));
+        //console.log("amount     ", Tokens.unwrap(amount));
+        //console.log("taxRate    ", BasisPoints.unwrap(taxRate));
+        //console.log("===");
+        //console.log("fromBalance", Tokens.unwrap(fromBalance));
+        //console.log("toBalance  ", Tokens.unwrap(toBalance));
+        //console.log("===");
 
         Shares counterfactualToShares;
         (newFromShares, counterfactualToShares, newToShares, newTotalShares) =
             ReflectMath.getTransferSharesToWhale(amount, taxRate, totalSupply, totalShares, fromShares, toShares);
 
-        console.log("=== NEW ===");
-        console.log("totalShares", Shares.unwrap(newTotalShares));
-        console.log("fromShares ", Shares.unwrap(newFromShares));
-        console.log("toShares   ", Shares.unwrap(newToShares));
-        console.log("whale limit", Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)));
-        console.log("counterfactual", Shares.unwrap(counterfactualToShares));
-        console.log("===");
+        //console.log("=== NEW ===");
+        //console.log("totalShares", Shares.unwrap(newTotalShares));
+        //console.log("fromShares ", Shares.unwrap(newFromShares));
+        //console.log("toShares   ", Shares.unwrap(newToShares));
+        //console.log("whale limit", Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)));
+        //console.log("counterfactual", Shares.unwrap(counterfactualToShares));
+        //console.log("===");
 
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
