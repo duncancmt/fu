@@ -104,6 +104,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
 
     // slither-disable-next-line naming-convention
     function DOMAIN_SEPARATOR() public view override returns (bytes32 r) {
+        // TODO: cache the domain separator in an immutable; only recompute if the chainid changes
         bytes32 _NAME_HASH_ = _NAME_HASH();
         assembly ("memory-safe") {
             let ptr := mload(0x40)
