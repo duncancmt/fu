@@ -14,7 +14,7 @@ library MoonPhase {
     // This is the AVERAGE length of the synodic month at the epoch. The duration between actual new
     // moons varies significantly over short periods of time. Over long periods of time, the average
     // length of the synodic month increases slightly.
-    uint256 private constant _SYNODIC_MONTH = 29.530588907 * 10 ** 7 * 24 * 60 * 60;
+    uint256 private constant _SYNODIC_MONTH = 29.530588907 * 10 ** 7 * 1 days;
     uint256 private constant _SCALE = 2 ** 64 * 10 ** 7;
 
     function moonPhase(uint256 timestamp) internal pure returns (BasisPoints) {
@@ -59,19 +59,19 @@ library MoonPhase {
             // but that is more than sufficient for our purposes.
 
             int256 p = x; // `p` is monic; the leading coefficient is 1
-            p += 1525700193226203185; // ~0.0827
+            p += 0x152c603e02fe2031; // ~0.0827
             p *= x;
-            p += -93284552137022849597343993509195607076; // ~-0.274
+            p += -0x462df383df0568550000000000000000; // ~-0.274
             p *= x;
             // The constant coefficient of `p` is so small (~3.98e-7) that it does not affect
             // accuracy if it is elided
             p *= sign;
 
-            int256 q = -2132527596694872609; // ~-0.116
+            int256 q = -0x1d98428cf2b72221; // ~-0.116
             q *= x;
-            q += 4216729355816757570957775670381316919; // ~0.0124
+            q += 0x032c1ccefcbad6dd0000000000000000; // ~0.0124
             q *= x;
-            q += -273763917958281728795650899975241599620736138002175265032; // ~-0.0436
+            q += -0x0b2a3a89efcf885e00000000000000000000000000000000; // ~-0.0436
 
             // Now `p/q` if computed exactly represents `cos(monthElapsed)`. What we actually want,
             // though, is `(1 + cos(monthElapsed)) / 2`. We also want to represent the output as a

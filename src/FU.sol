@@ -2,10 +2,8 @@
 pragma solidity ^0.8.28;
 
 import {ERC20Base} from "./core/ERC20Base.sol";
-import {FUStorage} from "./FUStorage.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
-import {IERC6372} from "./interfaces/IERC6372.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
@@ -56,9 +54,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
     function totalSupply() external view override returns (uint256) {
         Storage storage $ = _$();
-        unchecked {
-            return Tokens.unwrap($.totalSupply + $.pairTokens);
-        }
+        return Tokens.unwrap($.totalSupply + $.pairTokens);
     }
 
     /// @custom:security non-reentrant
