@@ -305,7 +305,8 @@ library ReflectMath {
         TokensXShares t2 = alloc().omul(fromShares.mul(Settings.ANTI_WHALE_DIVISOR) + totalShares, totalSupply);
         TokensXShares d = alloc().osub(t1, t2);
         Shares uninvolvedShares = totalShares - fromShares - toShares;
-        TokensXShares2 n1 = alloc2().omul(tmp().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply), uninvolvedShares);
+        TokensXShares2 n1 =
+            alloc2().omul(tmp().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply), uninvolvedShares);
         TokensXShares t3 = alloc().omul(fromShares, totalSupply);
         TokensXShares t4 = alloc().omul(totalShares, amount);
         TokensXShares2 n2 = alloc2().omul(uninvolvedShares.mul(Settings.ANTI_WHALE_DIVISOR), tmp().osub(t3, t4));
@@ -314,7 +315,9 @@ library ReflectMath {
         newToShares = n1.div(d).div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newFromShares = n2.div(d);
         newTotalShares = totalShares - (fromShares + toShares - newFromShares - newToShares);
-        counterfactualToShares = tmp().omul(totalSupply - cast(scale(amount.mul(Settings.ANTI_WHALE_DIVISOR), BASIS - taxRate)), totalShares).div(totalSupply.mul(Settings.ANTI_WHALE_DIVISOR));
+        counterfactualToShares = tmp().omul(
+            totalSupply - cast(scale(amount.mul(Settings.ANTI_WHALE_DIVISOR), BASIS - taxRate)), totalShares
+        ).div(totalSupply.mul(Settings.ANTI_WHALE_DIVISOR));
     }
 
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares)

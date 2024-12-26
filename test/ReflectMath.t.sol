@@ -198,10 +198,10 @@ contract ReflectMathTest is Boilerplate, Test {
             Shares.wrap(bound(Shares.unwrap(toShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))));
         Tokens toBalance = toShares.toTokens(totalSupply, totalShares);
 
-        (Shares newFromShares, Shares newToShares, Shares newTotalShares) = ReflectMath.getTransferShares(amount, taxRate, totalSupply, totalShares, fromShares, toShares);
+        (Shares newFromShares, Shares newToShares, Shares newTotalShares) =
+            ReflectMath.getTransferShares(amount, taxRate, totalSupply, totalShares, fromShares, toShares);
 
         assume(newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR));
-
 
         console.log("===");
         console.log("totalSupply", Tokens.unwrap(totalSupply));
@@ -252,8 +252,16 @@ contract ReflectMathTest is Boilerplate, Test {
         assertGe(Tokens.unwrap(newToBalance) + fudge, Tokens.unwrap(expectedNewToBalance), "newToBalance lower");
         assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalance) + fudge, "newToBalance upper");
 
-        assertGe(Tokens.unwrap(counterfactualToBalance) + fudge, Tokens.unwrap(expectedCounterfactualToBalance), "counterfactualToBalance lower");
-        assertLe(Tokens.unwrap(counterfactualToBalance), Tokens.unwrap(expectedCounterfactualToBalance) + fudge, "counterfactualToBalance upper");
+        assertGe(
+            Tokens.unwrap(counterfactualToBalance) + fudge,
+            Tokens.unwrap(expectedCounterfactualToBalance),
+            "counterfactualToBalance lower"
+        );
+        assertLe(
+            Tokens.unwrap(counterfactualToBalance),
+            Tokens.unwrap(expectedCounterfactualToBalance) + fudge,
+            "counterfactualToBalance upper"
+        );
     }
 
     function testTransferSomeFromPair(
