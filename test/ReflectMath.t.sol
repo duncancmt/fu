@@ -237,8 +237,10 @@ contract ReflectMathTest is Boilerplate, Test {
 
         Tokens newFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
         Tokens newToBalance = newToShares.toTokens(totalSupply, newTotalShares);
+        Tokens counterfactualToBalance = counterfactualToShares.toTokens(totalSupply, totalShares);
         Tokens expectedNewFromBalance = fromBalance - amount;
         Tokens expectedNewToBalance = totalSupply.div(Settings.ANTI_WHALE_DIVISOR);
+        Tokens expectedCounterfactualToBalance = expectedNewToBalance - cast(scale(amount, BASIS - taxRate));
 
         // TODO: tighten these bounds to exact equality
         //assertEq(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "newFromBalance");
@@ -249,6 +251,9 @@ contract ReflectMathTest is Boilerplate, Test {
 
         assertGe(Tokens.unwrap(newToBalance) + fudge, Tokens.unwrap(expectedNewToBalance), "newToBalance lower");
         assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalance) + fudge, "newToBalance upper");
+
+        assertGe(Tokens.unwrap(counterfactualToBalance) + fudge, Tokens.unwrap(expectedCounterfactualToBalance), "counterfactualToBalance lower");
+        assertLe(Tokens.unwrap(counterfactualToBalance), Tokens.unwrap(expectedCounterfactualToBalance) + fudge, "counterfactualToBalance upper");
     }
 
     function testTransferSomeFromPair(

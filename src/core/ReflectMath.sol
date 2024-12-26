@@ -7,7 +7,7 @@ import {BasisPoints, BASIS} from "../types/BasisPoints.sol";
 import {Shares, ONE as ONE_SHARE} from "../types/Shares.sol";
 import {Tokens} from "../types/Tokens.sol";
 import {scale} from "../types/SharesXBasisPoints.sol";
-import {TokensXBasisPoints, scale, castUp} from "../types/TokensXBasisPoints.sol";
+import {TokensXBasisPoints, scale, castUp, cast} from "../types/TokensXBasisPoints.sol";
 import {TokensXShares, tmp, alloc, SharesToTokens} from "../types/TokensXShares.sol";
 import {TokensXShares2, tmp as tmp2, alloc as alloc2} from "../types/TokensXShares2.sol";
 import {TokensXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "../types/TokensXBasisPointsXShares.sol";
@@ -314,6 +314,7 @@ library ReflectMath {
         newToShares = n1.div(d).div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newFromShares = n2.div(d);
         newTotalShares = totalShares - (fromShares + toShares - newFromShares - newToShares);
+        counterfactualToShares = tmp().omul(totalSupply - cast(scale(amount.mul(Settings.ANTI_WHALE_DIVISOR), BASIS - taxRate)), totalShares).div(totalSupply.mul(Settings.ANTI_WHALE_DIVISOR));
     }
 
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares)
