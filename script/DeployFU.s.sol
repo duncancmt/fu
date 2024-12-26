@@ -3,17 +3,16 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
-import {FU} from "src/FU.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 
 import {Math} from "./Math.sol";
 import {stdJson} from "@forge-std/StdJson.sol";
 
+import {FU} from "src/FU.sol";
+
 import {Script} from "@forge-std/Script.sol";
 import {VmSafe} from "@forge-std/Vm.sol";
-
-import {console} from "@forge-std/console.sol";
 
 interface IMulticall {
     /// @param transactions Encoded transactions. Each transaction is encoded as a packed bytes of
