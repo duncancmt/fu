@@ -33,7 +33,6 @@ import {
     CrazyBalanceArithmetic
 } from "./types/CrazyBalance.sol";
 
-import {Math} from "./lib/Math.sol";
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 import {IPFS} from "./lib/IPFS.sol";
 
@@ -146,12 +145,11 @@ contract FU is ERC20Base, TransientStorageLayout {
         } catch {
             require(pair == FACTORY.getPair(WETH, this));
         }
-        {
-            (CrazyBalance pairBalance,,,,) = _balanceOf($, address(pair));
-            uint256 initialLiquidity =
-                Math.sqrt(CrazyBalance.unwrap(pairBalance) * WETH.balanceOf(address(pair))) - 1_000;
-            require(pair.mint(address(0)) >= initialLiquidity);
-        }
+
+        // We can't call `pair.mint` from within the constructor because it wants to call back into
+        // us with `balanceOf`. The call to `mint` and the check that liquidity isn't being stolen
+        // is performed in the deployment script. Its atomicity is enforced by the check against
+        // `tx.origin` above.
     }
 
     function _consumeNonce(Storage storage $, address account) internal override returns (uint256) {
