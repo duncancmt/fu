@@ -209,12 +209,13 @@ then this is not the coin for you. The authors are not pumpooors (they're
 borderline incompetent with HTML/JS/CSS), and neither are they going to put any
 further development, management, or promotional effort into this token. If you
 want to tell your friends about it, the authors can't stop you, but you're
-probably going to lose them money by suggesting this to them. This is strictly
-an art project. FU has no inherent value. The pricing is set by an AMM with
-fully locked liquidity; the authors do not market make, entreat professional
-market makers, or stabilize/increase the price. Owning FU does not entitle you
-to some future income stream. There is no treasury, community fund, marketing
-fund, or other source of funds for ongoing operations.
+probably going to lose them money by suggesting this to them.
+
+This is strictly an art project. FU has no inherent value. The pricing is set by
+an AMM with fully locked liquidity; the authors do not market make, entreat
+professional market makers, or stabilize/increase the price. Owning FU does not
+entitle you to some future income stream. There is no treasury, community fund,
+marketing fund, or other source of funds for ongoing operations.
 
 Owning FU is like owning a participation trophy. The trophy is for being
 determined enough to actually make a swap happen in spite of all the roadblocks
