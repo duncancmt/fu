@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {BasisPoints} from "./BasisPoints.sol";
+import {BasisPoints, BASIS} from "./BasisPoints.sol";
 import {Shares} from "./Shares.sol";
+
+import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
 /// This type is given as `uint256` for efficiency, but it is actually only 190 bits.
 type SharesXBasisPoints is uint256;
@@ -11,6 +13,14 @@ function scale(Shares s, BasisPoints bp) pure returns (SharesXBasisPoints) {
     unchecked {
         return SharesXBasisPoints.wrap(Shares.unwrap(s) * BasisPoints.unwrap(bp));
     }
+}
+
+function cast(SharesXBasisPoints tbp) pure returns (Shares) {
+    return Shares.wrap(UnsafeMath.unsafeDiv(SharesXBasisPoints.unwrap(tbp), BasisPoints.unwrap(BASIS)));
+}
+
+function castUp(SharesXBasisPoints tbp) pure returns (Shares) {
+    return Shares.wrap(UnsafeMath.unsafeDivUp(SharesXBasisPoints.unwrap(tbp), BasisPoints.unwrap(BASIS)));
 }
 
 function __add(SharesXBasisPoints a, SharesXBasisPoints b) pure returns (SharesXBasisPoints) {

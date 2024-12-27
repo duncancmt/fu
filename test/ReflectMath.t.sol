@@ -264,6 +264,92 @@ contract ReflectMathTest is Boilerplate, Test {
         );
     }
 
+    function testTransferAllToWhale(
+        Tokens totalSupply,
+        Shares totalShares,
+        Shares fromShares,
+        Shares toShares,
+        BasisPoints taxRate/*,
+        uint256 sharesRatio*/
+    ) public view virtual {
+        Tokens fromBalance;
+        (totalSupply, totalShares, fromShares, fromBalance) =
+            _boundCommon(totalSupply, totalShares, fromShares, /* sharesRatio */ 0);
+        taxRate = BasisPoints.wrap(
+            uint16(
+                bound(
+                    BasisPoints.unwrap(taxRate),
+                    BasisPoints.unwrap(Settings.MIN_TAX),
+                    BasisPoints.unwrap(Settings.MAX_TAX)
+                )
+            )
+        );
+
+        toShares =
+            Shares.wrap(bound(Shares.unwrap(toShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))));
+        Tokens toBalance = toShares.toTokens(totalSupply, totalShares);
+
+        (Shares newToShares, Shares newTotalShares) =
+            ReflectMath.getTransferShares(taxRate, totalSupply, totalShares, fromShares, toShares);
+
+        assume(newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR));
+
+        console.log("===");
+        console.log("totalSupply", Tokens.unwrap(totalSupply));
+        console.log("totalShares", Shares.unwrap(totalShares));
+        console.log("fromShares ", Shares.unwrap(fromShares));
+        console.log("toShares   ", Shares.unwrap(toShares));
+        console.log("taxRate    ", BasisPoints.unwrap(taxRate));
+        console.log("===");
+        console.log("fromBalance", Tokens.unwrap(fromBalance));
+        console.log("toBalance  ", Tokens.unwrap(toBalance));
+        console.log("===");
+
+        Shares counterfactualToShares;
+        (counterfactualToShares, newToShares, newTotalShares) =
+            ReflectMath.getTransferSharesToWhale(taxRate, totalShares, fromShares, toShares);
+
+        console.log("=== NEW ===");
+        console.log("totalShares", Shares.unwrap(newTotalShares));
+        console.log("toShares   ", Shares.unwrap(newToShares));
+        console.log("whale limit", Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)));
+        console.log("counterfactual", Shares.unwrap(counterfactualToShares));
+        console.log("===");
+
+        uint256 fudge = 1;
+
+        assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
+        assertGe(Shares.unwrap(newToShares) + fudge, Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)), "to share whale limit lo");
+        assertLe(Shares.unwrap(newToShares), Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) + fudge, "to share whale limit hi");
+        assertEq(
+            Shares.unwrap(totalShares - newTotalShares),
+            Shares.unwrap(fromShares + toShares - newToShares),
+            "shares delta"
+        );
+
+        Tokens newToBalance = newToShares.toTokens(totalSupply, newTotalShares);
+        Tokens counterfactualToBalance = counterfactualToShares.toTokens(totalSupply, totalShares);
+        Tokens expectedNewToBalance = totalSupply.div(Settings.ANTI_WHALE_DIVISOR);
+        Tokens expectedCounterfactualToBalance = expectedNewToBalance - cast(scale(fromBalance, BASIS - taxRate));
+
+        // TODO: tighten these bounds to exact equality
+        assertGe(Tokens.unwrap(newToBalance) + fudge, Tokens.unwrap(expectedNewToBalance), "newToBalance lower");
+        assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalance) + fudge, "newToBalance upper");
+
+        // TODO: why on earth does the fudge factor have to be so high
+        fudge = 3;
+        assertGe(
+            Tokens.unwrap(counterfactualToBalance) + fudge,
+            Tokens.unwrap(expectedCounterfactualToBalance),
+            "counterfactualToBalance lower"
+        );
+        assertLe(
+            Tokens.unwrap(counterfactualToBalance),
+            Tokens.unwrap(expectedCounterfactualToBalance) + fudge,
+            "counterfactualToBalance upper"
+        );
+    }
+
     function testTransferSomeFromPair(
         Tokens totalSupply,
         Shares totalShares,

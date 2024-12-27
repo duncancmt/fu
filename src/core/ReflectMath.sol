@@ -12,7 +12,7 @@ import {TokensXShares, tmp, alloc, SharesToTokens} from "../types/TokensXShares.
 import {TokensXShares2, tmp as tmp2, alloc as alloc2} from "../types/TokensXShares2.sol";
 import {TokensXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "../types/TokensXBasisPointsXShares.sol";
 import {TokensXBasisPointsXShares2, tmp as tmp4, alloc as alloc4} from "../types/TokensXBasisPointsXShares2.sol";
-import {SharesXBasisPoints} from "../types/SharesXBasisPoints.sol";
+import {SharesXBasisPoints, scale, castUp, cast} from "../types/SharesXBasisPoints.sol";
 import {Shares2XBasisPoints, tmp as tmp5, alloc as alloc5} from "../types/Shares2XBasisPoints.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
@@ -326,7 +326,9 @@ library ReflectMath {
         returns (Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
         // Called when `to`'s final shares will be the whale limit and `from` is sending their entire balance
-        revert("unimplemented");
+        newToShares = (totalShares - fromShares - toShares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
+        counterfactualToShares = (totalShares - cast(scale(fromShares, BASIS - taxRate)).mul(Settings.ANTI_WHALE_DIVISOR)).div(Settings.ANTI_WHALE_DIVISOR);
+        newTotalShares = totalShares + newToShares - fromShares - toShares;
     }
 
     function getTransferSharesFromPair(
