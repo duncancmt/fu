@@ -330,22 +330,22 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens newToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens counterfactualToBalance = counterfactualToShares.toTokens(totalSupply, totalShares);
         Tokens expectedNewToBalance = totalSupply.div(Settings.ANTI_WHALE_DIVISOR);
-        Tokens expectedCounterfactualToBalance = expectedNewToBalance - cast(scale(fromBalance, BASIS - taxRate));
+        Tokens expectedCounterfactualToBalanceLo = expectedNewToBalance - castUp(scale(fromBalance, BASIS - taxRate));
+        Tokens expectedCounterfactualToBalanceHi = expectedNewToBalance - cast(scale(fromBalance, BASIS - taxRate));
 
         // TODO: tighten these bounds to exact equality
         assertGe(Tokens.unwrap(newToBalance) + fudge, Tokens.unwrap(expectedNewToBalance), "newToBalance lower");
         assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalance) + fudge, "newToBalance upper");
 
         // TODO: why on earth does the fudge factor have to be so high
-        fudge = 3;
         assertGe(
             Tokens.unwrap(counterfactualToBalance) + fudge,
-            Tokens.unwrap(expectedCounterfactualToBalance),
+            Tokens.unwrap(expectedCounterfactualToBalanceLo),
             "counterfactualToBalance lower"
         );
         assertLe(
             Tokens.unwrap(counterfactualToBalance),
-            Tokens.unwrap(expectedCounterfactualToBalance) + fudge,
+            Tokens.unwrap(expectedCounterfactualToBalanceHi) + fudge,
             "counterfactualToBalance upper"
         );
     }
