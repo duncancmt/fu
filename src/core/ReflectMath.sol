@@ -140,13 +140,6 @@ library ReflectMath {
         Shares2XBasisPoints n = alloc5().omul(scale(uninvolvedShares, BASIS), totalShares);
         SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, taxRate);
 
-        /*
-        Shares2XBasisPoints n =
-            alloc5().omul(scale(fromShares, (BASIS - taxRate)) + scale(toShares, BASIS), uninvolvedShares);
-        SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, taxRate);
-        newToShares = n.div(d);
-        newTotalShares = totalShares + (newToShares - toShares) - fromShares;
-        */
         newTotalShares = n.div(d);
         newToShares = toShares + fromShares - (totalShares - newTotalShares);
 
@@ -154,10 +147,8 @@ library ReflectMath {
         (Tokens beforeFromBalance, Tokens beforeToBalance) = fromShares.toTokensMulti(toShares, totalSupply, totalShares);
         Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, taxRate));
-        //Tokens expectedAfterToBalance = beforeToBalance + cast(scale(beforeFromBalance, BASIS - taxRate));
 
         for (uint256 i; afterToBalance > expectedAfterToBalance && i < 3; i++) {
-            // TODO: should this use `unsafeDiv` instead of `unsafeDivUp`? That might give lower rounding error (and consequently fewer iterations of this loop)
             Shares decr = Shares.wrap(
                 (Tokens.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(
                     Tokens.unwrap(totalSupply)
