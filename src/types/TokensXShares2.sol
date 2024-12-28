@@ -26,6 +26,14 @@ function tmp() pure returns (TokensXShares2) {
 }
 
 library TokensXShares2Arithmetic {
+    function oadd(TokensXShares2 r, TokensXShares2 x, TokensXShares2 y) internal pure returns (TokensXShares2) {
+        return cast2(cast(r).oadd(cast(x), cast(y)));
+    }
+
+    function osub(TokensXShares2 r, TokensXShares2 x, TokensXShares2 y) internal pure returns (TokensXShares2) {
+        return cast2(cast(r).osub(cast(x), cast(y)));
+    }
+
     function omul(TokensXShares2 r, TokensXShares x, Shares s) internal pure returns (TokensXShares2) {
         return cast2(cast(r).omul(cast(x), Shares.unwrap(s)));
     }
@@ -40,3 +48,29 @@ library TokensXShares2Arithmetic {
 }
 
 using TokensXShares2Arithmetic for TokensXShares2 global;
+
+function __eq(TokensXShares2 a, TokensXShares2 b) pure returns (bool) {
+    return cast(a) == cast(b);
+}
+
+function __lt(TokensXShares2 a, TokensXShares2 b) pure returns (bool) {
+    return cast(a) < cast(b);
+}
+
+function __gt(TokensXShares2 a, TokensXShares2 b) pure returns (bool) {
+    return cast(a) > cast(b);
+}
+
+function __ne(TokensXShares2 a, TokensXShares2 b) pure returns (bool) {
+    return cast(a) != cast(b);
+}
+
+function __le(TokensXShares2 a, TokensXShares2 b) pure returns (bool) {
+    return cast(a) <= cast(b);
+}
+
+function __ge(TokensXShares2 a, TokensXShares2 b) pure returns (bool) {
+    return cast(a) >= cast(b);
+}
+
+using {__eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __ge as >=} for TokensXShares2 global;

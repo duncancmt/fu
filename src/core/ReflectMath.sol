@@ -5,7 +5,7 @@ import {Settings} from "../core/Settings.sol";
 
 import {BasisPoints, BASIS} from "../types/BasisPoints.sol";
 import {Shares, ONE as ONE_SHARE} from "../types/Shares.sol";
-import {Tokens} from "../types/Tokens.sol";
+import {Tokens, ONE as ONE_TOKEN} from "../types/Tokens.sol";
 import {scale} from "../types/SharesXBasisPoints.sol";
 import {TokensXBasisPoints, scale, castUp, cast} from "../types/TokensXBasisPoints.sol";
 import {TokensXShares, tmp, alloc, SharesToTokens} from "../types/TokensXShares.sol";
@@ -16,8 +16,6 @@ import {SharesXBasisPoints, scale, castUp, cast} from "../types/SharesXBasisPoin
 import {Shares2XBasisPoints, tmp as tmp5, alloc as alloc5} from "../types/Shares2XBasisPoints.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
-
-import {console} from "@forge-std/console.sol";
 
 library ReflectMath {
     using UnsafeMath for uint256;
@@ -45,15 +43,7 @@ library ReflectMath {
         TokensXBasisPointsXShares t8 = alloc3().oadd(t6, t7);
         TokensXBasisPointsXShares2 n2 = alloc4().omul(t8, uninvolvedShares);
 
-        newFromShares = n1.div(d);
-        newToShares = n2.div(d);
-        // TODO: implement divMulti for TokensXBasisPointsXShares2 / TokensXBasisPointsXShares
-        /*
-        {
-            (uint256 x, uint256 y) = cast(n1).divMulti(cast(n2), cast(d));
-            (newFromShares, newToShares) = (Shares.wrap(x), Shares.wrap(y));
-        }
-        */
+        (newFromShares, newToShares) = n1.divMulti(n2, d);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
 
         // TODO use divMulti to compute beforeToBalance and beforeFromBalance (can't use it for after because newTotalShares might change)
@@ -63,44 +53,32 @@ library ReflectMath {
         //Tokens expectedAfterToBalanceHi = beforeToBalance + castUp(scale(amount, BASIS - taxRate));
 
         if (afterToBalance < expectedAfterToBalanceLo) {
-            //console.log("branch 0");
             {
-                //console.log("to round up");
                 Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(totalSupply)));
                 newToShares = newToShares + incr;
                 newTotalShares = newTotalShares + incr;
-                //console.log("incr", Shares.unwrap(incr));
             }
             Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
             Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
             Tokens expectedAfterFromBalance = beforeFromBalance - amount;
             if (afterFromBalance < expectedAfterFromBalance) {
-                //console.log("from round up");
                 Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(totalSupply)));
                 newFromShares = newFromShares + incr;
                 newTotalShares = newTotalShares + incr;
-                //console.log("incr", Shares.unwrap(incr));
             }
         }
         // TODO: previously the block below was an `else` block. This is more accurate, but it is *MUCH* less gas efficient
         {
-            //console.log("branch 1");
             Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
             Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
             Tokens expectedAfterFromBalance = beforeFromBalance - amount;
             {
                 bool condition = afterFromBalance > expectedAfterFromBalance;
-                if (condition) {
-                    //console.log("from round down");
-                }
                 newFromShares = newFromShares.dec(condition);
                 newTotalShares = newTotalShares.dec(condition);
             }
             {
                 bool condition = afterFromBalance < expectedAfterFromBalance;
-                if (condition) {
-                    //console.log("from round up");
-                }
                 newFromShares = newFromShares.inc(condition);
                 newTotalShares = newTotalShares.inc(condition);
             }
@@ -108,17 +86,11 @@ library ReflectMath {
             afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
             {
                 bool condition = afterToBalance > expectedAfterToBalanceLo;
-                if (condition) {
-                    //console.log("to round down");
-                }
                 newToShares = newToShares.dec(condition);
                 newTotalShares = newTotalShares.dec(condition);
             }
             {
                 bool condition = afterToBalance < expectedAfterToBalanceLo;
-                if (condition) {
-                    //console.log("to round up");
-                }
                 newToShares = newToShares.inc(condition);
                 newTotalShares = newTotalShares.inc(condition);
             }
@@ -126,56 +98,27 @@ library ReflectMath {
             afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
             {
                 bool condition = afterFromBalance > expectedAfterFromBalance;
-                if (condition) {
-                    //console.log("from round down");
-                }
                 newFromShares = newFromShares.dec(condition);
                 newTotalShares = newTotalShares.dec(condition);
             }
             {
                 bool condition = afterFromBalance < expectedAfterFromBalance;
-                if (condition) {
-                    //console.log("from round up");
-                }
                 newFromShares = newFromShares.inc(condition);
                 newTotalShares = newTotalShares.inc(condition);
             }
-
-            /*
-            afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
-            {
-                bool condition = afterToBalance > expectedAfterToBalanceLo;
-                if (condition) {
-                    //console.log("to round down");
-                }
-                newToShares = newToShares.dec(condition);
-                newTotalShares = newTotalShares.dec(condition);
-            }
-            {
-                bool condition = afterToBalance < expectedAfterToBalanceLo;
-                if (condition) {
-                    //console.log("to round up");
-                }
-                newToShares = newToShares.inc(condition);
-                newTotalShares = newTotalShares.inc(condition);
-            }
-            */
         }
 
         if (newTotalShares > totalShares) {
             // TODO: check to see if this branch is still necessary
-            //console.log("clamp");
             Shares decrTotal = newTotalShares - totalShares;
             Shares decrFrom;
             Shares decrTo;
             if (newFromShares > newToShares) {
-                //console.log("clamp from");
                 decrFrom = Shares.wrap(
                     Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares) / Shares.unwrap(newFromShares + newToShares)
                 );
                 decrTo = decrTotal - decrFrom;
             } else {
-                //console.log("clamp to");
                 decrTo = Shares.wrap(
                     Shares.unwrap(decrTotal) * Shares.unwrap(newToShares) / Shares.unwrap(newFromShares + newToShares)
                 );
@@ -185,17 +128,6 @@ library ReflectMath {
             newFromShares = newFromShares - decrFrom;
             newToShares = newToShares - decrTo;
         }
-
-        //console.log("===");
-        //console.log("           taxRate", BasisPoints.unwrap(taxRate));
-        //console.log("       totalSupply", Tokens.unwrap(totalSupply));
-        //console.log("       totalShares", Shares.unwrap(totalShares));
-        //console.log("    newTotalShares", Shares.unwrap(newTotalShares));
-        //console.log("        fromShares", Shares.unwrap(fromShares));
-        //console.log("     newFromShares", Shares.unwrap(newFromShares));
-        //console.log("          toShares", Shares.unwrap(toShares));
-        //console.log("       newToShares", Shares.unwrap(newToShares));
-        //console.log("===");
     }
 
     function getTransferShares(
@@ -220,14 +152,6 @@ library ReflectMath {
         newTotalShares = n.div(d);
         newToShares = toShares + fromShares - (totalShares - newTotalShares);
 
-        //console.log("           taxRate", BasisPoints.unwrap(taxRate));
-        //console.log("       totalSupply", Tokens.unwrap(totalSupply));
-        //console.log("       totalShares", Shares.unwrap(totalShares));
-        //console.log("        fromShares", Shares.unwrap(fromShares));
-        //console.log("          toShares", Shares.unwrap(toShares));
-        //console.log("       newToShares", Shares.unwrap(newToShares));
-        //console.log("===");
-
         // Fixup rounding error
         // TODO: use divMulti
         Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
@@ -236,56 +160,28 @@ library ReflectMath {
         Tokens expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, taxRate));
         //Tokens expectedAfterToBalance = beforeToBalance + cast(scale(beforeFromBalance, BASIS - taxRate));
 
-        //console.log("before fromBalance", Tokens.unwrap(beforeFromBalance));
-        //console.log("  before toBalance", Tokens.unwrap(beforeToBalance));
-        //console.log("         toBalance", Tokens.unwrap(afterToBalance));
-        //console.log("expected toBalance", Tokens.unwrap(expectedAfterToBalance));
-
-        /*
-        {
-            bool condition = afterToBalance > expectedAfterToBalance;
-            newToShares = newToShares.dec(condition);
-            newTotalShares = newTotalShares.dec(condition);
-        }
-        {
-            bool condition = afterToBalance < expectedAfterToBalance;
-            newToShares = newToShares.inc(condition);
-            newTotalShares = newTotalShares.inc(condition);
-        }
-        */
         for (uint256 i; afterToBalance > expectedAfterToBalance && i < 3; i++) {
-            //console.log("round down");
             // TODO: should this use `unsafeDiv` instead of `unsafeDivUp`? That might give lower rounding error (and consequently fewer iterations of this loop)
             Shares decr = Shares.wrap(
                 (Tokens.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(
                     Tokens.unwrap(totalSupply)
                 )
             );
-            //console.log("decr", Shares.unwrap(decr));
             newToShares = newToShares - decr;
             newTotalShares = newTotalShares - decr;
             if (newToShares <= toShares) {
-                //console.log("clamp");
                 newTotalShares = newTotalShares + (toShares - newToShares);
                 newToShares = toShares;
                 afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
-                //console.log("updated toBalance", Tokens.unwrap(afterToBalance));
                 break;
             }
             afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
-            //console.log("updated toBalance", Tokens.unwrap(afterToBalance));
         }
         {
             bool condition = afterToBalance < expectedAfterToBalance;
-            if (condition) {
-                //console.log("round up");
-            }
             newToShares = newToShares.inc(condition);
             newTotalShares = newTotalShares.inc(condition);
         }
-
-        //console.log("    new toBalance", Tokens.unwrap(newToShares.toTokens(totalSupply, newTotalShares)));
-        //console.log("===");
     }
 
     function getTransferSharesToWhale(
@@ -319,6 +215,7 @@ library ReflectMath {
             totalSupply - cast(scale(amount.mul(Settings.ANTI_WHALE_DIVISOR), BASIS - taxRate)), totalShares
         ).div(totalSupply.mul(Settings.ANTI_WHALE_DIVISOR));
 
+        // Fixup rounding error
         bool condition = newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newTotalShares = newTotalShares.dec(condition);
         newToShares = newToShares.dec(condition);
@@ -336,6 +233,7 @@ library ReflectMath {
         ).div(Settings.ANTI_WHALE_DIVISOR);
         newTotalShares = totalShares + newToShares - fromShares - toShares;
 
+        // Fixup rounding error
         bool condition = newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newTotalShares = newTotalShares.dec(condition);
         newToShares = newToShares.dec(condition);

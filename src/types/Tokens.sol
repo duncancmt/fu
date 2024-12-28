@@ -6,6 +6,9 @@ import {UnsafeMath} from "../lib/UnsafeMath.sol";
 /// This type is given as `uint256` for efficiency, but it is capped at `type(uint144).max`.
 type Tokens is uint256;
 
+Tokens constant ZERO = Tokens.wrap(0);
+Tokens constant ONE = Tokens.wrap(1);
+
 library TokensUnsafeMathAdapter {
     using UnsafeMath for uint256;
 
