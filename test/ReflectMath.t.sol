@@ -445,10 +445,38 @@ contract ReflectMathTest is Boilerplate, Test {
 
         (Shares newFromShares, Shares newTotalShares) =
             ReflectMath.getDeliverShares(amount, totalSupply, totalShares, fromShares);
-        assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares));
-        assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares));
+
+        assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
+        assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
+        assertEq(Shares.unwrap(totalShares - newTotalShares), Shares.unwrap(fromShares - newFromShares), "shares delta");
 
         Tokens newFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
+        Tokens expectedNewFromBalance = fromBalance - amount;
+
+        assertEq(
+            Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "new balance, expected new balance"
+        );
+    }
+
+    function testBurn(
+        Tokens totalSupply,
+        Shares totalShares,
+        Shares fromShares,
+        Tokens amount/*,
+        uint256 sharesRatio*/
+    ) public view virtual {
+        Tokens fromBalance;
+        (totalSupply, totalShares, fromShares, fromBalance, amount) =
+            _boundCommon(totalSupply, totalShares, fromShares, amount, /* sharesRatio */ 0);
+        assume(fromShares < totalShares.div(2));
+
+        (Shares newFromShares, Shares newTotalShares, Tokens newTotalSupply) = ReflectMath.getBurnShares(amount, totalSupply, totalShares, fromShares);
+
+        assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
+        assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
+        assertEq(Shares.unwrap(totalShares - newTotalShares), Shares.unwrap(fromShares - newFromShares), "shares delta");
+
+        Tokens newFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
         Tokens expectedNewFromBalance = fromBalance - amount;
 
         assertEq(

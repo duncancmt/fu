@@ -269,6 +269,7 @@ library ReflectMath {
         newTotalShares = newToShares - toShares + totalShares;
         newTotalSupply = totalSupply + amount;
 
+        // Fixup rounding error
         Tokens beforeToBalance = toShares.toTokens(totalSupply, totalShares);
         Tokens afterToBalance = newToShares.toTokens(newTotalSupply, newTotalShares);
         Tokens expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
@@ -301,6 +302,7 @@ library ReflectMath {
         transferTokens = cast(scale(amount, BASIS - taxRate));
         newTotalSupply = totalSupply - transferTokens;
 
+        // Fixup rounding error
         Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
         Tokens afterFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
         Tokens expectedAfterFromBalance = beforeFromBalance - amount;
@@ -345,12 +347,29 @@ library ReflectMath {
     function getBurnShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
         internal
         pure
-        returns (Shares)
+        returns (Shares newFromShares, Shares newTotalShares, Tokens newTotalSupply)
     {
         TokensXShares t1 = alloc().omul(fromShares, totalSupply);
         TokensXShares t2 = alloc().omul(totalShares, amount);
         TokensXShares n = alloc().osub(t1, t2);
-        return n.div(totalSupply);
+        newFromShares = n.div(totalSupply);
+        newTotalShares = totalShares + newFromShares - fromShares;
+        newTotalSupply = totalSupply - amount;
+
+        // Fixup rounding error
+        Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
+        Tokens afterFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
+        Tokens expectedAfterFromBalance = beforeFromBalance - amount;
+
+        if (afterFromBalance < expectedAfterFromBalance) {
+            Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
+            newFromShares = newFromShares + incr;
+            newTotalShares = newTotalShares + incr;
+        } else if (afterFromBalance > expectedAfterFromBalance) {
+            Shares decr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
+            newFromShares = newFromShares - decr;
+            newTotalShares = newTotalShares - decr;
+        }
     }
 
     // getBurnShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
