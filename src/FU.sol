@@ -296,6 +296,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         BasisPoints taxRate = _tax();
         Shares newShares;
         Shares newTotalShares;
+        Tokens newTotalSupply;
         // TODO: I haven't thoroughly thought through the rounding behavior of this check. there may
         // be an off-by-one. but also maybe it doesn't matter because `getTransferSharesFromPair`
         // *mostly* works correctly when values aren't *too* extreme
@@ -306,14 +307,14 @@ contract FU is ERC20Base, TransientStorageLayout {
         ) {
             newShares = (cachedTotalShares - cachedShares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
             newTotalShares = cachedTotalShares + newShares - cachedShares;
+            newTotalSupply = cachedTotalSupply + amountTokens;
         } else {
-            (newShares, newTotalShares) = ReflectMath.getTransferSharesFromPair(
+            (newShares, newTotalShares, newTotalSupply) = ReflectMath.getTransferSharesFromPair(
                 taxRate, cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
             );
             // TODO: this is inelegant. can this be moved into the `if` statement immediately above?
             (newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);
         }
-        Tokens newTotalSupply = cachedTotalSupply + amountTokens;
 
         CrazyBalance transferAmount = newShares.toPairBalance(newTotalSupply, newTotalShares)
             - cachedTotalShares.toPairBalance(cachedTotalSupply, cachedTotalShares);

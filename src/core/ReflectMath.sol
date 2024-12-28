@@ -254,7 +254,7 @@ library ReflectMath {
         Shares totalShares,
         Tokens amount,
         Shares toShares
-    ) internal view returns (Shares newToShares, Shares newTotalShares) {
+    ) internal view returns (Shares newToShares, Shares newTotalShares, Tokens newTotalSupply) {
         TokensXBasisPointsXShares t2 = alloc3().omul(scale(amount, BASIS - taxRate), totalShares);
         TokensXBasisPointsXShares t4 = alloc3().omul(scale(totalSupply, BASIS), toShares);
         TokensXBasisPointsXShares t5 = alloc3().oadd(t2, t4);
@@ -267,6 +267,17 @@ library ReflectMath {
 
         newToShares = n.div(d);
         newTotalShares = newToShares - toShares + totalShares;
+        newTotalSupply = totalSupply + amount;
+
+        Tokens beforeToBalance = toShares.toTokens(totalSupply, totalShares);
+        Tokens afterToBalance = newToShares.toTokens(newTotalSupply, newTotalShares);
+        Tokens expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
+
+        if (afterToBalance < expectedAfterToBalanceLo) {
+            Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
+            newToShares = newToShares + incr;
+            newTotalShares = newTotalShares + incr;
+        }
     }
 
     function getTransferSharesToPair(

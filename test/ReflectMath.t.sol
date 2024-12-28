@@ -346,7 +346,7 @@ contract ReflectMathTest is Boilerplate, Test {
         );
     }
 
-    function testTransferSomeFromPair(
+    function testTransferFromPair(
         Tokens totalSupply,
         Shares totalShares,
         Shares toShares,
@@ -370,30 +370,22 @@ contract ReflectMathTest is Boilerplate, Test {
             )
         );
 
-        (Shares newToShares, Shares newTotalShares) =
+        (Shares newToShares, Shares newTotalShares, Tokens newTotalSupply) =
             ReflectMath.getTransferSharesFromPair(taxRate, totalSupply, totalShares, amount, toShares);
-        Tokens newTotalSupply = totalSupply + amount;
 
-        assertGe(Shares.unwrap(newToShares), Shares.unwrap(toShares), "to shares decreased");
         assertGe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares decreased");
         assertEq(Shares.unwrap(newTotalShares - totalShares), Shares.unwrap(newToShares - toShares), "shares delta");
+        assertGe(Shares.unwrap(newToShares), Shares.unwrap(toShares), "to shares decreased");
+
+        // This case is handled in the token by simply applying the whale limit
+        assume(newToShares <= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE);
 
         Tokens newToBalance = newToShares.toTokens(newTotalSupply, newTotalShares);
 
-        if (amount <= totalSupply.div(Settings.ANTI_WHALE_DIVISOR - 1)) { // anti-whale criterion
-            // TODO: tighter bounds
-            uint256 fudge = 1;
-            Tokens expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, taxRate));
-            Tokens expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - taxRate));
-            //if (newToShares == toShares) {
-                assertGe(Tokens.unwrap(newToBalance) + fudge, Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
-                assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi) + fudge, "newToBalance upper");
-            /*
-            } else {
-                assertEq(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance");
-            }
-            */
-        }
+        Tokens expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, taxRate));
+        Tokens expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - taxRate));
+        assertGe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
+        assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi), "newToBalance upper");
     }
 
     function testTransferSomeToPair(
