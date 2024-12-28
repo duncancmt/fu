@@ -412,7 +412,7 @@ library ReflectMath {
 
     function getBurnShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
         internal
-        view
+        pure
         returns (Shares)
     {
         TokensXShares t1 = alloc().omul(fromShares, totalSupply);
