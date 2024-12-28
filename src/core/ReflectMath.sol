@@ -46,7 +46,7 @@ library ReflectMath {
         (newFromShares, newToShares) = n1.divMulti(n2, d);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
 
-        (Tokens beforeFromBalance, Tokens beforeToBalance) = fromShares.toTokens(toShares, totalSupply, totalShares);
+        (Tokens beforeFromBalance, Tokens beforeToBalance) = fromShares.toTokensMulti(toShares, totalSupply, totalShares);
 
         Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
@@ -58,7 +58,6 @@ library ReflectMath {
                 newToShares = newToShares + incr;
                 newTotalShares = newTotalShares + incr;
             }
-            Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
             Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
             Tokens expectedAfterFromBalance = beforeFromBalance - amount;
             if (afterFromBalance < expectedAfterFromBalance) {
@@ -152,9 +151,7 @@ library ReflectMath {
         newToShares = toShares + fromShares - (totalShares - newTotalShares);
 
         // Fixup rounding error
-        // TODO: use divMulti
-        Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
-        Tokens beforeToBalance = toShares.toTokens(totalSupply, totalShares);
+        (Tokens beforeFromBalance, Tokens beforeToBalance) = fromShares.toTokensMulti(toShares, totalSupply, totalShares);
         Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, taxRate));
         //Tokens expectedAfterToBalance = beforeToBalance + cast(scale(beforeFromBalance, BASIS - taxRate));
@@ -206,9 +203,8 @@ library ReflectMath {
         TokensXShares t4 = alloc().omul(totalShares, amount);
         TokensXShares2 n2 = alloc2().omul(uninvolvedShares.mul(Settings.ANTI_WHALE_DIVISOR), tmp().osub(t3, t4));
 
-        // TODO: divMulti
-        newToShares = n1.div(d).div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
-        newFromShares = n2.div(d);
+        (newToShares, newFromShares) = n1.divMulti(n2, d);
+        newToShares = newToShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newTotalShares = totalShares - (fromShares + toShares - newFromShares - newToShares);
         counterfactualToShares = tmp().omul(
             totalSupply - cast(scale(amount.mul(Settings.ANTI_WHALE_DIVISOR), BASIS - taxRate)), totalShares

@@ -196,7 +196,6 @@ contract ReflectMathTest is Boilerplate, Test {
 
         toShares =
             Shares.wrap(bound(Shares.unwrap(toShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))));
-        Tokens toBalance = toShares.toTokens(totalSupply, totalShares);
 
         (Shares newFromShares, Shares newToShares, Shares newTotalShares) =
             ReflectMath.getTransferShares(amount, taxRate, totalSupply, totalShares, fromShares, toShares);
@@ -292,7 +291,6 @@ contract ReflectMathTest is Boilerplate, Test {
 
         toShares =
             Shares.wrap(bound(Shares.unwrap(toShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))));
-        Tokens toBalance = toShares.toTokens(totalSupply, totalShares);
 
         (Shares newToShares, Shares newTotalShares) =
             ReflectMath.getTransferShares(taxRate, totalSupply, totalShares, fromShares, toShares);

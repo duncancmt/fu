@@ -93,7 +93,7 @@ library SharesToTokens {
         return tmp().omul(shares, totalSupply).div(totalShares);
     }
 
-    function toTokens(Shares shares0, Shares shares1, Tokens totalSupply, Shares totalShares) internal pure returns (Tokens r0, Tokens r1) {
+    function toTokensMulti(Shares shares0, Shares shares1, Tokens totalSupply, Shares totalShares) internal pure returns (Tokens r0, Tokens r1) {
         uint256 freePtr;
         assembly ("memory-safe") {
             freePtr := mload(0x40)
