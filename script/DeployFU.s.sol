@@ -52,9 +52,7 @@ contract DeployFU is Script {
         bytes memory initcode = bytes.concat(type(FU).creationCode, abi.encode(gitCommit, image, initialHolders));
         IERC20 fu = IERC20(
             address(
-                uint160(
-                    uint256(keccak256(abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, salt, keccak256(initcode))))
-                )
+                uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, salt, keccak256(initcode)))))
             )
         );
         IUniswapV2Pair pair = pairFor(fu, _WETH);
