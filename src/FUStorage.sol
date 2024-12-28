@@ -5,7 +5,7 @@ import {INonces} from "./interfaces/INonces.sol";
 import {IERC5805} from "./interfaces/IERC5805.sol";
 
 import {Tokens} from "./types/Tokens.sol";
-import {Shares} from "./types/Shares.sol";
+import {Shares, SharesStorage} from "./types/Shares.sol";
 import {CrazyBalance} from "./types/CrazyBalance.sol";
 
 import {Checkpoints} from "./core/Checkpoints.sol";
@@ -14,7 +14,7 @@ import {RebaseQueue} from "./core/RebaseQueue.sol";
 abstract contract FUStorage is INonces, IERC5805 {
     // @custom:storage-location erc7201:"Fuck You!"
     struct Storage {
-        mapping(address account => Shares shares) sharesOf;
+        mapping(address account => SharesStorage shares) sharesOf;
         Tokens totalSupply;
         Tokens pairTokens;
         Shares totalShares;

@@ -81,3 +81,22 @@ using {
 function ternary(bool c, Shares x, Shares y) pure returns (Shares) {
     return Shares.wrap(Ternary.ternary(c, Shares.unwrap(x), Shares.unwrap(y)));
 }
+
+// This is the same as `Shares`, except it has padding on the wrong end, just to
+// make life harder for people who do state overrides
+type SharesStorage is uint256;
+
+function load(SharesStorage x) pure returns (Shares r) {
+    assembly ("memory-safe") {
+        r := mul(shr(0x50, x), iszero(and(0xffffffffffffffffffff, x)))
+    }
+}
+
+function store(Shares x) pure returns (SharesStorage r) {
+    assembly ("memory-safe") {
+        r := shl(0x50, x)
+    }
+}
+
+using {load} for SharesStorage global;
+using {store} for Shares global;

@@ -6,7 +6,7 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {Settings} from "./Settings.sol";
 
 import {CrazyBalance, ZERO as ZERO_BALANCE, CrazyBalanceArithmetic} from "../types/CrazyBalance.sol";
-import {Shares, ONE as ONE_SHARE, ternary} from "../types/Shares.sol";
+import {Shares, SharesStorage, ONE as ONE_SHARE, ternary} from "../types/Shares.sol";
 import {Tokens} from "../types/Tokens.sol";
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
@@ -127,7 +127,7 @@ library LibRebaseQueue {
 
     function processQueue(
         RebaseQueue storage self,
-        mapping(address => Shares) storage sharesOf,
+        mapping(address => SharesStorage) storage sharesOf,
         Tokens totalSupply,
         Shares totalShares
     ) internal {
@@ -135,7 +135,7 @@ library LibRebaseQueue {
         RebaseQueueElem storage elem = self.queue[cursor];
         Shares limit = totalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         for (uint256 i = gasleft() & 7;; i = i.unsafeDec()) {
-            Shares shares = sharesOf[cursor];
+            Shares shares = sharesOf[cursor].load();
 
             shares = (shares > limit).ternary(limit, shares);
             elem.lastTokens = _rebaseFor(elem, cursor, shares, totalSupply, totalShares);

@@ -105,13 +105,13 @@ contract FU is ERC20Base, TransientStorageLayout {
         {
             // The queue is empty, so we have to special-case the first insertion. `DEAD` will
             // always hold a token balance, which makes many things simpler.
-            $.sharesOf[DEAD] = Settings.oneTokenInShares();
-            CrazyBalance balance = $.sharesOf[DEAD].toCrazyBalance(totalSupply_, totalShares);
+            $.sharesOf[DEAD] = Settings.oneTokenInShares().store();
+            CrazyBalance balance = $.sharesOf[DEAD].load().toCrazyBalance(totalSupply_, totalShares);
             emit Transfer(address(0), DEAD, balance.toExternal());
             $.rebaseQueue.initialize(DEAD, balance);
         }
         {
-            Shares toMint = totalShares - $.sharesOf[DEAD];
+            Shares toMint = totalShares - $.sharesOf[DEAD].load();
             // slither-disable-next-line divide-before-multiply
             Shares sharesRest = toMint.div(initialHolders.length);
             {
@@ -119,8 +119,8 @@ contract FU is ERC20Base, TransientStorageLayout {
                 CrazyBalance amount = sharesFirst.toCrazyBalance(totalSupply_, totalShares);
 
                 address to = initialHolders[0];
-                assert($.sharesOf[to] == ZERO_SHARES);
-                $.sharesOf[to] = sharesFirst;
+                assert($.sharesOf[to].load() == ZERO_SHARES);
+                $.sharesOf[to] = sharesFirst.store();
                 emit Transfer(address(0), to, amount.toExternal());
                 $.rebaseQueue.enqueue(to, amount);
             }
@@ -128,8 +128,8 @@ contract FU is ERC20Base, TransientStorageLayout {
                 CrazyBalance amount = sharesRest.toCrazyBalance(totalSupply_, totalShares);
                 for (uint256 i = 1; i < initialHolders.length; i++) {
                     address to = initialHolders[i];
-                    assert($.sharesOf[to] == ZERO_SHARES);
-                    $.sharesOf[to] = sharesRest;
+                    assert($.sharesOf[to].load() == ZERO_SHARES);
+                    $.sharesOf[to] = sharesRest.store();
                     emit Transfer(address(0), to, amount.toExternal());
                     $.rebaseQueue.enqueue(to, amount);
                 }
@@ -206,7 +206,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         view
         returns (Shares originalShares, Shares cachedShares, Shares cachedTotalShares)
     {
-        originalShares = $.sharesOf[account];
+        originalShares = $.sharesOf[account].load();
         (cachedShares, cachedTotalShares) = _applyWhaleLimit(originalShares, $.totalShares);
     }
 
@@ -221,8 +221,8 @@ contract FU is ERC20Base, TransientStorageLayout {
             Shares cachedTotalShares
         )
     {
-        originalShares0 = $.sharesOf[account0];
-        originalShares1 = $.sharesOf[account1];
+        originalShares0 = $.sharesOf[account0].load();
+        originalShares1 = $.sharesOf[account1].load();
         (cachedShares0, cachedShares1, cachedTotalShares) =
             _applyWhaleLimit(originalShares0, originalShares1, $.totalShares);
     }
@@ -322,7 +322,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         $.rebaseQueue.rebaseFor(to, cachedShares, cachedTotalSupply, cachedTotalShares);
 
         $.pairTokens = $.pairTokens - amountTokens;
-        $.sharesOf[to] = newShares;
+        $.sharesOf[to] = newShares.store();
         $.totalSupply = newTotalSupply;
         $.totalShares = newTotalShares;
 
@@ -392,7 +392,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
         $.rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
 
-        $.sharesOf[from] = newShares;
+        $.sharesOf[from] = newShares.store();
         $.pairTokens = newPairTokens;
         $.totalSupply = cachedTotalSupply - transferTokens;
         $.totalShares = newTotalShares;
@@ -524,8 +524,8 @@ contract FU is ERC20Base, TransientStorageLayout {
         $.rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
         $.rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
 
-        $.sharesOf[from] = newFromShares;
-        $.sharesOf[to] = newToShares;
+        $.sharesOf[from] = newFromShares.store();
+        $.sharesOf[to] = newToShares.store();
         $.totalShares = newTotalShares;
         emit Transfer(from, to, transferAmount.toExternal());
         emit Transfer(from, address(0), burnAmount.toExternal());
@@ -684,7 +684,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     function _delegate(Storage storage $, address delegator, address delegatee) internal override {
-        Shares shares = $.sharesOf[delegator];
+        Shares shares = $.sharesOf[delegator].load();
         address oldDelegatee = $.delegates[delegator];
         emit DelegateChanged(delegator, oldDelegatee, delegatee);
         $.delegates[delegator] = delegatee;
@@ -745,7 +745,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
         $.rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
 
-        $.sharesOf[from] = newShares;
+        $.sharesOf[from] = newShares.store();
         $.totalShares = newTotalShares;
         $.totalSupply = newTotalSupply;
         emit Transfer(from, address(0), amount.toExternal());
@@ -806,7 +806,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
         $.rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
 
-        $.sharesOf[from] = newShares;
+        $.sharesOf[from] = newShares.store();
         $.totalShares = newTotalShares;
         emit Transfer(from, address(0), amount.toExternal());
 
