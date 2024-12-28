@@ -249,10 +249,11 @@ contract ReflectMathTest is Boilerplate, Test {
         // TODO: tighten these bounds to exact equality
         //assertEq(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "newFromBalance");
 
-        uint256 fudge = 1;
+        uint256 fudge = 0;
         assertGe(Tokens.unwrap(newFromBalance) + fudge, Tokens.unwrap(expectedNewFromBalance), "newFromBalance lower");
         assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance) + fudge, "newFromBalance upper");
 
+        fudge = 1;
         assertGe(Tokens.unwrap(newToBalance) + fudge, Tokens.unwrap(expectedNewToBalance), "newToBalance lower");
         assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalance) + fudge, "newToBalance upper");
 

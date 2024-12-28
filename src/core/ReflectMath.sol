@@ -202,9 +202,32 @@ library ReflectMath {
         ).div(totalSupply.mul(Settings.ANTI_WHALE_DIVISOR));
 
         // Fixup rounding error
-        bool condition = newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
-        newTotalShares = newTotalShares.dec(condition);
-        newToShares = newToShares.dec(condition);
+        {
+            bool condition = newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+            newTotalShares = newTotalShares.dec(condition);
+            newToShares = newToShares.dec(condition);
+        }
+
+        Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
+        Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
+        Tokens expectedAfterFromBalance = beforeFromBalance - amount;
+        {
+            bool condition = afterFromBalance > expectedAfterFromBalance;
+            newFromShares = newFromShares.dec(condition);
+            newTotalShares = newTotalShares.dec(condition);
+        }
+        {
+            bool condition = afterFromBalance < expectedAfterFromBalance;
+            newFromShares = newFromShares.inc(condition);
+            newTotalShares = newTotalShares.inc(condition);
+        }
+
+        {
+            bool condition = newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+            newTotalShares = newTotalShares.dec(condition);
+            newToShares = newToShares.dec(condition);
+        }
+
     }
 
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
