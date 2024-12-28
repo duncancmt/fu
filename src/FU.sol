@@ -72,7 +72,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         require(Settings.SHARES_TO_VOTES_DIVISOR >= Settings.INITIAL_SHARES_RATIO);
 
         require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
-        require(tx.origin == 0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60);
+        require(tx.origin == 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6);
         require(msg.value >= 1 ether);
         require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
