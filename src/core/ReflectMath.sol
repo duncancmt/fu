@@ -46,7 +46,8 @@ library ReflectMath {
         (newFromShares, newToShares) = n1.divMulti(n2, d);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
 
-        (Tokens beforeFromBalance, Tokens beforeToBalance) = fromShares.toTokensMulti(toShares, totalSupply, totalShares);
+        (Tokens beforeFromBalance, Tokens beforeToBalance) =
+            fromShares.toTokensMulti(toShares, totalSupply, totalShares);
 
         Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
@@ -144,7 +145,8 @@ library ReflectMath {
         newToShares = toShares + fromShares - (totalShares - newTotalShares);
 
         // Fixup rounding error
-        (Tokens beforeFromBalance, Tokens beforeToBalance) = fromShares.toTokensMulti(toShares, totalSupply, totalShares);
+        (Tokens beforeFromBalance, Tokens beforeToBalance) =
+            fromShares.toTokensMulti(toShares, totalSupply, totalShares);
         Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, taxRate));
 
@@ -227,7 +229,6 @@ library ReflectMath {
             newTotalShares = newTotalShares.dec(condition);
             newToShares = newToShares.dec(condition);
         }
-
     }
 
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
@@ -287,7 +288,11 @@ library ReflectMath {
         Shares totalShares,
         Tokens amount,
         Shares fromShares
-    ) internal view returns (Shares newFromShares, Shares newTotalShares, Tokens transferTokens, Tokens newTotalSupply) {
+    )
+        internal
+        view
+        returns (Shares newFromShares, Shares newTotalShares, Tokens transferTokens, Tokens newTotalSupply)
+    {
         TokensXBasisPointsXShares t1 = alloc3().omul(scale(fromShares, BASIS), totalSupply);
         TokensXBasisPointsXShares t2 = alloc3().omul(scale(totalShares, BASIS), amount);
         TokensXBasisPointsXShares t3 = alloc3().osub(t1, t2);

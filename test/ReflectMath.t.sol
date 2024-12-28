@@ -418,7 +418,7 @@ contract ReflectMathTest is Boilerplate, Test {
         //console.log("fromBalance", Tokens.unwrap(fromBalance));
         //console.log("===");
 
-        (Shares newFromShares, Shares newTotalShares, , Tokens newTotalSupply) =
+        (Shares newFromShares, Shares newTotalShares,, Tokens newTotalSupply) =
             ReflectMath.getTransferSharesToPair(taxRate, totalSupply, totalShares, amount, fromShares);
 
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
@@ -470,7 +470,8 @@ contract ReflectMathTest is Boilerplate, Test {
             _boundCommon(totalSupply, totalShares, fromShares, amount, /* sharesRatio */ 0);
         assume(fromShares < totalShares.div(2));
 
-        (Shares newFromShares, Shares newTotalShares, Tokens newTotalSupply) = ReflectMath.getBurnShares(amount, totalSupply, totalShares, fromShares);
+        (Shares newFromShares, Shares newTotalShares, Tokens newTotalSupply) =
+            ReflectMath.getBurnShares(amount, totalSupply, totalShares, fromShares);
 
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
