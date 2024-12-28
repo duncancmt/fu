@@ -228,6 +228,11 @@ contract ReflectMathTest is Boilerplate, Test {
         //console.log("===");
 
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
+        assertEq(
+            Shares.unwrap(newToShares),
+            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) - 1,
+            "to shares whale limit"
+        );
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         assertEq(
             Shares.unwrap(totalShares - newTotalShares),
@@ -294,6 +299,7 @@ contract ReflectMathTest is Boilerplate, Test {
 
         assume(newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR));
 
+        /*
         console.log("===");
         console.log("totalSupply", Tokens.unwrap(totalSupply));
         console.log("totalShares", Shares.unwrap(totalShares));
@@ -304,24 +310,26 @@ contract ReflectMathTest is Boilerplate, Test {
         console.log("fromBalance", Tokens.unwrap(fromBalance));
         console.log("toBalance  ", Tokens.unwrap(toBalance));
         console.log("===");
+        */
 
         Shares counterfactualToShares;
         (counterfactualToShares, newToShares, newTotalShares) =
             ReflectMath.getTransferSharesToWhale(taxRate, totalShares, fromShares, toShares);
 
+        /*
         console.log("=== NEW ===");
         console.log("totalShares", Shares.unwrap(newTotalShares));
         console.log("toShares   ", Shares.unwrap(newToShares));
         console.log("whale limit", Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)));
         console.log("counterfactual", Shares.unwrap(counterfactualToShares));
         console.log("===");
-
+        */
 
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         assertEq(
             Shares.unwrap(newToShares),
             Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) - 1,
-            "to share whale limit"
+            "to shares whale limit"
         );
         assertEq(
             Shares.unwrap(totalShares - newTotalShares),
@@ -341,7 +349,6 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens expectedCounterfactualToBalanceLo = expectedNewToBalance - castUp(scale(fromBalance, BASIS - taxRate));
         Tokens expectedCounterfactualToBalanceHi = expectedNewToBalance - cast(scale(fromBalance, BASIS - taxRate));
 
-        // TODO: why on earth does the fudge factor have to be so high
         assertGe(
             Tokens.unwrap(counterfactualToBalance) + fudge,
             Tokens.unwrap(expectedCounterfactualToBalanceLo),

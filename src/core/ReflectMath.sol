@@ -318,6 +318,10 @@ library ReflectMath {
         counterfactualToShares = tmp().omul(
             totalSupply - cast(scale(amount.mul(Settings.ANTI_WHALE_DIVISOR), BASIS - taxRate)), totalShares
         ).div(totalSupply.mul(Settings.ANTI_WHALE_DIVISOR));
+
+        bool condition = newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+        newTotalShares = newTotalShares.dec(condition);
+        newToShares = newToShares.dec(condition);
     }
 
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
