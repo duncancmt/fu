@@ -48,6 +48,16 @@ library TokensXSharesArithmetic {
     function div(TokensXShares n, Shares d) internal pure returns (Tokens) {
         return Tokens.wrap(cast(n).div(Shares.unwrap(d)));
     }
+
+    function divMulti(TokensXShares n0, TokensXShares n1, Tokens d) internal pure returns (Shares, Shares) {
+        (uint256 r0, uint256 r1) = cast(n0).divMulti(cast(n1), Tokens.unwrap(d));
+        return (Shares.wrap(r0), Shares.wrap(r1));
+    }
+
+    function divMulti(TokensXShares n0, TokensXShares n1, Shares d) internal pure returns (Tokens, Tokens) {
+        (uint256 r0, uint256 r1) = cast(n0).divMulti(cast(n1), Shares.unwrap(d));
+        return (Tokens.wrap(r0), Tokens.wrap(r1));
+    }
 }
 
 using TokensXSharesArithmetic for TokensXShares global;
@@ -81,6 +91,21 @@ using {__eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __ge as >=} for
 library SharesToTokens {
     function toTokens(Shares shares, Tokens totalSupply, Shares totalShares) internal pure returns (Tokens) {
         return tmp().omul(shares, totalSupply).div(totalShares);
+    }
+
+    function toTokens(Shares shares0, Shares shares1, Tokens totalSupply, Shares totalShares) internal pure returns (Tokens r0, Tokens r1) {
+        uint256 freePtr;
+        assembly ("memory-safe") {
+            freePtr := mload(0x40)
+        }
+
+        TokensXShares n0 = alloc().omul(shares0, totalSupply);
+        TokensXShares n1 = tmp().omul(shares1, totalSupply);
+        (r0, r1) = n0.divMulti(n1, totalShares);
+
+        assembly ("memory-safe") {
+            mstore(0x40, freePtr)
+        }
     }
 
     function toTokensUp(Shares shares, Tokens totalSupply, Shares totalShares) internal pure returns (Tokens r) {

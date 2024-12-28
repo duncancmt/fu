@@ -46,8 +46,8 @@ library ReflectMath {
         (newFromShares, newToShares) = n1.divMulti(n2, d);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
 
-        // TODO use divMulti to compute beforeToBalance and beforeFromBalance (can't use it for after because newTotalShares might change)
-        Tokens beforeToBalance = toShares.toTokens(totalSupply, totalShares);
+        (Tokens beforeFromBalance, Tokens beforeToBalance) = fromShares.toTokens(toShares, totalSupply, totalShares);
+
         Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
         //Tokens expectedAfterToBalanceHi = beforeToBalance + castUp(scale(amount, BASIS - taxRate));
@@ -69,7 +69,6 @@ library ReflectMath {
         }
         // TODO: previously the block below was an `else` block. This is more accurate, but it is *MUCH* less gas efficient
         {
-            Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
             Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
             Tokens expectedAfterFromBalance = beforeFromBalance - amount;
             {
