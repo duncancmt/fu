@@ -418,21 +418,17 @@ contract ReflectMathTest is Boilerplate, Test {
         //console.log("fromBalance", Tokens.unwrap(fromBalance));
         //console.log("===");
 
-        (Shares newFromShares, Shares newTotalShares) =
+        (Shares newFromShares, Shares newTotalShares, , Tokens newTotalSupply) =
             ReflectMath.getTransferSharesToPair(taxRate, totalSupply, totalShares, amount, fromShares);
-        Tokens newTotalSupply = totalSupply - cast(scale(amount, BASIS - taxRate));
 
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         assertEq(Shares.unwrap(totalShares - newTotalShares), Shares.unwrap(fromShares - newFromShares), "shares delta");
 
         Tokens newFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
-        //console.log("newFromBalance", Tokens.unwrap(newFromBalance));
 
         Tokens expectedNewFromBalance = fromBalance - amount;
-        // TODO: tighter bounds
-        assertGe(Tokens.unwrap(newFromBalance) + 1, Tokens.unwrap(expectedNewFromBalance), "newFromBalance lo");
-        assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance) + 1, "newFromBalance hi");
+        assertEq(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "newFromBalance");
     }
 
     function testDeliver(

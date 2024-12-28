@@ -286,9 +286,7 @@ library ReflectMath {
         Shares totalShares,
         Tokens amount,
         Shares fromShares
-    ) internal view returns (Shares newFromShares, Shares newTotalShares) {
-        // TODO: return the amount of tokens transferred (the tax-decreased `amount`) from this
-        // function so that everybody is on the same page about the delta in `totalSupply`
+    ) internal view returns (Shares newFromShares, Shares newTotalShares, Tokens transferTokens, Tokens newTotalSupply) {
         TokensXBasisPointsXShares t1 = alloc3().omul(scale(fromShares, BASIS), totalSupply);
         TokensXBasisPointsXShares t2 = alloc3().omul(scale(totalShares, BASIS), amount);
         TokensXBasisPointsXShares t3 = alloc3().osub(t1, t2);
@@ -300,6 +298,22 @@ library ReflectMath {
 
         newFromShares = n.div(d);
         newTotalShares = totalShares - (fromShares - newFromShares);
+        transferTokens = cast(scale(amount, BASIS - taxRate));
+        newTotalSupply = totalSupply - transferTokens;
+
+        Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
+        Tokens afterFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
+        Tokens expectedAfterFromBalance = beforeFromBalance - amount;
+
+        if (afterFromBalance < expectedAfterFromBalance) {
+            Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
+            newFromShares = newFromShares + incr;
+            newTotalShares = newTotalShares + incr;
+        } else if (afterFromBalance > expectedAfterFromBalance) {
+            Shares decr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
+            newFromShares = newFromShares - decr;
+            newTotalShares = newTotalShares - decr;
+        }
     }
 
     function getDeliverShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)

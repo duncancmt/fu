@@ -369,16 +369,16 @@ contract FU is ERC20Base, TransientStorageLayout {
         Shares newShares;
         Shares newTotalShares;
         Tokens transferTokens;
+        Tokens newTotalSupply;
         if (amount == balance) {
             transferTokens = scale(cachedShares, BASIS - taxRate).toTokens(cachedTotalSupply, cachedTotalShares);
+            newTotalSupply = cachedTotalSupply - transferTokens;
             newShares = ZERO_SHARES;
             newTotalShares = cachedTotalShares - cachedShares;
         } else {
-            transferTokens = amount.toTokens(from);
-            (newShares, newTotalShares) = ReflectMath.getTransferSharesToPair(
-                taxRate, cachedTotalSupply, cachedTotalShares, transferTokens, cachedShares
+            (newShares, newTotalShares, transferTokens, newTotalSupply) = ReflectMath.getTransferSharesToPair(
+                taxRate, cachedTotalSupply, cachedTotalShares, amount.toTokens(from), cachedShares
             );
-            transferTokens = cast(scale(transferTokens, BASIS - taxRate));
         }
         Tokens newPairTokens = cachedPairTokens + transferTokens;
 
@@ -395,7 +395,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
         $.sharesOf[from] = newShares.store();
         $.pairTokens = newPairTokens;
-        $.totalSupply = cachedTotalSupply - transferTokens;
+        $.totalSupply = newTotalSupply;
         $.totalShares = newTotalShares;
 
         emit Transfer(from, address(pair), transferAmount.toExternal());
