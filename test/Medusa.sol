@@ -19,8 +19,8 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         Shares,
         Shares,
         Tokens,
-        BasisPoints/*,
-        uint256*/
+        BasisPoints,
+        uint256
     ) public view override {
         return;
     }
@@ -30,8 +30,8 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         Shares,
         Shares,
         Shares,
-        BasisPoints/*,
-        uint256*/
+        BasisPoints,
+        uint256
     ) public pure override {
         return;
     }
@@ -40,8 +40,8 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         Tokens,
         Shares,
         Shares,
-        Tokens/*,
-        uint256*/
+        Tokens,
+        uint256
     ) public view override {
         return;
     }
@@ -52,10 +52,10 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         Shares fromShares,
         Shares toShares,
         Tokens amount,
-        BasisPoints taxRate/*,
-        uint256 sharesRatio*/
+        BasisPoints taxRate,
+        uint256 sharesRatio
     ) external {
-        super.testTransferSome(totalSupply, totalShares, fromShares, toShares, amount, taxRate);
+        super.testTransferSome(totalSupply, totalShares, fromShares, toShares, amount, taxRate, sharesRatio);
         assert(!failed());
     }
 
@@ -64,10 +64,10 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         Shares totalShares,
         Shares fromShares,
         Shares toShares,
-        BasisPoints taxRate/*,
-        uint256 sharesRatio*/
+        BasisPoints taxRate,
+        uint256 sharesRatio
     ) external {
-        super.testTransferAll(totalSupply, totalShares, fromShares, toShares, taxRate);
+        super.testTransferAll(totalSupply, totalShares, fromShares, toShares, taxRate, sharesRatio);
         assert(!failed());
     }
 
@@ -75,10 +75,10 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
-        Tokens amount/*,
-        uint256 sharesRatio*/
+        Tokens amount,
+        uint256 sharesRatio
     ) external {
-        super.testDeliver(totalSupply, totalShares, fromShares, amount);
+        super.testDeliver(totalSupply, totalShares, fromShares, amount, sharesRatio);
         assert(!failed());
     }
 
