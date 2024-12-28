@@ -316,11 +316,13 @@ contract ReflectMathTest is Boilerplate, Test {
         console.log("counterfactual", Shares.unwrap(counterfactualToShares));
         console.log("===");
 
-        uint256 fudge = 1;
 
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
-        assertGe(Shares.unwrap(newToShares) + fudge, Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)), "to share whale limit lo");
-        assertLe(Shares.unwrap(newToShares), Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) + fudge, "to share whale limit hi");
+        assertEq(
+            Shares.unwrap(newToShares),
+            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) - 1,
+            "to share whale limit"
+        );
         assertEq(
             Shares.unwrap(totalShares - newTotalShares),
             Shares.unwrap(fromShares + toShares - newToShares),
@@ -329,13 +331,15 @@ contract ReflectMathTest is Boilerplate, Test {
 
         Tokens newToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens counterfactualToBalance = counterfactualToShares.toTokens(totalSupply, totalShares);
-        Tokens expectedNewToBalance = totalSupply.div(Settings.ANTI_WHALE_DIVISOR);
-        Tokens expectedCounterfactualToBalanceLo = expectedNewToBalance - castUp(scale(fromBalance, BASIS - taxRate));
-        Tokens expectedCounterfactualToBalanceHi = expectedNewToBalance - cast(scale(fromBalance, BASIS - taxRate));
+        Tokens expectedNewToBalance = newToShares.toTokens(totalSupply, newTotalShares);
 
         // TODO: tighten these bounds to exact equality
+        uint256 fudge = 1;
         assertGe(Tokens.unwrap(newToBalance) + fudge, Tokens.unwrap(expectedNewToBalance), "newToBalance lower");
         assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalance) + fudge, "newToBalance upper");
+
+        Tokens expectedCounterfactualToBalanceLo = expectedNewToBalance - castUp(scale(fromBalance, BASIS - taxRate));
+        Tokens expectedCounterfactualToBalanceHi = expectedNewToBalance - cast(scale(fromBalance, BASIS - taxRate));
 
         // TODO: why on earth does the fudge factor have to be so high
         assertGe(

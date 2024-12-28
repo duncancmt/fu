@@ -327,8 +327,14 @@ library ReflectMath {
     {
         // Called when `to`'s final shares will be the whale limit and `from` is sending their entire balance
         newToShares = (totalShares - fromShares - toShares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
-        counterfactualToShares = (totalShares - castUp(scale(fromShares, BASIS - taxRate)).mul(Settings.ANTI_WHALE_DIVISOR)).div(Settings.ANTI_WHALE_DIVISOR);
+        counterfactualToShares = (
+            totalShares - castUp(scale(fromShares, BASIS - taxRate)).mul(Settings.ANTI_WHALE_DIVISOR)
+        ).div(Settings.ANTI_WHALE_DIVISOR);
         newTotalShares = totalShares + newToShares - fromShares - toShares;
+
+        bool condition = newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+        newTotalShares = newTotalShares.dec(condition);
+        newToShares = newToShares.dec(condition);
     }
 
     function getTransferSharesFromPair(
