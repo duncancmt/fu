@@ -5,7 +5,7 @@ import {Settings} from "src/core/Settings.sol";
 import {ReflectMath} from "src/core/ReflectMath.sol";
 
 import {BasisPoints, BASIS} from "src/types/BasisPoints.sol";
-import {Shares} from "src/types/Shares.sol";
+import {Shares, ONE as ONE_SHARE} from "src/types/Shares.sol";
 import {Tokens} from "src/types/Tokens.sol";
 import {TokensXShares, tmp, alloc, SharesToTokens} from "src/types/TokensXShares.sol";
 import {TokensXBasisPoints, scale, cast, castUp} from "src/types/TokensXBasisPoints.sol";
@@ -41,7 +41,7 @@ contract ReflectMathTest is Boilerplate, Test {
             bound(
                 Shares.unwrap(fromShares),
                 Shares.unwrap(totalShares).unsafeDivUp(Tokens.unwrap(totalSupply)),
-                Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR)) - 1
+                Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE)
             )
         );
 
@@ -229,7 +229,7 @@ contract ReflectMathTest is Boilerplate, Test {
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
         assertEq(
             Shares.unwrap(newToShares),
-            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) - 1,
+            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE),
             "to shares whale limit"
         );
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
@@ -318,7 +318,7 @@ contract ReflectMathTest is Boilerplate, Test {
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         assertEq(
             Shares.unwrap(newToShares),
-            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) - 1,
+            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE),
             "to shares whale limit"
         );
         assertEq(
@@ -329,16 +329,11 @@ contract ReflectMathTest is Boilerplate, Test {
 
         Tokens newToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens counterfactualToBalance = counterfactualToShares.toTokens(totalSupply, totalShares);
-        Tokens expectedNewToBalance = newToShares.toTokens(totalSupply, newTotalShares);
 
-        // TODO: tighten these bounds to exact equality
+        Tokens expectedCounterfactualToBalanceLo = newToBalance - castUp(scale(fromBalance, BASIS - taxRate));
+        Tokens expectedCounterfactualToBalanceHi = newToBalance - cast(scale(fromBalance, BASIS - taxRate));
+
         uint256 fudge = 1;
-        assertGe(Tokens.unwrap(newToBalance) + fudge, Tokens.unwrap(expectedNewToBalance), "newToBalance lower");
-        assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalance) + fudge, "newToBalance upper");
-
-        Tokens expectedCounterfactualToBalanceLo = expectedNewToBalance - castUp(scale(fromBalance, BASIS - taxRate));
-        Tokens expectedCounterfactualToBalanceHi = expectedNewToBalance - cast(scale(fromBalance, BASIS - taxRate));
-
         assertGe(
             Tokens.unwrap(counterfactualToBalance) + fudge,
             Tokens.unwrap(expectedCounterfactualToBalanceLo),
