@@ -244,8 +244,9 @@ If you want to be airdropped some FU, simply submit a PR adding yourself to
 [`airdrop.json`](./airdrop.json). There is a recommended donation/gratuity of
 0.1 ETH that can be paid to
 [`deployer.duncancmt.eth`](https://etherscan.io/address/deployer.duncancmt.eth)
-(aka `0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6`). There are no eligibility
-criteria. Whether or not you receive an airdrop is entirely contingent on the
-capricious and arbitrary whims of the authors.
+(aka `0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6`). All donations will be locked
+forever as liquidity. There are no eligibility criteria. Whether or not you
+receive an airdrop is entirely contingent on the capricious and arbitrary whims
+of the authors.
 
 ![deployer.duncancmt.eth](img/deployer.duncancmt.eth.png)
