@@ -199,7 +199,9 @@ library ReflectMath {
         (newToShares, newFromShares) = n1.divMulti(n2, d);
         newToShares = newToShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newTotalShares = totalShares - (fromShares + toShares - newFromShares - newToShares);
-        counterfactualToShares = tmp3().omul(scale(totalSupply, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(amount, BASIS - taxRate), totalShares).div(scale(totalSupply, BASIS));
+        counterfactualToShares = tmp3().omul(
+            scale(totalSupply, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(amount, BASIS - taxRate), totalShares
+        ).div(scale(totalSupply, BASIS));
 
         // Fixup rounding error
         {
@@ -236,7 +238,8 @@ library ReflectMath {
     {
         // Called when `to`'s final shares will be the whale limit and `from` is sending their entire balance
         newToShares = (totalShares - fromShares - toShares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
-        counterfactualToShares = cast(scale(totalShares, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(fromShares, BASIS - taxRate));
+        counterfactualToShares =
+            cast(scale(totalShares, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(fromShares, BASIS - taxRate));
         newTotalShares = totalShares + newToShares - fromShares - toShares;
 
         // Fixup rounding error

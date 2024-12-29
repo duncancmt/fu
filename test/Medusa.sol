@@ -13,36 +13,15 @@ import {Boilerplate, MedusaBoilerplate} from "./Boilerplate.sol";
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
 
 contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
-    function testTransferSome(
-        Tokens,
-        Shares,
-        Shares,
-        Shares,
-        Tokens,
-        BasisPoints,
-        uint256
-    ) public view override {
+    function testTransferSome(Tokens, Shares, Shares, Shares, Tokens, BasisPoints, uint256) public view override {
         return;
     }
 
-    function testTransferAll(
-        Tokens,
-        Shares,
-        Shares,
-        Shares,
-        BasisPoints,
-        uint256
-    ) public pure override {
+    function testTransferAll(Tokens, Shares, Shares, Shares, BasisPoints, uint256) public pure override {
         return;
     }
 
-    function testDeliver(
-        Tokens,
-        Shares,
-        Shares,
-        Tokens,
-        uint256
-    ) public view override {
+    function testDeliver(Tokens, Shares, Shares, Tokens, uint256) public view override {
         return;
     }
 

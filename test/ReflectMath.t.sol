@@ -300,8 +300,7 @@ contract ReflectMathTest is Boilerplate, Test {
         uint256 sharesRatio
     ) public view virtual {
         Tokens toBalance;
-        (totalSupply, totalShares, toShares, toBalance) =
-            _boundCommon(totalSupply, totalShares, toShares, sharesRatio);
+        (totalSupply, totalShares, toShares, toBalance) = _boundCommon(totalSupply, totalShares, toShares, sharesRatio);
         amount =
             Tokens.wrap(bound(Tokens.unwrap(amount), 1 wei, Tokens.unwrap(Settings.INITIAL_SUPPLY - toBalance) - 1 wei));
 
@@ -368,13 +367,11 @@ contract ReflectMathTest is Boilerplate, Test {
         assertEq(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "newFromBalance");
     }
 
-    function testDeliver(
-        Tokens totalSupply,
-        Shares totalShares,
-        Shares fromShares,
-        Tokens amount,
-        uint256 sharesRatio
-    ) public view virtual {
+    function testDeliver(Tokens totalSupply, Shares totalShares, Shares fromShares, Tokens amount, uint256 sharesRatio)
+        public
+        view
+        virtual
+    {
         Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, sharesRatio);
@@ -395,13 +392,11 @@ contract ReflectMathTest is Boilerplate, Test {
         );
     }
 
-    function testBurn(
-        Tokens totalSupply,
-        Shares totalShares,
-        Shares fromShares,
-        Tokens amount,
-        uint256 sharesRatio
-    ) public view virtual {
+    function testBurn(Tokens totalSupply, Shares totalShares, Shares fromShares, Tokens amount, uint256 sharesRatio)
+        public
+        view
+        virtual
+    {
         Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, sharesRatio);
