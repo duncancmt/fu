@@ -370,10 +370,6 @@ library ReflectMath {
             Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
             newFromShares = newFromShares + incr;
             newTotalShares = newTotalShares + incr;
-        } else if (afterFromBalance > expectedAfterFromBalance) {
-            Shares decr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
-            newFromShares = newFromShares - decr;
-            newTotalShares = newTotalShares - decr;
         }
     }
 
