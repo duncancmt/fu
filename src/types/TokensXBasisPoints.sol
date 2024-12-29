@@ -22,3 +22,17 @@ function cast(TokensXBasisPoints tbp) pure returns (Tokens) {
 function castUp(TokensXBasisPoints tbp) pure returns (Tokens) {
     return Tokens.wrap(UnsafeMath.unsafeDivUp(TokensXBasisPoints.unwrap(tbp), BasisPoints.unwrap(BASIS)));
 }
+
+function __add(TokensXBasisPoints a, TokensXBasisPoints b) pure returns (TokensXBasisPoints) {
+    unchecked {
+        return TokensXBasisPoints.wrap(TokensXBasisPoints.unwrap(a) + TokensXBasisPoints.unwrap(b));
+    }
+}
+
+function __sub(TokensXBasisPoints a, TokensXBasisPoints b) pure returns (TokensXBasisPoints) {
+    unchecked {
+        return TokensXBasisPoints.wrap(TokensXBasisPoints.unwrap(a) - TokensXBasisPoints.unwrap(b));
+    }
+}
+
+using {__add as +, __sub as -} for TokensXBasisPoints global;
