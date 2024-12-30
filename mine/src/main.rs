@@ -15,7 +15,7 @@ const UNISWAP_FACTORY: Address = address!("5C69bEe701ef814a2B6a3EDD4B1652CB9cc5a
 const WETH: Address = address!("C02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
 const UNISWAP_PAIR_INITCODE_HASH: B256 =
     b256!("96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f");
-const N_THREADS: usize = 4;
+const N_THREADS: usize = 8;
 const BATCH_SIZE: usize = 4096;
 
 fn leading_zeros(addr: Address) -> Option<u32> {
@@ -39,15 +39,15 @@ struct B256Aligned(B256, [usize; 0]);
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 3 {
-        eprintln!("Usage: {} <token_initcode_hash> <leading_zeros>", args[0]);
+        eprintln!("Usage: {} <initcode_hash> <leading_zeros>", args[0]);
         eprintln!("Example:");
-        eprintln!("  {} <32-byte hex inithash> 16", args[0]);
+        eprintln!("  {} 0x0000000000000000000000000000000000000000000000000000000000000000 16", args[0]);
         process::exit(1);
     }
 
-    let token_initcode: B256 = hex::FromHex::from_hex(args[1].clone())?;
+    let initcode: B256 = hex::FromHex::from_hex(args[1].clone())?;
 
-    let target: usize = args[2].parse().expect("invalid integer for bits");
+    let target: usize = args[2].parse().expect("invalid integer for number of leading zero bits");
 
     println!("Required leading zero bits: {target}");
 
@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 for _ in 0..BATCH_SIZE {
-                    let token_address = DEPLOYER.create2(&salt.0, &token_initcode);
+                    let token_address = DEPLOYER.create2(&salt.0, &initcode);
 
                     let (token0, token1) = if token_address < WETH {
                         (token_address, WETH)
@@ -115,7 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Successfully found contract address in {:?}",
         timer.elapsed()
     );
-    println!("Salt:          {}", hex::encode(salt));
+    println!("Salt:          {salt}");
     println!("Token Address: {token_address}");
     println!("Pair Address:  {pair_address}");
 
