@@ -19,7 +19,7 @@ library Settings {
     // divide `BASIS` (10_000).
     // TODO: verify that it's still possible to `deliver` without serious issue even when the
     // balance is well above the limit
-    uint256 internal constant ANTI_WHALE_DIVISOR = 4;
+    uint256 internal constant ANTI_WHALE_DIVISOR = 16;
 
     BasisPoints internal constant MIN_TAX = BasisPoints.wrap(1);
     // A tax above `BASIS / 2` makes `ReflectMath` break down
