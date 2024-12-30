@@ -266,15 +266,12 @@ library ReflectMath {
         Tokens amount,
         Shares toShares
     ) internal view freeMemory returns (Shares newToShares, Shares newTotalShares, Tokens newTotalSupply) {
-        TokensXBasisPointsXShares t2 = alloc3().omul(scale(amount, BASIS - taxRate), totalShares);
-        TokensXBasisPointsXShares t4 = alloc3().omul(scale(totalSupply, BASIS), toShares);
-        TokensXBasisPointsXShares t5 = alloc3().oadd(t2, t4);
-        TokensXBasisPointsXShares2 n = alloc4().omul(t5, totalShares - toShares);
-
-        TokensXBasisPointsXShares t7 = alloc3().omul(scale(totalSupply, BASIS), totalShares);
-        TokensXBasisPointsXShares t9 = alloc3().omul(scale(amount, taxRate), totalShares);
-        TokensXBasisPointsXShares t10 = alloc3().oadd(t9, t7);
-        TokensXBasisPointsXShares d = alloc3().osub(t10, t4);
+        TokensXBasisPointsXShares d =
+            alloc3().omul(scale(totalSupply, BASIS), totalShares).iadd(tmp3().omul(scale(amount, taxRate), totalShares));
+        TokensXBasisPointsXShares t = tmp3().omul(scale(totalSupply, BASIS), toShares);
+        d.isub(t);
+        TokensXBasisPointsXShares2 n =
+            alloc3().omul(scale(amount, BASIS - taxRate), totalShares).iadd(t).imul(totalShares - toShares);
 
         newToShares = n.div(d);
         newTotalShares = newToShares - toShares + totalShares;
@@ -304,14 +301,13 @@ library ReflectMath {
         freeMemory
         returns (Shares newFromShares, Shares newTotalShares, Tokens transferTokens, Tokens newTotalSupply)
     {
-        TokensXBasisPointsXShares t1 = alloc3().omul(scale(fromShares, BASIS), totalSupply);
-        TokensXBasisPointsXShares t2 = alloc3().omul(scale(totalShares, BASIS), amount);
-        TokensXBasisPointsXShares t3 = alloc3().osub(t1, t2);
-        TokensXBasisPointsXShares2 n = alloc4().omul(t3, totalShares - fromShares);
+        TokensXBasisPointsXShares2 n = alloc3().omul(scale(fromShares, BASIS), totalSupply).isub(
+            tmp3().omul(scale(totalShares, BASIS), amount)
+        ).imul(totalShares - fromShares);
 
-        TokensXBasisPointsXShares t4 = alloc3().omul(scale(totalShares, taxRate), amount);
-        TokensXBasisPointsXShares t5 = alloc3().omul(scale(totalShares - fromShares, BASIS), totalSupply);
-        TokensXBasisPointsXShares d = alloc3().oadd(t4, t5);
+        TokensXBasisPointsXShares d = alloc3().omul(scale(totalShares, taxRate), amount).iadd(
+            tmp3().omul(scale(totalShares - fromShares, BASIS), totalSupply)
+        );
 
         newFromShares = n.div(d);
         newTotalShares = totalShares - (fromShares - newFromShares);
@@ -340,12 +336,10 @@ library ReflectMath {
         freeMemory
         returns (Shares newFromShares, Shares newTotalShares)
     {
-        TokensXShares t1 = alloc().omul(fromShares, totalSupply);
-        TokensXShares t2 = alloc().omul(amount, totalShares);
-        TokensXShares t3 = alloc().osub(t1, t2);
-        TokensXShares2 n = alloc2().omul(t3, totalShares - fromShares);
-        TokensXShares t4 = alloc().omul(totalSupply, totalShares - fromShares);
-        TokensXShares d = alloc().oadd(t4, t2);
+        TokensXShares d = alloc().omul(totalSupply, totalShares - fromShares);
+        TokensXShares t = tmp().omul(amount, totalShares);
+        d.iadd(t);
+        TokensXShares2 n = alloc().omul(fromShares, totalSupply).isub(t).imul(totalShares - fromShares);
 
         newFromShares = n.div(d);
         newTotalShares = totalShares - (fromShares - newFromShares);
@@ -367,9 +361,7 @@ library ReflectMath {
         freeMemory
         returns (Shares newFromShares, Shares newTotalShares, Tokens newTotalSupply)
     {
-        TokensXShares t1 = alloc().omul(fromShares, totalSupply);
-        TokensXShares t2 = alloc().omul(totalShares, amount);
-        TokensXShares n = alloc().osub(t1, t2);
+        TokensXShares n = alloc().omul(fromShares, totalSupply).isub(tmp().omul(totalShares, amount));
         newFromShares = n.div(totalSupply);
         newTotalShares = totalShares + newFromShares - fromShares;
         newTotalSupply = totalSupply - amount;
