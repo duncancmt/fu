@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .add(32 - std::mem::size_of::<usize>())
                     .cast::<usize>()
             };
-            *salt_word = thread_idx;
+            *salt_word = thread_idx.to_be();
             let mut pair_salt_input = [0u8; 40];
 
             loop {
@@ -93,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     break Some((token_address, pair_address, salt.0));
                 }
 
-                *salt_word = salt_word.wrapping_add(N_THREADS);
+                *salt_word = usize::from_be(*salt_word).wrapping_add(N_THREADS).to_be();
             }
         });
 
