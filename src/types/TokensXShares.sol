@@ -63,7 +63,6 @@ library TokensXSharesArithmetic {
         return cast3(cast(r).imul(BasisPoints.unwrap(bp)));
     }
 
-
     function imul(TokensXShares r, SharesXBasisPoints s) internal pure returns (TokensXBasisPointsXShares2) {
         return cast4(cast(r).imul(SharesXBasisPoints.unwrap(s)));
     }

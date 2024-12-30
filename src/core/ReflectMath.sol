@@ -42,14 +42,15 @@ library ReflectMath {
         Shares toShares
     ) internal view freeMemory returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
         Shares uninvolvedShares = totalShares - fromShares - toShares;
-        TokensXBasisPointsXShares2 n1 = alloc().omul(fromShares, totalSupply).isub(tmp().omul(amount, totalShares)).imul(scale(uninvolvedShares, BASIS));
-        TokensXBasisPointsXShares t4 = alloc3().omul(totalSupply, scale(uninvolvedShares, BASIS));
-        TokensXBasisPointsXShares t5 = alloc3().omul(amount, scale(totalShares, taxRate));
-        TokensXBasisPointsXShares d = alloc3().oadd(t4, t5);
-        TokensXBasisPointsXShares t6 = alloc3().omul(amount, scale(totalShares, BASIS - taxRate));
-        TokensXBasisPointsXShares t7 = alloc3().omul(scale(toShares, BASIS), totalSupply);
-        TokensXBasisPointsXShares t8 = alloc3().oadd(t6, t7);
-        TokensXBasisPointsXShares2 n2 = alloc4().omul(t8, uninvolvedShares);
+        TokensXBasisPointsXShares2 n1 = alloc().omul(fromShares, totalSupply).isub(tmp().omul(amount, totalShares)).imul(
+            scale(uninvolvedShares, BASIS)
+        );
+        TokensXBasisPointsXShares d = alloc3().omul(totalSupply, scale(uninvolvedShares, BASIS)).iadd(
+            tmp3().omul(amount, scale(totalShares, taxRate))
+        );
+        TokensXBasisPointsXShares2 n2 = alloc3().omul(amount, scale(totalShares, BASIS - taxRate)).iadd(
+            tmp3().omul(scale(toShares, BASIS), totalSupply)
+        ).imul(uninvolvedShares);
 
         (newFromShares, newToShares) = n1.divMulti(n2, d);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
@@ -59,10 +60,10 @@ library ReflectMath {
 
         Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
-        //Tokens expectedAfterToBalanceHi = beforeToBalance + castUp(scale(amount, BASIS - taxRate));
 
         if (afterToBalance < expectedAfterToBalanceLo) {
             {
+                // TODO: DRY this pattern that computes `incr`
                 Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(totalSupply)));
                 newToShares = newToShares + incr;
                 newTotalShares = newTotalShares + incr;

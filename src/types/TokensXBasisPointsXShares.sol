@@ -7,6 +7,8 @@ import {Tokens} from "./Tokens.sol";
 import {SharesXBasisPoints, scale} from "./SharesXBasisPoints.sol";
 import {TokensXBasisPoints} from "./TokensXBasisPoints.sol";
 
+import {TokensXBasisPointsXShares2, cast as cast2} from "./TokensXBasisPointsXShares2.sol";
+
 import {uint512, tmp as baseTmp, alloc as baseAlloc} from "../lib/512Math.sol";
 
 type TokensXBasisPointsXShares is bytes32;
@@ -36,12 +38,28 @@ library TokensXBasisPointsXSharesArithmetic {
         return cast(cast(r).oadd(cast(x), cast(y)));
     }
 
+    function iadd(TokensXBasisPointsXShares r, TokensXBasisPointsXShares x)
+        internal
+        pure
+        returns (TokensXBasisPointsXShares)
+    {
+        return cast(cast(r).iadd(cast(x)));
+    }
+
     function osub(TokensXBasisPointsXShares r, TokensXBasisPointsXShares x, TokensXBasisPointsXShares y)
         internal
         pure
         returns (TokensXBasisPointsXShares)
     {
         return cast(cast(r).osub(cast(x), cast(y)));
+    }
+
+    function isub(TokensXBasisPointsXShares r, TokensXBasisPointsXShares x)
+        internal
+        pure
+        returns (TokensXBasisPointsXShares)
+    {
+        return cast(cast(r).isub(cast(x)));
     }
 
     function omul(TokensXBasisPointsXShares r, Tokens b, SharesXBasisPoints s)
@@ -74,6 +92,10 @@ library TokensXBasisPointsXSharesArithmetic {
         returns (TokensXBasisPointsXShares)
     {
         return cast(cast(r).omul(TokensXBasisPoints.unwrap(b), Shares.unwrap(s)));
+    }
+
+    function imul(TokensXBasisPointsXShares r, Shares s) internal pure returns (TokensXBasisPointsXShares2) {
+        return cast2(cast(r).imul(Shares.unwrap(s)));
     }
 
     function div(TokensXBasisPointsXShares n, SharesXBasisPoints d) internal pure returns (Tokens) {
