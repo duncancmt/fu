@@ -23,11 +23,10 @@ fn leading_zeroes(addr: Address) -> usize {
 
     for b in bytes {
         let zeroes_in_byte = b.leading_zeros() as usize;
-        if zeroes_in_byte == 8 {
-            r += 8;
-        } else {
+        if zeroes_in_byte < 8 {
             return r + zeroes_in_byte;
         }
+        r += 8;
     }
     r
 }
@@ -47,6 +46,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token_initcode: B256 = hex::FromHex::from_hex(args[1].clone())?;
 
     let target: usize = args[2].parse().expect("invalid integer for bits");
+
+    println!("Required leading zero bits: {target}");
 
     let mut handles = Vec::with_capacity(N_THREADS);
     let found = Arc::new(AtomicBool::new(false));
@@ -72,6 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if found.load(Ordering::Relaxed) {
                     break None;
                 }
+
                 let token_address = DEPLOYER.create2(&salt.0, &token_initcode);
 
                 let (token0, token1) = if token_address < WETH {
@@ -105,12 +107,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (token_address, pair_address, salt) = results.into_iter().next().unwrap();
 
     println!("Success!");
-    println!("Required leading zero bits: {target}");
     println!(
         "Successfully found contract address in {:?}",
         timer.elapsed()
     );
-    println!("Salt:          {salt}");
+    println!("Salt:          {}", hex::encode(salt));
     println!("Token Address: {token_address}");
     println!("Pair Address:  {pair_address}");
 
