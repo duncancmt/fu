@@ -60,15 +60,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let handle = thread::spawn(move || {
             let mut salt = B256Aligned(B256::ZERO, []);
-            // SAFETY: B256 is aligned enough to treat the last 8 bytes as a `usize`.
+            // SAFETY: B256 is aligned enough to treat the last 8 bytes as a `u64`.
             let salt_word = unsafe {
                 &mut *salt
                     .0
                     .as_mut_ptr()
-                    .add(32 - std::mem::size_of::<usize>())
-                    .cast::<usize>()
+                    .add(32 - std::mem::size_of::<u64>())
+                    .cast::<u64>()
             };
-            *salt_word = thread_idx.to_be();
+            *salt_word = (thread_idx as u64).to_be();
             let mut pair_salt_input = [0u8; 40];
 
             'outer: loop {
@@ -97,7 +97,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         break 'outer Some((token_address, pair_address, salt.0));
                     }
 
-                    *salt_word = usize::from_be(*salt_word).wrapping_add(N_THREADS).to_be();
+                    *salt_word = u64::from_be(*salt_word).wrapping_add(N_THREADS as u64).to_be();
                 }
             }
         });
