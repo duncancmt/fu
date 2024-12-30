@@ -41,13 +41,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.len() != 3 {
         eprintln!("Usage: {} <initcode_hash> <leading_zeros>", args[0]);
         eprintln!("Example:");
-        eprintln!("  {} 0x0000000000000000000000000000000000000000000000000000000000000000 16", args[0]);
+        eprintln!(
+            "  {} 0x0000000000000000000000000000000000000000000000000000000000000000 16",
+            args[0]
+        );
         process::exit(1);
     }
 
     let initcode: B256 = hex::FromHex::from_hex(args[1].clone())?;
 
-    let target: usize = args[2].parse().expect("invalid integer for number of leading zero bits");
+    let target: usize = args[2]
+        .parse()
+        .expect("invalid integer for number of leading zero bits");
 
     println!("Required leading zero bits: {target}");
 
@@ -97,7 +102,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         break 'outer Some((token_address, pair_address, salt.0));
                     }
 
-                    *salt_word = u64::from_be(*salt_word).wrapping_add(N_THREADS as u64).to_be();
+                    *salt_word = u64::from_be(*salt_word)
+                        .wrapping_add(N_THREADS as u64)
+                        .to_be();
                 }
             }
         });
