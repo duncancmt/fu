@@ -106,7 +106,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Vec<_>>();
     let (token_address, pair_address, salt) = results.into_iter().next().unwrap();
 
-    println!("Success!");
     println!(
         "Successfully found contract address in {:?}",
         timer.elapsed()

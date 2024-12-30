@@ -6,12 +6,14 @@ auto_detect_remappings = false
 optimizer_runs = 10_000
 solc_version = "0.8.28"
 no_match_contract = "Medusa"
-ffi = true
-fs_permissions = [{ access = "read", path = "./airdrop.json"}]
 
 [profile.default.optimizer_details]
 constantOptimizer = true
 yul = true
+
+[profile.deploy]
+ffi = true
+fs_permissions = [{ access = "read", path = "./airdrop.json"}, { access = "read", path = "./image.svg"}]
 
 [fuzz]
 runs = 10_000_000

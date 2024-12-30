@@ -32,9 +32,10 @@ contract DeployFU is Script {
     address internal constant _DEPLOYER_BROADCASTER = 0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60;
     IERC20 internal constant _WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-    function run(uint256 value, bytes32 salt, string memory image) external {
+    function run(uint256 value, bytes32 salt) external {
         string memory json = vm.readFile(string.concat(vm.projectRoot(), "/airdrop.json"));
         address[] memory initialHolders = abi.decode(json.parseRaw("$"), (address[]));
+        string memory image = vm.readFile(string.concat(vm.projectRoot(), "/image.svg"));
 
         bytes20 gitCommit;
         {
