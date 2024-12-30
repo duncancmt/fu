@@ -16,6 +16,7 @@ const WETH: Address = address!("C02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
 const UNISWAP_PAIR_INITCODE_HASH: B256 =
     b256!("96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f");
 const N_THREADS: usize = 4;
+const BATCH_SIZE: usize = 4096;
 
 fn leading_zeroes(addr: Address) -> usize {
     let mut r = 0;
@@ -69,31 +70,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             *salt_word = thread_idx.to_be();
             let mut pair_salt_input = [0u8; 40];
 
-            loop {
+            'outer: loop {
                 if found.load(Ordering::Relaxed) {
                     break None;
                 }
 
-                let token_address = DEPLOYER.create2(&salt.0, &token_initcode);
+                for _ in 0..BATCH_SIZE {
+                    let token_address = DEPLOYER.create2(&salt.0, &token_initcode);
 
-                let (token0, token1) = if token_address < WETH {
-                    (token_address, WETH)
-                } else {
-                    (WETH, token_address)
-                };
+                    let (token0, token1) = if token_address < WETH {
+                        (token_address, WETH)
+                    } else {
+                        (WETH, token_address)
+                    };
 
-                pair_salt_input[0..20].copy_from_slice(token0.as_slice());
-                pair_salt_input[20..40].copy_from_slice(token1.as_slice());
-                let pair_salt = keccak256(&pair_salt_input);
+                    pair_salt_input[0..20].copy_from_slice(token0.as_slice());
+                    pair_salt_input[20..40].copy_from_slice(token1.as_slice());
+                    let pair_salt = keccak256(&pair_salt_input);
 
-                let pair_address = UNISWAP_FACTORY.create2(pair_salt, UNISWAP_PAIR_INITCODE_HASH);
+                    let pair_address =
+                        UNISWAP_FACTORY.create2(pair_salt, UNISWAP_PAIR_INITCODE_HASH);
 
-                if leading_zeroes(pair_address) == target {
-                    found.store(true, Ordering::Relaxed);
-                    break Some((token_address, pair_address, salt.0));
+                    if leading_zeroes(pair_address) == target {
+                        found.store(true, Ordering::Relaxed);
+                        break 'outer Some((token_address, pair_address, salt.0));
+                    }
+
+                    *salt_word = usize::from_be(*salt_word).wrapping_add(N_THREADS).to_be();
                 }
-
-                *salt_word = usize::from_be(*salt_word).wrapping_add(N_THREADS).to_be();
             }
         });
 
