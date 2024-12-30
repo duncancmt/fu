@@ -208,8 +208,8 @@ slither .
 declare -r image="$(< image.svg)"
 
 # substitute actual values
-declare -r  salt="$(cast hash-zero)"
-declare -r ethForLiquidity="$(bc <<<"$(cast balance 0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60)-1000000000000000000")"
+declare -r salt="$(cast hash-zero)"
+declare -r ethForLiquidity="$(bc <<<"$(cast balance 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6)-1000000000000000000")"
 
 # add `--broadcast` when ready
 forge script -vvvv --slow --no-storage-caching --isolate --rpc-url 'http://127.0.0.1:8545' --sig 'run(uint256,bytes32,string memory)' script/DeployFU.s.sol "$ethForLiquidity" "$salt" "$image"
