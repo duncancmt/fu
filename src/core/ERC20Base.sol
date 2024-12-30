@@ -23,6 +23,9 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
                 == keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
         );
         require(_DELEGATION_TYPEHASH == keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"));
+
+        require(block.chainid == _CHAIN_ID);
+        _CACHED_DOMAIN_SEPARATOR = _computeDomainSeparator();
     }
 
     function _success() internal view virtual returns (bool);
@@ -101,10 +104,10 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
     }
 
     bytes32 private constant _DOMAIN_TYPEHASH = 0x8cad95687ba82c2ce50e74f7b754645e5117c3a5bec8151c0726d5857980a866;
+    uint256 private constant _CHAIN_ID = 1;
+    bytes32 private immutable _CACHED_DOMAIN_SEPARATOR;
 
-    // slither-disable-next-line naming-convention
-    function DOMAIN_SEPARATOR() public view override returns (bytes32 r) {
-        // TODO: cache the domain separator in an immutable; only recompute if the chainid changes
+    function _computeDomainSeparator() private view returns (bytes32 r) {
         bytes32 _NAME_HASH_ = _NAME_HASH();
         assembly ("memory-safe") {
             let ptr := mload(0x40)
@@ -116,6 +119,11 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
             mstore(0x40, ptr)
             mstore(0x60, 0x00)
         }
+    }
+
+    // slither-disable-next-line naming-convention
+    function DOMAIN_SEPARATOR() public view override returns (bytes32) {
+        return block.chainid == _CHAIN_ID ? _CACHED_DOMAIN_SEPARATOR : _computeDomainSeparator();
     }
 
     bytes32 private constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
