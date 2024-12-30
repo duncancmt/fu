@@ -38,10 +38,7 @@ struct B256Aligned(B256, [usize; 0]);
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 3 {
-        eprintln!(
-            "Usage: {} <token_initcode_hash> <leading_zeroes>",
-            args[0]
-        );
+        eprintln!("Usage: {} <token_initcode_hash> <leading_zeroes>", args[0]);
         eprintln!("Example:");
         eprintln!("  {} <32-byte hex inithash> 16", args[0]);
         process::exit(1);
