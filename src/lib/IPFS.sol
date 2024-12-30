@@ -47,6 +47,7 @@ library IPFS {
 
     /// @return r string.concat("ipfs://", Base58(bytes.concat(hex"1220", h)))
     /// @param h The SHA256 hash value to be encoded. Must be the output of `ipfsDagPbUnixFsHash`
+    // slither-disable-next-line naming-convention
     function CIDv0(bytes32 h) internal pure returns (string memory r) {
         assembly ("memory-safe") {
             // we're going to take total control of the first 4 words of

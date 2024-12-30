@@ -12,7 +12,7 @@ import {TokensXShares, tmp, alloc, SharesToTokens} from "../types/TokensXShares.
 import {TokensXShares2, tmp as tmp2, alloc as alloc2} from "../types/TokensXShares2.sol";
 import {TokensXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "../types/TokensXBasisPointsXShares.sol";
 import {TokensXBasisPointsXShares2, tmp as tmp4, alloc as alloc4} from "../types/TokensXBasisPointsXShares2.sol";
-import {SharesXBasisPoints, scale, castUp, cast} from "../types/SharesXBasisPoints.sol";
+import {SharesXBasisPoints, scale, cast} from "../types/SharesXBasisPoints.sol";
 import {Shares2XBasisPoints, tmp as tmp5, alloc as alloc5} from "../types/Shares2XBasisPoints.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
@@ -273,6 +273,7 @@ library ReflectMath {
         TokensXBasisPointsXShares d =
             alloc3().omul(scale(totalSupply, BASIS), totalShares).iadd(tmp3().omul(scale(amount, taxRate), totalShares));
         TokensXBasisPointsXShares t = tmp3().omul(scale(totalSupply, BASIS), toShares);
+        // slither-disable-next-line unused-return
         d.isub(t);
         TokensXBasisPointsXShares2 n =
             alloc3().omul(scale(amount, BASIS - taxRate), totalShares).iadd(t).imul(totalShares - toShares);
@@ -342,6 +343,7 @@ library ReflectMath {
     {
         TokensXShares d = alloc().omul(totalSupply, totalShares - fromShares);
         TokensXShares t = tmp().omul(amount, totalShares);
+        // slither-disable-next-line unused-return
         d.iadd(t);
         TokensXShares2 n = alloc().omul(fromShares, totalSupply).isub(t).imul(totalShares - fromShares);
 

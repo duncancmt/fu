@@ -72,6 +72,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         assert(Settings.SHARES_TO_VOTES_DIVISOR > Settings.INITIAL_SHARES_RATIO);
 
         require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
+        // slither-disable-next-line tx-origin
         require(tx.origin == 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6);
         require(msg.value >= 1 ether);
         require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
@@ -643,6 +644,7 @@ contract FU is ERC20Base, TransientStorageLayout {
             r := mload(0x40)
             mstore(0x40, add(0x0a, r))
         }
+        // slither-disable-next-line unused-return
         msg.sender.toChecksumAddress();
         assembly ("memory-safe") {
             mstore(add(0x0a, r), 0x4675636b20796f752c20)
@@ -654,6 +656,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
     uint8 public constant override decimals = Settings.DECIMALS;
 
+    // slither-disable-next-line naming-convention
     function _NAME_HASH() internal pure override returns (bytes32) {
         return 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93694;
     }
@@ -825,6 +828,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     receive() external payable {
+        // slither-disable-next-line low-level-calls
         (bool success,) = address(WETH).call{value: address(this).balance}("");
         require(success);
         require(WETH.transfer(address(pair), WETH.balanceOf(address(this))));

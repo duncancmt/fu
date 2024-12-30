@@ -19,10 +19,6 @@ function cast(SharesXBasisPoints tbp) pure returns (Shares) {
     return Shares.wrap(UnsafeMath.unsafeDiv(SharesXBasisPoints.unwrap(tbp), BasisPoints.unwrap(BASIS)));
 }
 
-function castUp(SharesXBasisPoints tbp) pure returns (Shares) {
-    return Shares.wrap(UnsafeMath.unsafeDivUp(SharesXBasisPoints.unwrap(tbp), BasisPoints.unwrap(BASIS)));
-}
-
 function __add(SharesXBasisPoints a, SharesXBasisPoints b) pure returns (SharesXBasisPoints) {
     unchecked {
         return SharesXBasisPoints.wrap(SharesXBasisPoints.unwrap(a) + SharesXBasisPoints.unwrap(b));

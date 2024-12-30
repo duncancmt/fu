@@ -44,6 +44,7 @@ abstract contract FUStorage is INonces, IERC5805 {
         assert($int == (uint256(keccak256(bytes(name()))) - 1) & ~uint256(0xff));
     }
 
+    // slither-disable-next-line naming-convention
     function _$() internal pure returns (Storage storage $) {
         assembly ("memory-safe") {
             $.slot := 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93600

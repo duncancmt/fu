@@ -53,6 +53,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
     ) internal virtual;
 
     function name() public pure virtual override(FUStorage, IERC20) returns (string memory);
+    // slither-disable-next-line naming-convention
     function _NAME_HASH() internal pure virtual returns (bytes32);
     function _consumeNonce(Storage storage $, address account) internal virtual returns (uint256);
     function clock() public view virtual override returns (uint48);
@@ -105,6 +106,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
 
     bytes32 private constant _DOMAIN_TYPEHASH = 0x8cad95687ba82c2ce50e74f7b754645e5117c3a5bec8151c0726d5857980a866;
     uint256 private constant _CHAIN_ID = 1;
+    // slither-disable-next-line naming-convention
     bytes32 private immutable _CACHED_DOMAIN_SEPARATOR;
 
     function _computeDomainSeparator() private view returns (bytes32 r) {
@@ -135,6 +137,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         if (owner == address(0)) {
             revert ERC20InvalidApprover(address(0));
         }
+        // slither-disable-next-line timestamp
         if (block.timestamp > deadline) {
             revert ERC2612ExpiredSignature(deadline);
         }
@@ -180,6 +183,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         external
         override
     {
+        // slither-disable-next-line timestamp
         if (block.timestamp > expiry) {
             revert ERC5805ExpiredSignature(expiry);
         }

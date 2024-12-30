@@ -182,6 +182,7 @@ library Lib512MathAccessors {
         }
     }
 
+    // slither-disable-next-line naming-convention
     function from(uint512 r, uint256 x_hi, uint256 x_lo) internal pure returns (uint512 r_out) {
         assembly ("memory-safe") {
             mstore(r, x_hi)
