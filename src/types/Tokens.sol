@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
-/// This type is given as `uint256` for efficiency, but it is capped at `type(uint144).max`.
+/// This type is given as `uint256` for efficiency, but it is capped at 147 bits.
 type Tokens is uint256;
 
 Tokens constant ZERO = Tokens.wrap(0);

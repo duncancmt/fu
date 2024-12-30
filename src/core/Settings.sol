@@ -30,7 +30,6 @@ library Settings {
     uint8 internal constant DECIMALS = 36;
     uint256 internal constant CRAZY_BALANCE_BASIS = 2 ** 45 - 1;
     Tokens internal constant INITIAL_SUPPLY = Tokens.wrap(_UNISWAP_MAX_BALANCE * CRAZY_BALANCE_BASIS);
-    // TODO: I think this can be 1 bit larger without incurring overflow
     Shares internal constant INITIAL_SHARES = Shares.wrap(Tokens.unwrap(INITIAL_SUPPLY) << 30);
 
     uint256 internal constant INITIAL_SHARES_RATIO = Shares.unwrap(INITIAL_SHARES) / Tokens.unwrap(INITIAL_SUPPLY);
