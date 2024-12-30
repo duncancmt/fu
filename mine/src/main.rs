@@ -2,9 +2,10 @@ use std::{
     env, process,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
+        Arc,
     },
     thread,
+    time::Instant,
 };
 
 use alloy::primitives::{address, b256, hex, keccak256, Address, B256};
@@ -54,21 +55,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let leading_zero_bits: usize = args[2].parse().expect("invalid integer for bits");
 
-    // We'll store the final result in a shared "once" slot
-    // so that whichever thread finds the solution can store it
-    // and others can stop.
-    let found_flag = Arc::new(AtomicBool::new(false));
-    let result_salt = Arc::new(Mutex::new(None::<B256>));
-    let result_token_address = Arc::new(Mutex::new(None::<Address>));
-    let result_pair_address = Arc::new(Mutex::new(None::<Address>));
-
     let mut handles = Vec::with_capacity(N_THREADS);
+    let found = Arc::new(AtomicBool::new(false));
+    let timer = Instant::now();
 
     for thread_idx in 0..N_THREADS {
-        let found_flag = Arc::clone(&found_flag);
-        let result_salt = Arc::clone(&result_salt);
-        let result_token_address = Arc::clone(&result_token_address);
-        let result_pair_address = Arc::clone(&result_pair_address);
+        let found = Arc::clone(&found);
 
         let handle = thread::spawn(move || {
             let mut salt = B256Aligned(B256::ZERO, []);
@@ -80,11 +72,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .add(32 - std::mem::size_of::<usize>())
                     .cast::<usize>()
             };
-
             *salt_word = thread_idx;
 
-            while !found_flag.load(Ordering::Relaxed) {
-                let token_address = DEPLOYER.create2(salt.0, token_initcode);
+            loop {
+                if found.load(Ordering::Relaxed) {
+                    break None;
+                }
+                let token_address = DEPLOYER.create2(&salt.0, &token_initcode);
 
                 let (token0, token1) = if token_address < WETH {
                     (token_address, WETH)
@@ -100,17 +94,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let pair_address = UNISWAP_FACTORY.create2(pair_salt, UNISWAP_PAIR_INITCODE_HASH);
 
                 if has_leading_zero_bits(pair_address, leading_zero_bits) {
-                    if !found_flag.swap(true, Ordering::Relaxed) {
-                        let mut lock_salt = result_salt.lock().unwrap();
-                        *lock_salt = Some(salt.0);
-
-                        let mut lock_token = result_token_address.lock().unwrap();
-                        *lock_token = Some(token_address);
-
-                        let mut lock_pair = result_pair_address.lock().unwrap();
-                        *lock_pair = Some(pair_address);
-                    }
-                    break;
+                    found.store(true, Ordering::Relaxed);
+                    break Some((token_address, pair_address, salt.0));
                 }
 
                 *salt_word = salt_word.wrapping_add(N_THREADS);
@@ -120,23 +105,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         handles.push(handle);
     }
 
-    for h in handles {
-        let _ = h.join();
-    }
+    let results = handles
+        .into_iter()
+        .filter_map(|h| h.join().unwrap())
+        .collect::<Vec<_>>();
+    let (token_address, pair_address, salt) = results.into_iter().next().unwrap();
 
-    let salt_opt = result_salt.lock().unwrap();
-    if let Some(salt) = *salt_opt {
-        let token_address = result_token_address.lock().unwrap().unwrap();
-        let pair_address = result_pair_address.lock().unwrap().unwrap();
-
-        println!("\nSuccess!");
-        println!("Required leading zero bits: {leading_zero_bits}");
-        println!("Salt (hex):    {salt}");
-        println!("Token Address: {token_address}");
-        println!("Pair Address:  {pair_address}");
-    } else {
-        println!("No salt found (this would only happen if you had a break condition).");
-    }
+    println!("\nSuccess!");
+    println!("Required leading zero bits: {leading_zero_bits}");
+    println!(
+        "Successfully found contract address in {:?}",
+        timer.elapsed()
+    );
+    println!("Salt:          {salt}");
+    println!("Token Address: {token_address}");
+    println!("Pair Address:  {pair_address}");
 
     Ok(())
 }
