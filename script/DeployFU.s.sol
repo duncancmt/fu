@@ -7,12 +7,17 @@ import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 
 import {Math} from "./Math.sol";
+import {ItoA} from "./ItoA.sol";
+import {Hexlify} from "./Hexlify.sol";
 import {stdJson} from "@forge-std/StdJson.sol";
 
 import {FU} from "src/FU.sol";
+import {Settings} from "src/core/Settings.sol";
 
 import {Script} from "@forge-std/Script.sol";
 import {VmSafe} from "@forge-std/Vm.sol";
+
+import {console} from "@forge-std/console.sol";
 
 interface IMulticall {
     /// @param transactions Encoded transactions. Each transaction is encoded as a packed bytes of
@@ -25,6 +30,8 @@ interface IMulticall {
 }
 
 contract DeployFU is Script {
+    using ItoA for uint256;
+    using Hexlify for bytes32;
     using stdJson for string;
 
     address internal constant _DEPLOYER_PROXY = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
@@ -57,6 +64,13 @@ contract DeployFU is Script {
             )
         );
         IUniswapV2Pair pair = pairFor(fu, _WETH);
+
+        if (uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR != 1 && salt == bytes32(0)) {
+            console.log("Use the tool in `.../fu/mine` to compute the salt:");
+            console.log(string.concat("\tcargo run --release ", keccak256(initcode).hexlify(), " ", Settings.PAIR_LEADING_ZEROES.itoa()));
+            return;
+        }
+
         bytes memory mint = abi.encodeCall(pair.mint, (address(0)));
 
         bytes memory calls = abi.encodePacked(

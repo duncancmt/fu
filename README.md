@@ -214,7 +214,7 @@ declare -r salt="$(cast hash-zero)"
 declare -r ethForLiquidity="$(bc <<<"$(cast balance 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6)-1000000000000000000")"
 
 # add `--broadcast` when ready
-forge script -vvvv --slow --no-storage-caching --isolate --rpc-url 'http://127.0.0.1:8545' --sig 'run(uint256,bytes32)' script/DeployFU.s.sol "$ethForLiquidity" "$salt"
+FOUNDRY_PROFILE=deploy forge script -vvvv --slow --no-storage-caching --isolate --rpc-url 'http://127.0.0.1:8545' --sig 'run(uint256,bytes32)' script/DeployFU.s.sol "$ethForLiquidity" "$salt"
 ```
 
 # Legal

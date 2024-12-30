@@ -28,7 +28,8 @@ library Settings {
     uint256 private constant _UNISWAPV2_MAX_BALANCE = 2 ** 112 - 1;
 
     uint8 internal constant DECIMALS = 35;
-    uint256 internal constant CRAZY_BALANCE_BASIS = 2 ** 33 - 1;
+    uint256 internal constant PAIR_LEADING_ZEROES = 32;
+    uint256 internal constant CRAZY_BALANCE_BASIS = 2 ** (PAIR_LEADING_ZEROES + 1) - 1;
     Tokens internal constant INITIAL_SUPPLY = Tokens.wrap(_UNISWAPV2_MAX_BALANCE * CRAZY_BALANCE_BASIS);
     Shares internal constant INITIAL_SHARES = Shares.wrap(Tokens.unwrap(INITIAL_SUPPLY) << 32);
 
