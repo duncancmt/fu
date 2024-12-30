@@ -42,10 +42,7 @@ library ReflectMath {
         Shares toShares
     ) internal view freeMemory returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
         Shares uninvolvedShares = totalShares - fromShares - toShares;
-        TokensXShares t1 = alloc().omul(fromShares, totalSupply);
-        TokensXShares t2 = alloc().omul(amount, totalShares);
-        TokensXShares t3 = alloc().osub(t1, t2);
-        TokensXBasisPointsXShares2 n1 = alloc4().omul(t3, scale(uninvolvedShares, BASIS));
+        TokensXBasisPointsXShares2 n1 = alloc().omul(fromShares, totalSupply).isub(tmp().omul(amount, totalShares)).imul(scale(uninvolvedShares, BASIS));
         TokensXBasisPointsXShares t4 = alloc3().omul(totalSupply, scale(uninvolvedShares, BASIS));
         TokensXBasisPointsXShares t5 = alloc3().omul(amount, scale(totalShares, taxRate));
         TokensXBasisPointsXShares d = alloc3().oadd(t4, t5);

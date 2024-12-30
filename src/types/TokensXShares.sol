@@ -3,6 +3,12 @@ pragma solidity ^0.8.28;
 
 import {Shares} from "./Shares.sol";
 import {Tokens} from "./Tokens.sol";
+import {BasisPoints} from "./BasisPoints.sol";
+import {SharesXBasisPoints} from "./SharesXBasisPoints.sol";
+
+import {TokensXShares2, cast2} from "./TokensXShares2.sol";
+import {TokensXBasisPointsXShares, cast as cast3} from "./TokensXBasisPointsXShares.sol";
+import {TokensXBasisPointsXShares2, cast as cast4} from "./TokensXBasisPointsXShares2.sol";
 
 import {uint512, tmp as baseTmp, alloc as baseAlloc} from "../lib/512Math.sol";
 
@@ -29,8 +35,16 @@ library TokensXSharesArithmetic {
         return cast(cast(r).oadd(cast(x), cast(y)));
     }
 
+    function iadd(TokensXShares r, TokensXShares x) internal pure returns (TokensXShares) {
+        return cast(cast(r).iadd(cast(x)));
+    }
+
     function osub(TokensXShares r, TokensXShares x, TokensXShares y) internal pure returns (TokensXShares) {
         return cast(cast(r).osub(cast(x), cast(y)));
+    }
+
+    function isub(TokensXShares r, TokensXShares x) internal pure returns (TokensXShares) {
+        return cast(cast(r).isub(cast(x)));
     }
 
     function omul(TokensXShares r, Tokens b, Shares s) internal pure returns (TokensXShares) {
@@ -39,6 +53,19 @@ library TokensXSharesArithmetic {
 
     function omul(TokensXShares r, Shares s, Tokens b) internal pure returns (TokensXShares) {
         return cast(cast(r).omul(Shares.unwrap(s), Tokens.unwrap(b)));
+    }
+
+    function imul(TokensXShares r, Shares s) internal pure returns (TokensXShares2) {
+        return cast2(cast(r).imul(Shares.unwrap(s)));
+    }
+
+    function imul(TokensXShares r, BasisPoints bp) internal pure returns (TokensXBasisPointsXShares) {
+        return cast3(cast(r).imul(BasisPoints.unwrap(bp)));
+    }
+
+
+    function imul(TokensXShares r, SharesXBasisPoints s) internal pure returns (TokensXBasisPointsXShares2) {
+        return cast4(cast(r).imul(SharesXBasisPoints.unwrap(s)));
     }
 
     function div(TokensXShares n, Tokens d) internal pure returns (Shares) {
