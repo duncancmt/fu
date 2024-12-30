@@ -5,6 +5,7 @@
 /cache/
 /out/
 /crytic-export/
+/mine/target/
 
 # Ignores development broadcast logs
 !/broadcast
