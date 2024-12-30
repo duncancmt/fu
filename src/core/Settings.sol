@@ -25,10 +25,10 @@ library Settings {
     // A tax above `BASIS / 2` makes `ReflectMath` break down
     BasisPoints internal constant MAX_TAX = BasisPoints.wrap(BasisPoints.unwrap(BASIS) / 2);
 
-    uint256 private constant _UNISWAP_MAX_BALANCE = 2 ** 102 - 1;
+    uint256 private constant _UNISWAP_MAX_BALANCE = 2 ** 101 - 1;
 
     uint8 internal constant DECIMALS = 36;
-    uint256 internal constant CRAZY_BALANCE_BASIS = 2 ** 45 - 1;
+    uint256 internal constant CRAZY_BALANCE_BASIS = 2 ** 46 - 1;
     Tokens internal constant INITIAL_SUPPLY = Tokens.wrap(_UNISWAP_MAX_BALANCE * CRAZY_BALANCE_BASIS);
     Shares internal constant INITIAL_SHARES = Shares.wrap(Tokens.unwrap(INITIAL_SUPPLY) << 30);
 

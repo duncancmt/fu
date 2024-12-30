@@ -37,6 +37,7 @@ import {IPFS} from "./lib/IPFS.sol";
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+address constant POOL_MANAGER = 0x000000000004444c5dc75cB358380D2e3dE08A90;
 
 /// @custom:security-contact security@fuckyou.finance
 contract FU is ERC20Base, TransientStorageLayout {
@@ -77,6 +78,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
         //require(uint256(uint160(address(this))) < Settings.ADDRESS_DIVISOR);
+        //assert(uint160(uint160(address(POOL_MANAGER))) / Settings.ADDRESS_DIVISOR == 1);
         pair = pairFor(WETH, this);
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
 
