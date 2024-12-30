@@ -67,7 +67,11 @@ contract DeployFU is Script {
 
         if (uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR != 1 && salt == bytes32(0)) {
             console.log("Use the tool in `.../fu/mine` to compute the salt:");
-            console.log(string.concat("\tcargo run --release ", keccak256(initcode).hexlify(), " ", Settings.PAIR_LEADING_ZEROES.itoa()));
+            console.log(
+                string.concat(
+                    "\tcargo run --release ", keccak256(initcode).hexlify(), " ", Settings.PAIR_LEADING_ZEROES.itoa()
+                )
+            );
             return;
         }
 
