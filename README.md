@@ -18,7 +18,7 @@ being technically correct.
 
 ## Features
 
-* Unreasonably high decimals (35)
+* Unreasonably high decimals (36)
 * Reflection (both tax _and_ rebase)
 * Tax rate changes depending on the phase of the moon
 * Randomly reverts or returns `false` to signal failure

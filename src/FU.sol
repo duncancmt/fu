@@ -76,6 +76,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         require(msg.value >= 1 ether);
         require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
+        //require(uint256(uint160(address(this))) < Settings.ADDRESS_DIVISOR);
         pair = pairFor(WETH, this);
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
 
@@ -435,12 +436,6 @@ contract FU is ERC20Base, TransientStorageLayout {
             return false;
         }
         if (to == DEAD) {
-            if (_check()) {
-                revert ERC20InvalidReceiver(to);
-            }
-            return false;
-        }
-        if (to == address(this)) {
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
             }
