@@ -117,7 +117,6 @@ library ReflectMath {
         }
 
         if (newTotalShares > totalShares) {
-            // TODO: check to see if this branch is still necessary
             Shares decrTotal = newTotalShares - totalShares;
             Shares decrFrom;
             Shares decrTo;
