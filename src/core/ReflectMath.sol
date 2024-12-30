@@ -21,6 +21,17 @@ library ReflectMath {
     using UnsafeMath for uint256;
     using SharesToTokens for Shares;
 
+    modifier freeMemory() {
+        uint256 freePtr;
+        assembly ("memory-safe") {
+            freePtr := mload(0x40)
+        }
+        _;
+        assembly ("memory-safe") {
+            mstore(0x40, freePtr)
+        }
+    }
+
     // TODO: reorder arguments for clarity/consistency
     function getTransferShares(
         Tokens amount,
@@ -29,7 +40,7 @@ library ReflectMath {
         Shares totalShares,
         Shares fromShares,
         Shares toShares
-    ) internal view returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
+    ) internal view freeMemory returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
         Shares uninvolvedShares = totalShares - fromShares - toShares;
         TokensXShares t1 = alloc().omul(fromShares, totalSupply);
         TokensXShares t2 = alloc().omul(amount, totalShares);
@@ -135,7 +146,7 @@ library ReflectMath {
         Shares totalShares,
         Shares fromShares,
         Shares toShares
-    ) internal pure returns (Shares newToShares, Shares newTotalShares) {
+    ) internal pure freeMemory returns (Shares newToShares, Shares newTotalShares) {
         // Called when `from` is sending their entire balance
         Shares uninvolvedShares = totalShares - fromShares - toShares;
         Shares2XBasisPoints n = alloc5().omul(scale(uninvolvedShares, BASIS), totalShares);
@@ -183,6 +194,7 @@ library ReflectMath {
     )
         internal
         view
+        freeMemory
         returns (Shares newFromShares, Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
         // Called when `to`'s final shares will be the whale limit
@@ -234,6 +246,7 @@ library ReflectMath {
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
         internal
         pure
+        freeMemory
         returns (Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
         // Called when `to`'s final shares will be the whale limit and `from` is sending their entire balance
@@ -254,7 +267,7 @@ library ReflectMath {
         Shares totalShares,
         Tokens amount,
         Shares toShares
-    ) internal view returns (Shares newToShares, Shares newTotalShares, Tokens newTotalSupply) {
+    ) internal view freeMemory returns (Shares newToShares, Shares newTotalShares, Tokens newTotalSupply) {
         TokensXBasisPointsXShares t2 = alloc3().omul(scale(amount, BASIS - taxRate), totalShares);
         TokensXBasisPointsXShares t4 = alloc3().omul(scale(totalSupply, BASIS), toShares);
         TokensXBasisPointsXShares t5 = alloc3().oadd(t2, t4);
@@ -290,6 +303,7 @@ library ReflectMath {
     )
         internal
         view
+        freeMemory
         returns (Shares newFromShares, Shares newTotalShares, Tokens transferTokens, Tokens newTotalSupply)
     {
         TokensXBasisPointsXShares t1 = alloc3().omul(scale(fromShares, BASIS), totalSupply);
@@ -325,6 +339,7 @@ library ReflectMath {
     function getDeliverShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
         internal
         view
+        freeMemory
         returns (Shares newFromShares, Shares newTotalShares)
     {
         TokensXShares t1 = alloc().omul(fromShares, totalSupply);
@@ -351,6 +366,7 @@ library ReflectMath {
     function getBurnShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
         internal
         pure
+        freeMemory
         returns (Shares newFromShares, Shares newTotalShares, Tokens newTotalSupply)
     {
         TokensXShares t1 = alloc().omul(fromShares, totalSupply);
