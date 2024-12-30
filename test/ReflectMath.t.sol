@@ -384,7 +384,6 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, sharesRatio);
-        assume(fromShares < totalShares.div(2));
 
         (Shares newFromShares, Shares newTotalShares) =
             ReflectMath.getDeliverShares(amount, totalSupply, totalShares, fromShares);
@@ -409,7 +408,6 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, sharesRatio);
-        assume(fromShares < totalShares.div(2));
 
         (Shares newFromShares, Shares newTotalShares, Tokens newTotalSupply) =
             ReflectMath.getBurnShares(amount, totalSupply, totalShares, fromShares);
