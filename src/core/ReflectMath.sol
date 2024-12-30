@@ -120,16 +120,18 @@ library ReflectMath {
             Shares decrTotal = newTotalShares - totalShares;
             Shares decrFrom;
             Shares decrTo;
-            if (newFromShares > newToShares) {
-                decrFrom = Shares.wrap(
-                    Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares) / Shares.unwrap(newFromShares + newToShares)
-                );
-                decrTo = decrTotal - decrFrom;
-            } else {
-                decrTo = Shares.wrap(
-                    Shares.unwrap(decrTotal) * Shares.unwrap(newToShares) / Shares.unwrap(newFromShares + newToShares)
-                );
-                decrFrom = decrTotal - decrTo;
+            unchecked {
+                if (newFromShares > newToShares) {
+                    decrFrom = Shares.wrap(
+                        Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares) / Shares.unwrap(newFromShares + newToShares)
+                    );
+                    decrTo = decrTotal - decrFrom;
+                } else {
+                    decrTo = Shares.wrap(
+                        Shares.unwrap(decrTotal) * Shares.unwrap(newToShares) / Shares.unwrap(newFromShares + newToShares)
+                    );
+                    decrFrom = decrTotal - decrTo;
+                }
             }
             newTotalShares = totalShares;
             newFromShares = newFromShares - decrFrom;
@@ -159,11 +161,14 @@ library ReflectMath {
         Tokens expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, taxRate));
 
         for (uint256 i; afterToBalance > expectedAfterToBalance && i < 3; i++) {
-            Shares decr = Shares.wrap(
-                (Tokens.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(
-                    Tokens.unwrap(totalSupply)
-                )
-            );
+            Shares decr;
+            unchecked {
+                decr = Shares.wrap(
+                    (Tokens.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(
+                        Tokens.unwrap(totalSupply)
+                    )
+                );
+            }
             newToShares = newToShares - decr;
             newTotalShares = newTotalShares - decr;
             if (newToShares <= toShares) {
