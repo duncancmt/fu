@@ -42,17 +42,17 @@ library ReflectMath {
         Shares toShares
     ) internal view freeMemory returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
         Shares uninvolvedShares = totalShares - fromShares - toShares;
-        TokensXBasisPointsXShares2 n1 = alloc().omul(fromShares, totalSupply).isub(tmp().omul(amount, totalShares)).imul(
+        TokensXBasisPointsXShares2 n0 = alloc().omul(fromShares, totalSupply).isub(tmp().omul(amount, totalShares)).imul(
             scale(uninvolvedShares, BASIS)
         );
         TokensXBasisPointsXShares d = alloc3().omul(totalSupply, scale(uninvolvedShares, BASIS)).iadd(
             tmp3().omul(amount, scale(totalShares, taxRate))
         );
-        TokensXBasisPointsXShares2 n2 = alloc3().omul(amount, scale(totalShares, BASIS - taxRate)).iadd(
+        TokensXBasisPointsXShares2 n1 = alloc3().omul(amount, scale(totalShares, BASIS - taxRate)).iadd(
             tmp3().omul(scale(toShares, BASIS), totalSupply)
         ).imul(uninvolvedShares);
 
-        (newFromShares, newToShares) = n1.divMulti(n2, d);
+        (newFromShares, newToShares) = n0.divMulti(n1, d);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
 
         (Tokens beforeFromBalance, Tokens beforeToBalance) =
@@ -200,13 +200,13 @@ library ReflectMath {
             tmp().omul(fromShares.mul(Settings.ANTI_WHALE_DIVISOR) + totalShares, totalSupply)
         );
         Shares uninvolvedShares = totalShares - fromShares - toShares;
-        TokensXShares2 n1 =
+        TokensXShares2 n0 =
             alloc().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply).imul(uninvolvedShares);
-        TokensXShares2 n2 = alloc().omul(fromShares, totalSupply).isub(tmp().omul(totalShares, amount)).imul(
+        TokensXShares2 n1 = alloc().omul(fromShares, totalSupply).isub(tmp().omul(totalShares, amount)).imul(
             uninvolvedShares.mul(Settings.ANTI_WHALE_DIVISOR)
         );
 
-        (newToShares, newFromShares) = n1.divMulti(n2, d);
+        (newToShares, newFromShares) = n0.divMulti(n1, d);
         newToShares = newToShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newTotalShares = totalShares - (fromShares + toShares - newFromShares - newToShares);
         counterfactualToShares = tmp3().omul(
