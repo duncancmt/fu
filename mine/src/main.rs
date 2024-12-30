@@ -18,18 +18,19 @@ const UNISWAP_PAIR_INITCODE_HASH: B256 =
 const N_THREADS: usize = 4;
 const BATCH_SIZE: usize = 4096;
 
-fn leading_zeroes(addr: Address) -> usize {
-    let mut r = 0;
-    let bytes = addr.as_slice();
+fn leading_zeros(addr: Address) -> Option<u32> {
+    let b = addr.as_slice();
+    let mut r = 0u32;
 
-    for b in bytes {
-        let zeroes_in_byte = b.leading_zeros() as usize;
-        if zeroes_in_byte < 8 {
-            return r + zeroes_in_byte;
+    for c in b.chunks_exact(4) {
+        let w = u32::from_be_bytes(c.try_into().ok()?);
+        let z = w.leading_zeros();
+        if z < 32 {
+            return Some(r + z);
         }
-        r += 8;
+        r += 32;
     }
-    r
+    Some(r)
 }
 
 #[repr(C)]
@@ -38,7 +39,7 @@ struct B256Aligned(B256, [usize; 0]);
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 3 {
-        eprintln!("Usage: {} <token_initcode_hash> <leading_zeroes>", args[0]);
+        eprintln!("Usage: {} <token_initcode_hash> <leading_zeros>", args[0]);
         eprintln!("Example:");
         eprintln!("  {} <32-byte hex inithash> 16", args[0]);
         process::exit(1);
@@ -91,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let pair_address =
                         UNISWAP_FACTORY.create2(&pair_salt, &UNISWAP_PAIR_INITCODE_HASH);
 
-                    if leading_zeroes(pair_address) == target {
+                    if leading_zeros(pair_address)? as usize == target {
                         found.store(true, Ordering::Relaxed);
                         break 'outer Some((token_address, pair_address, salt.0));
                     }
