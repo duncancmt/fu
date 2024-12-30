@@ -304,6 +304,8 @@ contract ReflectMathTest is Boilerplate, Test {
         amount =
             Tokens.wrap(bound(Tokens.unwrap(amount), 1 wei, Tokens.unwrap(Settings.INITIAL_SUPPLY - toBalance) - 1 wei));
 
+        assume(amount <= totalSupply.div(Settings.ANTI_WHALE_DIVISOR));
+
         taxRate = BasisPoints.wrap(
             uint16(
                 bound(
