@@ -301,10 +301,17 @@ contract ReflectMathTest is Boilerplate, Test {
     ) public view virtual {
         Tokens toBalance;
         (totalSupply, totalShares, toShares, toBalance) = _boundCommon(totalSupply, totalShares, toShares, sharesRatio);
-        amount =
-            Tokens.wrap(bound(Tokens.unwrap(amount), 1 wei, Tokens.unwrap(Settings.INITIAL_SUPPLY - toBalance) - 1 wei));
-
-        assume(amount <= totalSupply.div(Settings.ANTI_WHALE_DIVISOR));
+        amount = Tokens.wrap(
+            bound(
+                Tokens.unwrap(amount),
+                1 wei,
+                Tokens.unwrap(
+                    Settings.INITIAL_SUPPLY - toBalance > totalSupply.div(Settings.ANTI_WHALE_DIVISOR)
+                        ? totalSupply.div(Settings.ANTI_WHALE_DIVISOR)
+                        : Settings.INITIAL_SUPPLY - toBalance
+                ) - 1 wei
+            )
+        );
 
         taxRate = BasisPoints.wrap(
             uint16(

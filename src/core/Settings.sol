@@ -25,12 +25,11 @@ library Settings {
     // A tax above `BASIS / 2` makes `ReflectMath` break down
     BasisPoints internal constant MAX_TAX = BasisPoints.wrap(BasisPoints.unwrap(BASIS) / 2);
 
-    uint256 private constant _UNISWAPV2_MAX_BALANCE = type(uint112).max;
+    uint256 private constant _UNISWAPV2_MAX_BALANCE = 2 ** 112 - 1;
 
     uint8 internal constant DECIMALS = 35;
-    uint256 internal constant CRAZY_BALANCE_BASIS = type(uint32).max;
+    uint256 internal constant CRAZY_BALANCE_BASIS = 2 ** 33 - 1;
     Tokens internal constant INITIAL_SUPPLY = Tokens.wrap(_UNISWAPV2_MAX_BALANCE * CRAZY_BALANCE_BASIS);
-    // TODO: I think this can be 1 bit larger without incurring overflow
     Shares internal constant INITIAL_SHARES = Shares.wrap(Tokens.unwrap(INITIAL_SUPPLY) << 32);
 
     uint256 internal constant INITIAL_SHARES_RATIO = Shares.unwrap(INITIAL_SHARES) / Tokens.unwrap(INITIAL_SUPPLY);
@@ -38,7 +37,7 @@ library Settings {
     // It is not possible for the shares ratio to get as low as `MIN_SHARES_RATIO`. 1 whole token is
     // sent to the `DEAD` address on construction (effectively locked forever). Therefore, the
     // maximum possible relative decrease of the shares ratio is the number of tokens, approximately
-    // 223 million. This is considerably smaller than the ratio between the initial shares ratio
+    // 446 million. This is considerably smaller than the ratio between the initial shares ratio
     // and the minimum shares ratio, approximately 859 million.
 
     uint256 internal constant ADDRESS_DIVISOR = 2 ** 160 / (CRAZY_BALANCE_BASIS + 1);
