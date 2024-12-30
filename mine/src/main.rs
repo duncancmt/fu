@@ -17,23 +17,19 @@ const UNISWAP_PAIR_INITCODE_HASH: B256 =
     b256!("96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f");
 const N_THREADS: usize = 4;
 
-fn has_leading_zero_bits(addr: Address, leading_zero_bits: usize) -> bool {
-    let bytes = addr.as_slice(); // 20 bytes
-    let mut remaining = leading_zero_bits;
+fn leading_zeroes(addr: Address) -> usize {
+    let mut r = 0;
+    let bytes = addr.as_slice();
 
     for b in bytes {
         let zeroes_in_byte = b.leading_zeros() as usize;
         if zeroes_in_byte == 8 {
-            if remaining > 8 {
-                remaining -= 8;
-            } else {
-                return remaining == 8;
-            }
+            r += 8;
         } else {
-            return zeroes_in_byte == remaining;
+            return r + zeroes_in_byte;
         }
     }
-    remaining == 0
+    r
 }
 
 #[repr(C)]
@@ -43,17 +39,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 3 {
         eprintln!(
-            "Usage: {} <token_initcode_hash> <leading_zero_bits>",
+            "Usage: {} <token_initcode_hash> <leading_zeroes>",
             args[0]
         );
         eprintln!("Example:");
-        eprintln!("  {} 8f5e... (32-byte hex) 16", args[0]);
+        eprintln!("  {} <32-byte hex inithash> 16", args[0]);
         process::exit(1);
     }
 
-    let token_initcode: B256 = hex::FromHex::from_hex(args[1].trim_start_matches("0x"))?;
+    let token_initcode: B256 = hex::FromHex::from_hex(args[1].clone())?;
 
-    let leading_zero_bits: usize = args[2].parse().expect("invalid integer for bits");
+    let target: usize = args[2].parse().expect("invalid integer for bits");
 
     let mut handles = Vec::with_capacity(N_THREADS);
     let found = Arc::new(AtomicBool::new(false));
@@ -73,6 +69,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .cast::<usize>()
             };
             *salt_word = thread_idx;
+            let mut pair_salt_input = [0u8; 40];
 
             loop {
                 if found.load(Ordering::Relaxed) {
@@ -86,14 +83,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     (WETH, token_address)
                 };
 
-                let mut pair_salt_input = [0u8; 40];
                 pair_salt_input[0..20].copy_from_slice(token0.as_slice());
                 pair_salt_input[20..40].copy_from_slice(token1.as_slice());
                 let pair_salt = keccak256(&pair_salt_input);
 
                 let pair_address = UNISWAP_FACTORY.create2(pair_salt, UNISWAP_PAIR_INITCODE_HASH);
 
-                if has_leading_zero_bits(pair_address, leading_zero_bits) {
+                if leading_zeroes(pair_address) == target {
                     found.store(true, Ordering::Relaxed);
                     break Some((token_address, pair_address, salt.0));
                 }
@@ -111,8 +107,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect::<Vec<_>>();
     let (token_address, pair_address, salt) = results.into_iter().next().unwrap();
 
-    println!("\nSuccess!");
-    println!("Required leading zero bits: {leading_zero_bits}");
+    println!("Success!");
+    println!("Required leading zero bits: {target}");
     println!(
         "Successfully found contract address in {:?}",
         timer.elapsed()
