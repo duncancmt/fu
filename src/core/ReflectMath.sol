@@ -196,15 +196,15 @@ library ReflectMath {
         returns (Shares newFromShares, Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
         // Called when `to`'s final shares will be the whale limit
-        TokensXShares t1 = alloc().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply + amount);
-        TokensXShares t2 = alloc().omul(fromShares.mul(Settings.ANTI_WHALE_DIVISOR) + totalShares, totalSupply);
-        TokensXShares d = alloc().osub(t1, t2);
+        TokensXShares d = alloc().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply + amount).isub(
+            tmp().omul(fromShares.mul(Settings.ANTI_WHALE_DIVISOR) + totalShares, totalSupply)
+        );
         Shares uninvolvedShares = totalShares - fromShares - toShares;
         TokensXShares2 n1 =
-            alloc2().omul(tmp().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply), uninvolvedShares);
-        TokensXShares t3 = alloc().omul(fromShares, totalSupply);
-        TokensXShares t4 = alloc().omul(totalShares, amount);
-        TokensXShares2 n2 = alloc2().omul(uninvolvedShares.mul(Settings.ANTI_WHALE_DIVISOR), tmp().osub(t3, t4));
+            alloc().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply).imul(uninvolvedShares);
+        TokensXShares2 n2 = alloc().omul(fromShares, totalSupply).isub(tmp().omul(totalShares, amount)).imul(
+            uninvolvedShares.mul(Settings.ANTI_WHALE_DIVISOR)
+        );
 
         (newToShares, newFromShares) = n1.divMulti(n2, d);
         newToShares = newToShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
