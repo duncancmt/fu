@@ -89,7 +89,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let pair_salt = keccak256(&pair_salt_input);
 
                     let pair_address =
-                        UNISWAP_FACTORY.create2(pair_salt, UNISWAP_PAIR_INITCODE_HASH);
+                        UNISWAP_FACTORY.create2(&pair_salt, &UNISWAP_PAIR_INITCODE_HASH);
 
                     if leading_zeroes(pair_address) == target {
                         found.store(true, Ordering::Relaxed);
