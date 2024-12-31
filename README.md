@@ -182,7 +182,8 @@ attacks is left as an exercise for the implementer.
 FU was developed using the [Foundry](https://github.com/foundry-rs/foundry)
 framework with [Slither](https://github.com/crytic/slither) for static analysis
 and [medusa](https://github.com/crytic/medusa) as a coverage-guided complement
-to Foundry's fuzzer.
+to Foundry's fuzzer. FU also uses [Dedaub](https://dedaub.com/)'s analysis suite
+as a more powerful complement to Slither.
 
 The differential fuzz tests and invariant/property tests in this repository take
 quite a long time to run.
@@ -193,8 +194,13 @@ quite a long time to run.
 
 Install analysis tools from Crytic (Trail of Bits)
 ```shell
-python3 -m pip install --user crytic-compile
-python3 -m pip install --user slither-analyzer
+python3 -m pip install --user --upgrade crytic-compile
+python3 -m pip install --user --upgrade slither-analyzer
+```
+
+Install [Dedaub `srcup`](https://github.com/Dedaub/srcup)
+```shell
+python3 -m pip install --user --upgrade git+https://github.com/Dedaub/srcup#egg=srcup
 ```
 
 ## Run some tests
@@ -203,6 +209,7 @@ python3 -m pip install --user slither-analyzer
 forge test -vvv --fuzz-seed "$(python3 -c 'import secrets; print(secrets.randbelow(2**53))')"
 ./medusa fuzz # or use your system `medusa`
 slither .
+srcup --api-key "$(< ~/.config/dedaub/credentials)" --name fu --framework Foundry .
 ```
 
 # Deployment
