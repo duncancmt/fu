@@ -57,7 +57,6 @@ contract FU is ERC20Base, TransientStorageLayout {
         return Tokens.unwrap($.totalSupply + $.pairTokens);
     }
 
-    /// @custom:security non-reentrant
     IUniswapV2Pair public immutable pair;
 
     bytes32 private immutable _imageHash;

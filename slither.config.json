@@ -1,1 +1,1 @@
-{"detectors_to_exclude":["assembly"]}
+{"detectors_to_exclude":["assembly","too-many-digits"]}
