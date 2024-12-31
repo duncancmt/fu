@@ -99,7 +99,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     if leading_zeros(pair_address)? as usize == target {
                         found.store(true, Ordering::Relaxed);
-                        break 'outer Some((token_address, pair_address, salt.0));
+                        break 'outer Some((salt.0, token_address, pair_address));
                     }
 
                     *salt_word = u64::from_be(*salt_word)
@@ -116,7 +116,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into_iter()
         .filter_map(|h| h.join().unwrap())
         .collect::<Vec<_>>();
-    let (token_address, pair_address, salt) = results.into_iter().next().unwrap();
+    let (salt, token_address, pair_address) = results.into_iter().min().unwrap();
 
     println!(
         "Successfully found contract address in {:?}",
