@@ -317,10 +317,14 @@ contract FU is ERC20Base, TransientStorageLayout {
             (newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);
         }
 
+        // Take note of the mismatch between the holder/recipient of the tokens/shares (`to`) and
+        // the account for whom we calculate the balance delta (`pair`). The `amount` field of the
+        // `Transfer` event is relative to the sender of the tokens.
         CrazyBalance transferAmount = newShares.toPairBalance(newTotalSupply, newTotalShares)
             - cachedTotalShares.toPairBalance(cachedTotalSupply, cachedTotalShares);
         CrazyBalance burnAmount = amount - transferAmount;
 
+        // State modification starts here. No more bailing out allowed.
         $.rebaseQueue.rebaseFor(to, cachedShares, cachedTotalSupply, cachedTotalShares);
 
         $.pairTokens = $.pairTokens - amountTokens;
@@ -392,6 +396,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         // There is no need to apply the whale limit. `pair` holds tokens directly and is allowed to
         // go over the limit.
 
+        // State modification starts here. No more bailing out allowed.
         $.rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
 
         $.sharesOf[from] = newShares.store();
