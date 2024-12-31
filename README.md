@@ -23,6 +23,9 @@ being technically correct.
 * Tax rate changes depending on the phase of the moon
 * Randomly reverts or returns `false` to signal failure
 * Randomly returns nothing or returns `true` to signal success
+  * Ok, this is not technically ERC20 compliant, but I'm going to say it's
+    "close enough" given that there are some important "ERC20" tokens that
+    exhibit the same behavior
 * `symbol` depends on the identity of the caller
 * The shares-to-tokens ratio depends on the address of the holder
   * Consequently, `totalSupply` is merely an upper bound on the sum of all
