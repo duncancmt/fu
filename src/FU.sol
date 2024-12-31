@@ -119,7 +119,7 @@ contract FU is ERC20Base, TransientStorageLayout {
                 CrazyBalance amount = sharesFirst.toCrazyBalance(totalSupply_, totalShares);
 
                 address to = initialHolders[0];
-                assert($.sharesOf[to].load() == ZERO_SHARES);
+                assert(to != DEAD);
                 $.sharesOf[to] = sharesFirst.store();
                 emit Transfer(address(0), to, amount.toExternal());
                 $.rebaseQueue.enqueue(to, amount);
