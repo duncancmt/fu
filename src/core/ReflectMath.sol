@@ -8,12 +8,12 @@ import {Shares, ONE as ONE_SHARE} from "../types/Shares.sol";
 import {Tokens, ONE as ONE_TOKEN} from "../types/Tokens.sol";
 import {scale} from "../types/SharesXBasisPoints.sol";
 import {TokensXBasisPoints, scale, castUp, cast} from "../types/TokensXBasisPoints.sol";
-import {TokensXShares, tmp, alloc, SharesToTokens} from "../types/TokensXShares.sol";
-import {TokensXShares2, tmp as tmp2, alloc as alloc2} from "../types/TokensXShares2.sol";
-import {TokensXBasisPointsXShares, tmp as tmp3, alloc as alloc3} from "../types/TokensXBasisPointsXShares.sol";
-import {TokensXBasisPointsXShares2, tmp as tmp4, alloc as alloc4} from "../types/TokensXBasisPointsXShares2.sol";
+import {TokensXShares, tmp as tmpTS, alloc as allocTS, SharesToTokens} from "../types/TokensXShares.sol";
+import {TokensXShares2} from "../types/TokensXShares2.sol";
+import {TokensXBasisPointsXShares, tmp as tmpTBpS, alloc as allocTBpS} from "../types/TokensXBasisPointsXShares.sol";
+import {TokensXBasisPointsXShares2} from "../types/TokensXBasisPointsXShares2.sol";
 import {SharesXBasisPoints, scale, cast} from "../types/SharesXBasisPoints.sol";
-import {Shares2XBasisPoints, tmp as tmp5, alloc as alloc5} from "../types/Shares2XBasisPoints.sol";
+import {Shares2XBasisPoints, alloc as allocS2Bp} from "../types/Shares2XBasisPoints.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
@@ -42,14 +42,14 @@ library ReflectMath {
         Shares toShares
     ) internal view freeMemory returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
         Shares uninvolvedShares = totalShares - fromShares - toShares;
-        TokensXBasisPointsXShares2 n0 = alloc().omul(fromShares, totalSupply).isub(tmp().omul(amount, totalShares)).imul(
+        TokensXBasisPointsXShares2 n0 = allocTS().omul(fromShares, totalSupply).isub(tmpTS().omul(amount, totalShares)).imul(
             scale(uninvolvedShares, BASIS)
         );
-        TokensXBasisPointsXShares d = alloc3().omul(totalSupply, scale(uninvolvedShares, BASIS)).iadd(
-            tmp3().omul(amount, scale(totalShares, taxRate))
+        TokensXBasisPointsXShares d = allocTBpS().omul(totalSupply, scale(uninvolvedShares, BASIS)).iadd(
+            tmpTBpS().omul(amount, scale(totalShares, taxRate))
         );
-        TokensXBasisPointsXShares2 n1 = alloc3().omul(amount, scale(totalShares, BASIS - taxRate)).iadd(
-            tmp3().omul(scale(toShares, BASIS), totalSupply)
+        TokensXBasisPointsXShares2 n1 = allocTBpS().omul(amount, scale(totalShares, BASIS - taxRate)).iadd(
+            tmpTBpS().omul(scale(toShares, BASIS), totalSupply)
         ).imul(uninvolvedShares);
 
         (newFromShares, newToShares) = n0.divMulti(n1, d);
@@ -148,7 +148,7 @@ library ReflectMath {
     ) internal pure freeMemory returns (Shares newToShares, Shares newTotalShares) {
         // Called when `from` is sending their entire balance
         Shares uninvolvedShares = totalShares - fromShares - toShares;
-        Shares2XBasisPoints n = alloc5().omul(scale(uninvolvedShares, BASIS), totalShares);
+        Shares2XBasisPoints n = allocS2Bp().omul(scale(uninvolvedShares, BASIS), totalShares);
         SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, taxRate);
 
         newTotalShares = n.div(d);
@@ -200,20 +200,20 @@ library ReflectMath {
         returns (Shares newFromShares, Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
         // Called when `to`'s final shares will be the whale limit
-        TokensXShares d = alloc().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply + amount).isub(
-            tmp().omul(fromShares.mul(Settings.ANTI_WHALE_DIVISOR) + totalShares, totalSupply)
+        TokensXShares d = allocTS().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply + amount).isub(
+            tmpTS().omul(fromShares.mul(Settings.ANTI_WHALE_DIVISOR) + totalShares, totalSupply)
         );
         Shares uninvolvedShares = totalShares - fromShares - toShares;
         TokensXShares2 n0 =
-            alloc().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply).imul(uninvolvedShares);
-        TokensXShares2 n1 = alloc().omul(fromShares, totalSupply).isub(tmp().omul(totalShares, amount)).imul(
+            allocTS().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply).imul(uninvolvedShares);
+        TokensXShares2 n1 = allocTS().omul(fromShares, totalSupply).isub(tmpTS().omul(totalShares, amount)).imul(
             uninvolvedShares.mul(Settings.ANTI_WHALE_DIVISOR)
         );
 
         (newToShares, newFromShares) = n0.divMulti(n1, d);
         newToShares = newToShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newTotalShares = totalShares - (fromShares + toShares - newFromShares - newToShares);
-        counterfactualToShares = tmp3().omul(
+        counterfactualToShares = tmpTBpS().omul(
             scale(totalSupply, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(amount, BASIS - taxRate), totalShares
         ).div(scale(totalSupply, BASIS));
 
@@ -271,12 +271,12 @@ library ReflectMath {
         Shares toShares
     ) internal view freeMemory returns (Shares newToShares, Shares newTotalShares, Tokens newTotalSupply) {
         TokensXBasisPointsXShares d =
-            alloc3().omul(scale(totalSupply, BASIS), totalShares).iadd(tmp3().omul(scale(amount, taxRate), totalShares));
-        TokensXBasisPointsXShares t = tmp3().omul(scale(totalSupply, BASIS), toShares);
+            allocTBpS().omul(scale(totalSupply, BASIS), totalShares).iadd(tmpTBpS().omul(scale(amount, taxRate), totalShares));
+        TokensXBasisPointsXShares t = tmpTBpS().omul(scale(totalSupply, BASIS), toShares);
         // slither-disable-next-line unused-return
         d.isub(t);
         TokensXBasisPointsXShares2 n =
-            alloc3().omul(scale(amount, BASIS - taxRate), totalShares).iadd(t).imul(totalShares - toShares);
+            allocTBpS().omul(scale(amount, BASIS - taxRate), totalShares).iadd(t).imul(totalShares - toShares);
 
         newToShares = n.div(d);
         newTotalShares = newToShares - toShares + totalShares;
@@ -306,12 +306,12 @@ library ReflectMath {
         freeMemory
         returns (Shares newFromShares, Shares newTotalShares, Tokens transferTokens, Tokens newTotalSupply)
     {
-        TokensXBasisPointsXShares2 n = alloc3().omul(scale(fromShares, BASIS), totalSupply).isub(
-            tmp3().omul(scale(totalShares, BASIS), amount)
+        TokensXBasisPointsXShares2 n = allocTBpS().omul(scale(fromShares, BASIS), totalSupply).isub(
+            tmpTBpS().omul(scale(totalShares, BASIS), amount)
         ).imul(totalShares - fromShares);
 
-        TokensXBasisPointsXShares d = alloc3().omul(scale(totalShares, taxRate), amount).iadd(
-            tmp3().omul(scale(totalShares - fromShares, BASIS), totalSupply)
+        TokensXBasisPointsXShares d = allocTBpS().omul(scale(totalShares, taxRate), amount).iadd(
+            tmpTBpS().omul(scale(totalShares - fromShares, BASIS), totalSupply)
         );
 
         newFromShares = n.div(d);
@@ -341,18 +341,18 @@ library ReflectMath {
         freeMemory
         returns (Shares newFromShares, Shares newTotalShares)
     {
-        TokensXShares d = alloc().omul(totalSupply, totalShares - fromShares);
-        TokensXShares t = tmp().omul(amount, totalShares);
+        TokensXShares d = allocTS().omul(totalSupply, totalShares - fromShares);
+        TokensXShares t = tmpTS().omul(amount, totalShares);
         // slither-disable-next-line unused-return
         d.iadd(t);
-        TokensXShares2 n = alloc().omul(fromShares, totalSupply).isub(t).imul(totalShares - fromShares);
+        TokensXShares2 n = allocTS().omul(fromShares, totalSupply).isub(t).imul(totalShares - fromShares);
 
         newFromShares = n.div(d);
         newTotalShares = totalShares - (fromShares - newFromShares);
 
         // Fixup rounding error
-        Tokens beforeFromBalance = tmp().omul(fromShares, totalSupply).div(totalShares);
-        Tokens afterFromBalance = tmp().omul(newFromShares, totalSupply).div(newTotalShares);
+        Tokens beforeFromBalance = tmpTS().omul(fromShares, totalSupply).div(totalShares);
+        Tokens afterFromBalance = tmpTS().omul(newFromShares, totalSupply).div(newTotalShares);
         Tokens expectedAfterFromBalance = beforeFromBalance - amount;
         bool condition = afterFromBalance < expectedAfterFromBalance;
         newFromShares = newFromShares.inc(condition);
@@ -367,7 +367,7 @@ library ReflectMath {
         freeMemory
         returns (Shares newFromShares, Shares newTotalShares, Tokens newTotalSupply)
     {
-        TokensXShares n = alloc().omul(fromShares, totalSupply).isub(tmp().omul(totalShares, amount));
+        TokensXShares n = allocTS().omul(fromShares, totalSupply).isub(tmpTS().omul(totalShares, amount));
         newFromShares = n.div(totalSupply);
         newTotalShares = totalShares + newFromShares - fromShares;
         newTotalSupply = totalSupply - amount;
