@@ -60,7 +60,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     /// @custom:security non-reentrant
     IUniswapV2Pair public immutable pair;
 
-    bytes32 internal immutable _imageHash;
+    bytes32 private immutable _imageHash;
 
     function image() external view returns (string memory) {
         return _imageHash.CIDv0();
@@ -520,12 +520,13 @@ contract FU is ERC20Base, TransientStorageLayout {
             - cachedToShares.toCrazyBalance(from, cachedTotalSupply, cachedTotalShares);
         CrazyBalance burnAmount = amount - transferAmount;
 
-        // The computation in `ReflectMath.getTransferShares` (whichever version we used) enforces
-        // the postcondition that `from` and `to` come in under the whale limit. So we don't need to
-        // check, we can just write the values to storage.
+        // State modification starts here. No more bailing out allowed.
         $.rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
         $.rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
 
+        // The computation in `ReflectMath.getTransferShares` (whichever version we used) enforces
+        // the postcondition that `from` and `to` come in under the whale limit. So we don't need to
+        // check, we can just write the values to storage.
         $.sharesOf[from] = newFromShares.store();
         $.sharesOf[to] = newToShares.store();
         $.totalShares = newTotalShares;
