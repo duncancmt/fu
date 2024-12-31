@@ -32,7 +32,7 @@ contract CheckpointsTest is Boilerplate, Test {
 
     function mint(address to, Votes incr, uint32 elapsed) public virtual {
         assume(to != address(0));
-        incr = Votes.wrap(uint144(bound(Votes.unwrap(incr), 1, type(uint144).max >> 16)));
+        incr = Votes.wrap(bound(Votes.unwrap(incr), 1, (2 ** 145 - 1) >> 16));
         assume(elapsed > 1);
 
         clock += elapsed;
@@ -58,7 +58,7 @@ contract CheckpointsTest is Boilerplate, Test {
 
     function mint(address to, Votes incr) public virtual {
         assume(to != address(0));
-        incr = Votes.wrap(uint144(bound(Votes.unwrap(incr), 1, type(uint144).max >> 16)));
+        incr = Votes.wrap(bound(Votes.unwrap(incr), 1, (2 ** 145 - 1) >> 16));
         assume(clock != 0);
 
         dut.mint(to, incr, clock);
@@ -88,7 +88,7 @@ contract CheckpointsTest is Boilerplate, Test {
         address from = actors[fromActor];
         Votes fromVotes = each[from][each[from].length - 1].value;
         assume(Votes.unwrap(fromVotes) > 0);
-        decr = Votes.wrap(uint144(bound(Votes.unwrap(decr), 1, Votes.unwrap(fromVotes))));
+        decr = Votes.wrap(bound(Votes.unwrap(decr), 1, Votes.unwrap(fromVotes)));
         assume(elapsed > 1);
 
         clock += elapsed;
@@ -108,7 +108,7 @@ contract CheckpointsTest is Boilerplate, Test {
         address from = actors[fromActor];
         Votes fromVotes = each[from][each[from].length - 1].value;
         assume(Votes.unwrap(fromVotes) > 0);
-        decr = Votes.wrap(uint144(bound(Votes.unwrap(decr), 1, Votes.unwrap(fromVotes))));
+        decr = Votes.wrap(bound(Votes.unwrap(decr), 1, Votes.unwrap(fromVotes)));
 
         dut.burn(from, decr, clock);
 
@@ -133,11 +133,11 @@ contract CheckpointsTest is Boilerplate, Test {
         fromActor = bound(fromActor, 0, actors.length - 1);
         address from = actors[fromActor];
         assume(to != address(0));
-        incr = Votes.wrap(uint144(bound(Votes.unwrap(incr), 1, type(uint144).max >> 16)));
+        incr = Votes.wrap(bound(Votes.unwrap(incr), 1, (2 ** 145 - 1) >> 16));
         assume(each[from].length > 0);
         Votes fromVotes = each[from][each[from].length - 1].value;
         assume(Votes.unwrap(fromVotes) > 0);
-        decr = Votes.wrap(uint144(bound(Votes.unwrap(decr), 1, Votes.unwrap(fromVotes))));
+        decr = Votes.wrap(bound(Votes.unwrap(decr), 1, Votes.unwrap(fromVotes)));
         assume(elapsed > 1);
 
         clock += elapsed;
@@ -170,11 +170,11 @@ contract CheckpointsTest is Boilerplate, Test {
         fromActor = bound(fromActor, 0, actors.length - 1);
         address from = actors[fromActor];
         assume(to != address(0));
-        incr = Votes.wrap(uint144(bound(Votes.unwrap(incr), 1, type(uint144).max >> 16)));
+        incr = Votes.wrap(bound(Votes.unwrap(incr), 1, (2 ** 145 - 1) >> 16));
         assume(each[from].length > 0);
         Votes fromVotes = each[from][each[from].length - 1].value;
         assume(Votes.unwrap(fromVotes) > 0);
-        decr = Votes.wrap(uint144(bound(Votes.unwrap(decr), 1, Votes.unwrap(fromVotes))));
+        decr = Votes.wrap(bound(Votes.unwrap(decr), 1, Votes.unwrap(fromVotes)));
 
         dut.transfer(from, to, incr, decr, clock);
 

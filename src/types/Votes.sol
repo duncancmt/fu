@@ -5,7 +5,9 @@ import {Settings} from "../core/Settings.sol";
 
 import {Shares} from "./Shares.sol";
 
-type Votes is uint144;
+// This is actually only 145 bits, but we set it to 256 bits here to convince the compiler we don't
+// need to do as much masking.
+type Votes is uint256;
 
 function toVotes(Shares s) pure returns (Votes) {
     return Votes.wrap(uint144(Shares.unwrap(s.div(Settings.SHARES_TO_VOTES_DIVISOR))));

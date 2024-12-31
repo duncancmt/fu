@@ -6,7 +6,7 @@ import {BasisPoints} from "./BasisPoints.sol";
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 import {Ternary} from "../lib/Ternary.sol";
 
-/// This type is given as `uint256` for efficiency, but it is capped at `type(uint176).max`.
+/// This type is given as `uint256` for efficiency, but it is capped at `2 ** 177 - 1`.
 type Shares is uint256;
 
 Shares constant ZERO = Shares.wrap(0);

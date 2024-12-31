@@ -9,8 +9,8 @@ import {Votes} from "../types/Votes.sol";
 
 struct Checkpoint {
     uint48 key;
-    uint64 _pad;
-    Votes value;
+    uint56 _pad;
+    uint152 value;
 }
 
 struct Checkpoints {
@@ -84,8 +84,8 @@ library LibCheckpoints {
         assembly ("memory-safe") {
             slotValue := sload(arr.slot)
             key := shr(0xd0, slotValue)
-            len := and(0xffffffffffffffff, shr(0x90, slotValue))
-            value := and(0xffffffffffffffffffffffffffffffffffff, slotValue)
+            len := and(0xffffffffffffff, shr(0x98, slotValue))
+            value := and(0x1ffffffffffffffffffffffffffffffffffff, slotValue)
         }
     }
 
@@ -98,7 +98,7 @@ library LibCheckpoints {
                 mstore(0x00, arr.slot)
                 sstore(
                     add(keccak256(0x00, 0x20), len),
-                    and(0xffffffffffff0000000000000000ffffffffffffffffffffffffffffffffffff, slotValue)
+                    and(0xffffffffffff0000000000000001ffffffffffffffffffffffffffffffffffff, slotValue)
                 )
                 len := add(0x01, len)
             }
@@ -108,7 +108,7 @@ library LibCheckpoints {
     function _set(Checkpoint[] storage arr, uint48 clock, Votes value, uint256 len) private {
         assembly ("memory-safe") {
             sstore(
-                arr.slot, or(shl(0x90, len), or(shl(0xd0, clock), and(0xffffffffffffffffffffffffffffffffffff, value)))
+                   arr.slot, or(shl(0x98, len), or(shl(0xd0, and(0xffffffffffff, clock)), and(0x1ffffffffffffffffffffffffffffffffffff, value)))
             )
         }
     }
@@ -146,14 +146,14 @@ library LibCheckpoints {
     function current(Checkpoints storage checkpoints, address account) internal view returns (Votes value) {
         Checkpoint[] storage each = checkpoints.each[account];
         assembly ("memory-safe") {
-            value := sload(each.slot)
+            value := and(0x1ffffffffffffffffffffffffffffffffffff, sload(each.slot))
         }
     }
 
     function currentTotal(Checkpoints storage checkpoints) internal view returns (Votes value) {
         Checkpoint[] storage total = checkpoints.total;
         assembly ("memory-safe") {
-            value := sload(total.slot)
+            value := and(0x1ffffffffffffffffffffffffffffffffffff, sload(total.slot))
         }
     }
 
@@ -208,6 +208,8 @@ library LibCheckpoints {
                 value := newValue
                 lo := add(0x01, mid)
             }
+
+            value := and(0x1ffffffffffffffffffffffffffffffffffff, value)
         }
     }
 

@@ -6,7 +6,7 @@ import {Tokens} from "./Tokens.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
-/// This type is given as `uint256` for efficiency, but it is actually only 158 bits.
+/// This type is given as `uint256` for efficiency, but it is actually only 159 bits.
 type TokensXBasisPoints is uint256;
 
 function scale(Tokens s, BasisPoints bp) pure returns (TokensXBasisPoints) {

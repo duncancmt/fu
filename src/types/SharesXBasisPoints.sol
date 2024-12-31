@@ -6,7 +6,7 @@ import {Shares} from "./Shares.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
-/// This type is given as `uint256` for efficiency, but it is actually only 190 bits.
+/// This type is given as `uint256` for efficiency, but it is actually only 191 bits.
 type SharesXBasisPoints is uint256;
 
 function scale(Shares s, BasisPoints bp) pure returns (SharesXBasisPoints) {
