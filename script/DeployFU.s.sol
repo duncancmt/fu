@@ -36,7 +36,7 @@ contract DeployFU is Script {
 
     address internal constant _DEPLOYER_PROXY = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
     IMulticall internal constant _MULTICALL = IMulticall(0x40A2aCCbd92BCA938b02010E17A5b8929b49130D);
-    address internal constant _DEPLOYER_BROADCASTER = 0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60;
+    address internal constant _DEPLOYER_BROADCASTER = 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6;
     IERC20 internal constant _WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     function run(uint256 value, bytes32 salt) external {
