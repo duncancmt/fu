@@ -42,9 +42,8 @@ library ReflectMath {
         Shares toShares
     ) internal view freeMemory returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
         Shares uninvolvedShares = totalShares - fromShares - toShares;
-        TokensXBasisPointsXShares2 n0 = allocTS().omul(fromShares, totalSupply).isub(tmpTS().omul(amount, totalShares)).imul(
-            scale(uninvolvedShares, BASIS)
-        );
+        TokensXBasisPointsXShares2 n0 = allocTS().omul(fromShares, totalSupply).isub(tmpTS().omul(amount, totalShares))
+            .imul(scale(uninvolvedShares, BASIS));
         TokensXBasisPointsXShares d = allocTBpS().omul(totalSupply, scale(uninvolvedShares, BASIS)).iadd(
             tmpTBpS().omul(amount, scale(totalShares, taxRate))
         );
@@ -123,12 +122,14 @@ library ReflectMath {
             unchecked {
                 if (newFromShares > newToShares) {
                     decrFrom = Shares.wrap(
-                        Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares) / Shares.unwrap(newFromShares + newToShares)
+                        Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares)
+                            / Shares.unwrap(newFromShares + newToShares)
                     );
                     decrTo = decrTotal - decrFrom;
                 } else {
                     decrTo = Shares.wrap(
-                        Shares.unwrap(decrTotal) * Shares.unwrap(newToShares) / Shares.unwrap(newFromShares + newToShares)
+                        Shares.unwrap(decrTotal) * Shares.unwrap(newToShares)
+                            / Shares.unwrap(newFromShares + newToShares)
                     );
                     decrFrom = decrTotal - decrTo;
                 }
@@ -270,8 +271,9 @@ library ReflectMath {
         Tokens amount,
         Shares toShares
     ) internal view freeMemory returns (Shares newToShares, Shares newTotalShares, Tokens newTotalSupply) {
-        TokensXBasisPointsXShares d =
-            allocTBpS().omul(scale(totalSupply, BASIS), totalShares).iadd(tmpTBpS().omul(scale(amount, taxRate), totalShares));
+        TokensXBasisPointsXShares d = allocTBpS().omul(scale(totalSupply, BASIS), totalShares).iadd(
+            tmpTBpS().omul(scale(amount, taxRate), totalShares)
+        );
         TokensXBasisPointsXShares t = tmpTBpS().omul(scale(totalSupply, BASIS), toShares);
         // slither-disable-next-line unused-return
         d.isub(t);
