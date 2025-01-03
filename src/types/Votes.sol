@@ -10,7 +10,7 @@ import {Shares} from "./Shares.sol";
 type Votes is uint256;
 
 function toVotes(Shares s) pure returns (Votes) {
-    return Votes.wrap(uint144(Shares.unwrap(s.div(Settings.SHARES_TO_VOTES_DIVISOR))));
+    return Votes.wrap(Shares.unwrap(s.div(Settings.SHARES_TO_VOTES_DIVISOR)));
 }
 
 function toExternal(Votes v) pure returns (uint256) {
