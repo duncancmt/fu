@@ -28,10 +28,13 @@ using SharesUnsafeMathAdapter for Shares global;
 
 library SharesArithmetic {
     function mul(Shares x, uint256 y) internal pure returns (Shares) {
-        return Shares.wrap(Shares.unwrap(x) * y);
+        unchecked {
+            return Shares.wrap(Shares.unwrap(x) * y);
+        }
     }
 
     function div(Shares n, uint256 d) internal pure returns (Shares) {
+        // TODO: see if this can use `unsafeDiv`
         return Shares.wrap(Shares.unwrap(n) / d);
     }
 }

@@ -9,8 +9,9 @@ BasisPoints constant BASIS = BasisPoints.wrap(10_000);
 
 library BasisPointsArithmetic {
     function mul(BasisPoints x, uint256 y) internal pure returns (BasisPoints) {
-        // TODO: see if this can be made `unchecked`
-        return BasisPoints.wrap(BasisPoints.unwrap(x) * y);
+        unchecked {
+            return BasisPoints.wrap(BasisPoints.unwrap(x) * y);
+        }
     }
 
     function div(BasisPoints n, uint256 d) internal pure returns (BasisPoints) {
