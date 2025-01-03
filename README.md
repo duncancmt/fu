@@ -118,10 +118,10 @@ recommend a Governor that inherits from the following OpenZeppelin contracts
 * `GovernorTimelockControl`
 * `GovernorPreventLateQuorum`
 
-Remember that FU uses `block.timestamp` for durations, with a quantum of 1
-day. The authors recommend setting the voting delay to 2 days, the voting period
-to 1 week, the vote extension period to 4 days, the quorum fraction to 33%, and
-the timelock min delay to 2 weeks.
+Remember that FU uses `block.timestamp` for durations, with a quantum of 1 day
+(midnight). The authors recommend setting the voting delay to 2 days, the voting
+period to 1 week, the vote extension period to 4 days, the quorum fraction to
+33%, and the timelock min delay to 2 weeks.
 
 ## wFU
 

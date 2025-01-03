@@ -86,7 +86,8 @@ function ternary(bool c, Shares x, Shares y) pure returns (Shares) {
 }
 
 // This is the same as `Shares`, except it has padding on both ends, just to make life harder for
-// people who do state overrides
+// people who do state overrides. Also, unlike "normal" Solidity behavior, dirty padding is not
+// cleaned, but instead results in the entire slot being implicitly cleared.
 type SharesStorage is uint256;
 
 function load(SharesStorage x) pure returns (Shares r) {
