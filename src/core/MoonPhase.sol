@@ -61,7 +61,7 @@ library MoonPhase {
             int256 p = x; // `p` is monic; the leading coefficient is 1
             p += 0x152c603e02fe2031; // ~0.0827
             p *= x;
-            p += -0x462df383df0568550000000000000000; // ~-0.274
+            p -= 0x462df383df0568550000000000000000; // ~0.274
             p *= x;
             // The constant coefficient of `p` is so small (~3.98e-7) that it does not affect
             // accuracy if it is elided
@@ -71,7 +71,7 @@ library MoonPhase {
             q *= x;
             q += 0x032c1ccefcbad6dd0000000000000000; // ~0.0124
             q *= x;
-            q += -0x0b2a3a89efcf885e00000000000000000000000000000000; // ~-0.0436
+            q -= 0x0b2a3a89efcf885e00000000000000000000000000000000; // ~0.0436
 
             // Now `p/q` if computed exactly represents `cos(monthElapsed)`. What we actually want,
             // though, is `(1 + cos(monthElapsed)) / 2`. We also want to represent the output as a
