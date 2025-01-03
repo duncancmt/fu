@@ -574,6 +574,9 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     function _approve(Storage storage $, address owner, address spender, CrazyBalance amount) internal override {
+        if (spender == PERMIT2) {
+            return;
+        }
         $.allowance[owner][spender] = amount;
         emit Approval(owner, spender, amount.toExternal());
     }
@@ -702,6 +705,9 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
+        if (spender == PERMIT2) {
+            return _success();
+        }
         _setTemporaryAllowance(msg.sender, spender, amount.toCrazyBalance());
         return _success();
     }
