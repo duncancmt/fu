@@ -289,7 +289,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         return $.totalSupply.div(Settings.ANTI_WHALE_DIVISOR).toCrazyBalance(potentialWhale).toExternal();
     }
 
-    function _rebaseFrom(
+    function _rebaseQueueForFrom(
         Storage storage $,
         address from,
         CrazyBalance balance,
@@ -308,7 +308,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         }
     }
 
-    function _rebaseTo(
+    function _rebaseQueueForTo(
         Storage storage $,
         address to,
         CrazyBalance amount,
@@ -382,7 +382,7 @@ contract FU is ERC20Base, TransientStorageLayout {
             $.checkpoints.burn($.delegates[to], originalShares.toVotes() - newShares.toVotes(), clock());
         }
 
-        _rebaseTo($, to, amount, originalShares, newShares, newTotalSupply, newTotalShares);
+        _rebaseQueueForTo($, to, amount, originalShares, newShares, newTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
@@ -444,7 +444,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        _rebaseFrom($, from, balance, amount, originalShares, newShares, cachedTotalSupply, newTotalShares);
+        _rebaseQueueForFrom($, from, balance, amount, originalShares, newShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
@@ -580,9 +580,11 @@ contract FU is ERC20Base, TransientStorageLayout {
             $.checkpoints.burn($.delegates[to], originalToShares.toVotes() - newToShares.toVotes(), clock());
         }
 
-        _rebaseFrom($, from, fromBalance, amount, originalFromShares, newFromShares, cachedTotalSupply, newTotalShares);
+        _rebaseQueueForFrom(
+            $, from, fromBalance, amount, originalFromShares, newFromShares, cachedTotalSupply, newTotalShares
+        );
 
-        _rebaseTo($, to, amount, originalToShares, newToShares, cachedTotalSupply, newTotalShares);
+        _rebaseQueueForTo($, to, amount, originalToShares, newToShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
@@ -781,7 +783,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        _rebaseFrom($, from, balance, amount, originalShares, newShares, newTotalSupply, newTotalShares);
+        _rebaseQueueForFrom($, from, balance, amount, originalShares, newShares, newTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, newTotalSupply, newTotalShares);
 
@@ -835,7 +837,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        _rebaseFrom($, from, balance, amount, originalShares, newShares, cachedTotalSupply, newTotalShares);
+        _rebaseQueueForFrom($, from, balance, amount, originalShares, newShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
