@@ -284,6 +284,26 @@ contract FU is ERC20Base, TransientStorageLayout {
         return $.totalSupply.div(Settings.ANTI_WHALE_DIVISOR).toCrazyBalance(potentialWhale).toExternal();
     }
 
+    function _rebaseFrom(Storage storage $, address from, CrazyBalance balance, CrazyBalance amount, Shares originalShares, Shares newShares, Tokens newTotalSupply, Shares newTotalShares) private {
+        if (amount == balance) {
+            if (originalShares != ZERO_SHARES) {
+                $.rebaseQueue.dequeue(from);
+            }
+        } else {
+            $.rebaseQueue.moveToBack(from, newShares, newTotalSupply, newTotalShares);
+        }
+    }
+
+    function _rebaseTo(Storage storage $, address to, CrazyBalance amount, Shares originalShares, Shares newShares, Tokens newTotalSupply, Shares newTotalShares) private {
+        if (originalShares == ZERO_SHARES) {
+            if (amount != ZERO_BALANCE) {
+                $.rebaseQueue.enqueue(to, newShares, newTotalSupply, newTotalShares);
+            }
+        } else {
+            $.rebaseQueue.moveToBack(to, newShares, newTotalSupply, newTotalShares);
+        }
+    }
+
     function _transferFromPair(Storage storage $, address to, CrazyBalance amount) private returns (bool) {
         // We don't need to check that `pair` is transferring less than its balance. The
         // `UniswapV2Pair` code does that for us. Additionally, `pair`'s balance can never reach
@@ -340,13 +360,7 @@ contract FU is ERC20Base, TransientStorageLayout {
             $.checkpoints.burn($.delegates[to], originalShares.toVotes() - newShares.toVotes(), clock());
         }
 
-        if (originalShares == ZERO_SHARES) {
-            if (amount != ZERO_BALANCE) {
-                $.rebaseQueue.enqueue(to, newShares, newTotalSupply, newTotalShares);
-            }
-        } else {
-            $.rebaseQueue.moveToBack(to, newShares, newTotalSupply, newTotalShares);
-        }
+        _rebaseTo($, to, amount, originalShares, newShares, newTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
@@ -408,13 +422,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        if (amount == balance) {
-            if (originalShares != ZERO_SHARES) {
-                $.rebaseQueue.dequeue(from);
-            }
-        } else {
-            $.rebaseQueue.moveToBack(from, newShares, cachedTotalSupply, newTotalShares);
-        }
+        _rebaseFrom($, from, balance, amount, originalShares, newShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
@@ -550,23 +558,9 @@ contract FU is ERC20Base, TransientStorageLayout {
             $.checkpoints.burn($.delegates[to], originalToShares.toVotes() - newToShares.toVotes(), clock());
         }
 
-        // TODO: DRY
-        if (amount == fromBalance) {
-            if (originalFromShares != ZERO_SHARES) {
-                $.rebaseQueue.dequeue(from);
-            }
-        } else {
-            $.rebaseQueue.moveToBack(from, newFromShares, cachedTotalSupply, newTotalShares);
-        }
+        _rebaseFrom($, from, fromBalance, amount, originalFromShares, newFromShares, cachedTotalSupply, newTotalShares);
 
-        // TODO: DRY
-        if (originalToShares == ZERO_SHARES) {
-            if (amount != ZERO_BALANCE) {
-                $.rebaseQueue.enqueue(to, newToShares, cachedTotalSupply, newTotalShares);
-            }
-        } else {
-            $.rebaseQueue.moveToBack(to, newToShares, cachedTotalSupply, newTotalShares);
-        }
+        _rebaseTo($, to, amount, originalToShares, newToShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
@@ -765,13 +759,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        if (amount == balance) {
-            if (originalShares != ZERO_SHARES) {
-                $.rebaseQueue.dequeue(from);
-            }
-        } else {
-            $.rebaseQueue.moveToBack(from, newShares, newTotalSupply, newTotalShares);
-        }
+        _rebaseFrom($, from, balance, amount, originalShares, newShares, newTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, newTotalSupply, newTotalShares);
 
@@ -825,13 +813,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        if (amount == balance) {
-            if (originalShares != ZERO_SHARES) {
-                $.rebaseQueue.dequeue(from);
-            }
-        } else {
-            $.rebaseQueue.moveToBack(from, newShares, cachedTotalSupply, newTotalShares);
-        }
+        _rebaseFrom($, from, balance, amount, originalShares, newShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
