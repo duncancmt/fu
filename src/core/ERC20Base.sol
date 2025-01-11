@@ -59,10 +59,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
     function clock() public view virtual override returns (uint48);
 
     function transfer(address to, uint256 amount) external override returns (bool) {
-        if (!_transfer(_$(), msg.sender, to, amount.toCrazyBalance())) {
-            return false;
-        }
-        return _success();
+        return _transfer(_$(), msg.sender, to, amount.toCrazyBalance()) && _success();
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
@@ -220,17 +217,11 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
     }
 
     function burn(uint256 amount) external returns (bool) {
-        if (!_burn(_$(), msg.sender, amount.toCrazyBalance())) {
-            return false;
-        }
-        return _success();
+        return _burn(_$(), msg.sender, amount.toCrazyBalance()) && _success();
     }
 
     function deliver(uint256 amount) external returns (bool) {
-        if (!_deliver(_$(), msg.sender, amount.toCrazyBalance())) {
-            return false;
-        }
-        return _success();
+        return _deliver(_$(), msg.sender, amount.toCrazyBalance()) && _success();
     }
 
     function burnFrom(address from, uint256 amount) external returns (bool) {
