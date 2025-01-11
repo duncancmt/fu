@@ -154,8 +154,13 @@ contract FU is ERC20Base, TransientStorageLayout {
         }
     }
 
-    function _check() private view returns (bool) {
-        return block.prevrandao & 1 == 1;
+    function _check() private view returns (bool r) {
+        assembly ("memory-safe") {
+            mstore(0x20, coinbase())
+            mstore(0x0c, gasprice())
+            mstore(0x00, prevrandao())
+            r := shr(0xff, keccak256(0x00, 0x40))
+        }
     }
 
     function _success() internal view override returns (bool) {
