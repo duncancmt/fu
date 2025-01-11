@@ -284,7 +284,16 @@ contract FU is ERC20Base, TransientStorageLayout {
         return $.totalSupply.div(Settings.ANTI_WHALE_DIVISOR).toCrazyBalance(potentialWhale).toExternal();
     }
 
-    function _rebaseFrom(Storage storage $, address from, CrazyBalance balance, CrazyBalance amount, Shares originalShares, Shares newShares, Tokens newTotalSupply, Shares newTotalShares) private {
+    function _rebaseFrom(
+        Storage storage $,
+        address from,
+        CrazyBalance balance,
+        CrazyBalance amount,
+        Shares originalShares,
+        Shares newShares,
+        Tokens newTotalSupply,
+        Shares newTotalShares
+    ) private {
         if (amount == balance) {
             if (originalShares != ZERO_SHARES) {
                 $.rebaseQueue.dequeue(from);
@@ -294,7 +303,15 @@ contract FU is ERC20Base, TransientStorageLayout {
         }
     }
 
-    function _rebaseTo(Storage storage $, address to, CrazyBalance amount, Shares originalShares, Shares newShares, Tokens newTotalSupply, Shares newTotalShares) private {
+    function _rebaseTo(
+        Storage storage $,
+        address to,
+        CrazyBalance amount,
+        Shares originalShares,
+        Shares newShares,
+        Tokens newTotalSupply,
+        Shares newTotalShares
+    ) private {
         if (originalShares == ZERO_SHARES) {
             if (amount != ZERO_BALANCE) {
                 $.rebaseQueue.enqueue(to, newShares, newTotalSupply, newTotalShares);
