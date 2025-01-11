@@ -17,7 +17,7 @@ fs_permissions = [{ access = "read", path = "./airdrop.json"}, { access = "read"
 
 [fuzz]
 runs = 50_000_000
-max_test_rejects = 1_000_000_000
+max_test_rejects = 4_294_967_295
 
 [invariant]
 fail_on_revert = true
