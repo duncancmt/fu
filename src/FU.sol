@@ -648,10 +648,6 @@ contract FU is ERC20Base, TransientStorageLayout {
         CrazyBalance currentTempAllowance,
         CrazyBalance currentAllowance
     ) internal override returns (bool) {
-        if (currentTempAllowance.isMax()) {
-            // TODO: maybe remove this branch
-            return true;
-        }
         if (currentAllowance == ZERO_BALANCE) {
             _setTemporaryAllowance(owner, msg.sender, currentTempAllowance - amount);
             return true;
