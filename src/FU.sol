@@ -120,6 +120,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
                 address to = initialHolders[0];
                 assert(to != DEAD);
+                require(uint160(to) >= Settings.ANTI_WHALE_DIVISOR);
                 $.sharesOf[to] = sharesFirst.store();
                 emit Transfer(address(0), to, amount.toExternal());
                 $.rebaseQueue.enqueue(to, amount);
@@ -129,6 +130,7 @@ contract FU is ERC20Base, TransientStorageLayout {
                 for (uint256 i = 1; i < initialHolders.length; i++) {
                     address to = initialHolders[i];
                     assert($.sharesOf[to].load() == ZERO_SHARES);
+                    require(uint160(to) >= Settings.ANTI_WHALE_DIVISOR);
                     $.sharesOf[to] = sharesRest.store();
                     emit Transfer(address(0), to, amount.toExternal());
                     $.rebaseQueue.enqueue(to, amount);
