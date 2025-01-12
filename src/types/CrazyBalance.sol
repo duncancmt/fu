@@ -109,6 +109,7 @@ library CrazyBalanceArithmetic {
         pure
         returns (CrazyBalance)
     {
+        // TODO: optimize
         return toCrazyBalance(shares, address(type(uint160).max), totalSupply, totalShares);
     }
 
