@@ -109,8 +109,9 @@ library CrazyBalanceArithmetic {
         pure
         returns (CrazyBalance)
     {
-        // TODO: optimize
-        return toCrazyBalance(shares, address(type(uint160).max), totalSupply, totalShares);
+        return CrazyBalance.wrap(
+            tmp().omul(Shares.unwrap(shares), Tokens.unwrap(totalSupply)).div(Shares.unwrap(totalShares))
+        );
     }
 
     function toCrazyBalance(Tokens tokens, address account) internal pure returns (CrazyBalance) {
