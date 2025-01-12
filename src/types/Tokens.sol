@@ -24,6 +24,8 @@ library TokensUnsafeMathAdapter {
 using TokensUnsafeMathAdapter for Tokens global;
 
 library TokensArithmetic {
+    using UnsafeMath for uint256;
+
     function mul(Tokens x, uint256 y) internal pure returns (Tokens) {
         unchecked {
             return Tokens.wrap(Tokens.unwrap(x) * y);
@@ -31,8 +33,7 @@ library TokensArithmetic {
     }
 
     function div(Tokens n, uint256 d) internal pure returns (Tokens) {
-        // TODO: see if this can use `unsafeDiv`
-        return Tokens.wrap(Tokens.unwrap(n) / d);
+        return Tokens.wrap(Tokens.unwrap(n).unsafeDiv(d));
     }
 }
 

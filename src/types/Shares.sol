@@ -27,6 +27,8 @@ library SharesUnsafeMathAdapter {
 using SharesUnsafeMathAdapter for Shares global;
 
 library SharesArithmetic {
+    using UnsafeMath for uint256;
+
     function mul(Shares x, uint256 y) internal pure returns (Shares) {
         unchecked {
             return Shares.wrap(Shares.unwrap(x) * y);
@@ -34,8 +36,7 @@ library SharesArithmetic {
     }
 
     function div(Shares n, uint256 d) internal pure returns (Shares) {
-        // TODO: see if this can use `unsafeDiv`
-        return Shares.wrap(Shares.unwrap(n) / d);
+        return Shares.wrap(Shares.unwrap(n).unsafeDiv(d));
     }
 }
 
