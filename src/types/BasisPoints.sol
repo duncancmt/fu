@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {UnsafeMath} from "../lib/UnsafeMath.sol";
+
 /// This type is given as `uint256` for efficiency, but it is capped at 10_000
 /// (14 bits).
 type BasisPoints is uint256;
@@ -8,6 +10,8 @@ type BasisPoints is uint256;
 BasisPoints constant BASIS = BasisPoints.wrap(10_000);
 
 library BasisPointsArithmetic {
+    using UnsafeMath for uint256;
+
     function mul(BasisPoints x, uint256 y) internal pure returns (BasisPoints) {
         unchecked {
             return BasisPoints.wrap(BasisPoints.unwrap(x) * y);
@@ -15,8 +19,7 @@ library BasisPointsArithmetic {
     }
 
     function div(BasisPoints n, uint256 d) internal pure returns (BasisPoints) {
-        // TODO: see if this can use `unsafeDiv`
-        return BasisPoints.wrap(BasisPoints.unwrap(n) / d);
+        return BasisPoints.wrap(BasisPoints.unwrap(n).unsafeDiv(d));
     }
 }
 
