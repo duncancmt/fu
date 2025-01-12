@@ -125,6 +125,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
     }
 
     bytes32 private constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
+    uint256 private constant _ADDRESS_MASK = 0x00ffffffffffffffffffffffffffffffffffffffff;
 
     function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external
@@ -146,8 +147,8 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, _PERMIT_TYPEHASH)
-            mstore(add(0x20, ptr), and(0xffffffffffffffffffffffffffffffffffffffff, owner))
-            mstore(add(0x40, ptr), and(0xffffffffffffffffffffffffffffffffffffffff, spender))
+            mstore(add(0x20, ptr), and(_ADDRESS_MASK, owner))
+            mstore(add(0x40, ptr), and(_ADDRESS_MASK, spender))
             mstore(add(0x60, ptr), amount)
             mstore(add(0x80, ptr), nonce)
             mstore(add(0xa0, ptr), deadline)
@@ -188,7 +189,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(0x00, _DELEGATION_TYPEHASH)
-            mstore(0x20, and(0xffffffffffffffffffffffffffffffffffffffff, delegatee))
+            mstore(0x20, and(_ADDRESS_MASK, delegatee))
             mstore(0x40, nonce)
             mstore(0x60, expiry)
             mstore(0x40, keccak256(0x00, 0x80))
