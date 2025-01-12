@@ -641,23 +641,24 @@ contract FU is ERC20Base, TransientStorageLayout {
         CrazyBalance amount,
         CrazyBalance currentTempAllowance,
         CrazyBalance currentAllowance
-    ) internal override {
+    ) internal override returns (bool) {
         if (currentTempAllowance.isMax()) {
             // TODO: maybe remove this branch
-            return;
+            return true;
         }
         if (currentAllowance == ZERO_BALANCE) {
             _setTemporaryAllowance(owner, msg.sender, currentTempAllowance - amount);
-            return;
+            return true;
         }
         if (currentTempAllowance != ZERO_BALANCE) {
             amount = amount - currentTempAllowance;
             _setTemporaryAllowance(owner, msg.sender, ZERO_BALANCE);
         }
         if (currentAllowance.isMax()) {
-            return;
+            return true;
         }
         _approve($, owner, msg.sender, currentAllowance - amount);
+        return true;
     }
 
     function name() public pure override returns (string memory) {

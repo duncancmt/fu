@@ -50,7 +50,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         CrazyBalance amount,
         CrazyBalance currentTempAllowance,
         CrazyBalance currentAllowance
-    ) internal virtual;
+    ) internal virtual returns (bool);
 
     function name() public pure virtual override(FUStorage, IERC20) returns (string memory);
     // slither-disable-next-line naming-convention
@@ -71,14 +71,8 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         Storage storage $ = _$();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
             _checkAllowance($, from, amount.toCrazyBalance());
-        if (!success) {
-            return false;
-        }
-        if (!_transfer($, from, to, amount.toCrazyBalance())) {
-            return false;
-        }
-        _spendAllowance($, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
-        return _success();
+        return success && _transfer($, from, to, amount.toCrazyBalance())
+            && _spendAllowance($, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance) && _success();
     }
 
     function eip712Domain()
@@ -229,27 +223,15 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         Storage storage $ = _$();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
             _checkAllowance($, from, amount.toCrazyBalance());
-        if (!success) {
-            return false;
-        }
-        if (!_burn($, from, amount.toCrazyBalance())) {
-            return false;
-        }
-        _spendAllowance($, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
-        return _success();
+        return success && _burn($, from, amount.toCrazyBalance())
+            && _spendAllowance($, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance) && _success();
     }
 
     function deliverFrom(address from, uint256 amount) external returns (bool) {
         Storage storage $ = _$();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
             _checkAllowance($, from, amount.toCrazyBalance());
-        if (!success) {
-            return false;
-        }
-        if (!_deliver($, from, amount.toCrazyBalance())) {
-            return false;
-        }
-        _spendAllowance($, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance);
-        return _success();
+        return success && _deliver($, from, amount.toCrazyBalance())
+            && _spendAllowance($, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance) && _success();
     }
 }
