@@ -326,7 +326,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         }
     }
 
-    function _transferFromPair(Storage storage $, address to, CrazyBalance amount) private returns (bool) {
+    function _transferFromPair(Storage storage $, address pair_, address to, CrazyBalance amount) private returns (bool) {
         // We don't need to check that `pair` is transferring less than its balance. The
         // `UniswapV2Pair` code does that for us. Additionally, `pair`'s balance can never reach
         // zero.
@@ -373,8 +373,8 @@ contract FU is ERC20Base, TransientStorageLayout {
         $.totalSupply = newTotalSupply;
         $.totalShares = newTotalShares;
 
-        emit Transfer(address(pair), to, transferAmount.toExternal());
-        emit Transfer(address(pair), address(0), burnAmount.toExternal());
+        emit Transfer(pair_, to, transferAmount.toExternal());
+        emit Transfer(pair_, address(0), burnAmount.toExternal());
 
         if (newShares >= originalShares) {
             $.checkpoints.mint($.delegates[to], newShares.toVotes() - originalShares.toVotes(), clock());
@@ -389,7 +389,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         return true;
     }
 
-    function _transferToPair(Storage storage $, address from, CrazyBalance amount) private returns (bool) {
+    function _transferToPair(Storage storage $, address from, address pair_, CrazyBalance amount) private returns (bool) {
         (
             CrazyBalance balance,
             Shares originalShares,
@@ -439,7 +439,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         $.totalSupply = newTotalSupply;
         $.totalShares = newTotalShares;
 
-        emit Transfer(from, address(pair), transferAmount.toExternal());
+        emit Transfer(from, pair_, transferAmount.toExternal());
         emit Transfer(from, address(0), burnAmount.toExternal());
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
@@ -463,13 +463,14 @@ contract FU is ERC20Base, TransientStorageLayout {
             return false;
         }
 
-        if (to == address(pair)) {
-            if (from == address(pair)) {
+        address pair_ = address(pair);
+        if (to == pair_) {
+            if (from == to) {
                 if (_check()) {
                     revert ERC20InvalidReceiver(to);
                 }
             }
-            return _transferToPair($, from, amount);
+            return _transferToPair($, from, pair_, amount);
         }
 
         if (to == DEAD) {
@@ -492,8 +493,8 @@ contract FU is ERC20Base, TransientStorageLayout {
             return false;
         }
 
-        if (from == address(pair)) {
-            return _transferFromPair($, to, amount);
+        if (from == pair_) {
+            return _transferFromPair($, pair_, to, amount);
         }
 
         if (from == to) {
@@ -859,7 +860,8 @@ contract FU is ERC20Base, TransientStorageLayout {
         // slither-disable-next-line low-level-calls
         (bool success,) = address(WETH).call{value: address(this).balance}("");
         require(success);
-        require(WETH.transfer(address(pair), WETH.balanceOf(address(this))));
-        pair.sync();
+        IUniswapV2Pair pair_ = pair;
+        require(WETH.transfer(address(pair_), WETH.balanceOf(address(this))));
+        pair_.sync();
     }
 }
