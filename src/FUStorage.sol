@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {INonces} from "./interfaces/INonces.sol";
 import {IERC5805} from "./interfaces/IERC5805.sol";
 
@@ -11,7 +12,7 @@ import {CrazyBalance} from "./types/CrazyBalance.sol";
 import {Checkpoints} from "./core/Checkpoints.sol";
 import {RebaseQueue} from "./core/RebaseQueue.sol";
 
-abstract contract FUStorage is INonces, IERC5805 {
+abstract contract FUStorage is IERC20, INonces, IERC5805 {
     // @custom:storage-location erc7201:"Fuck You!"
     struct Storage {
         mapping(address account => SharesStorage shares) sharesOf;
@@ -33,7 +34,7 @@ abstract contract FUStorage is INonces, IERC5805 {
         return _$().nonces[account];
     }
 
-    function name() public pure virtual returns (string memory);
+    string public constant override name = "Fuck You!";
 
     constructor() {
         Storage storage $ = _$();
@@ -41,7 +42,7 @@ abstract contract FUStorage is INonces, IERC5805 {
         assembly ("memory-safe") {
             $int := $.slot
         }
-        assert($int == (uint256(keccak256(bytes(name()))) - 1) & ~uint256(0xff));
+        assert($int == (uint256(keccak256(bytes(name))) - 1) & ~uint256(0xff));
     }
 
     // slither-disable-next-line naming-convention

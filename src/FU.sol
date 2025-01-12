@@ -663,10 +663,6 @@ contract FU is ERC20Base, TransientStorageLayout {
         return true;
     }
 
-    function name() public pure override returns (string memory) {
-        return "Fuck You!";
-    }
-
     function symbol() external view override returns (string memory r) {
         if (msg.sender == tx.origin) {
             return "FU";
