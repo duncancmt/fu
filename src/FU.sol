@@ -469,24 +469,12 @@ contract FU is ERC20Base, TransientStorageLayout {
                 if (_check()) {
                     revert ERC20InvalidReceiver(to);
                 }
+                return false;
             }
             return _transferToPair($, from, pair_, amount);
         }
 
-        if (to == DEAD) {
-            if (_check()) {
-                revert ERC20InvalidReceiver(to);
-            }
-            return false;
-        }
-        if (to == address(this)) {
-            if (_check()) {
-                revert ERC20InvalidReceiver(to);
-            }
-            return false;
-        }
-        if (uint160(to) < Settings.ADDRESS_DIVISOR) {
-            // "efficient" addresses can't hold tokens because they have zero multiplier
+        if (to == DEAD || to == address(this) || uint160(to) < Settings.ADDRESS_DIVISOR) {
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
             }
