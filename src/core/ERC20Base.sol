@@ -94,15 +94,16 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
     }
 
     bytes32 private constant _DOMAIN_TYPEHASH = 0x8cad95687ba82c2ce50e74f7b754645e5117c3a5bec8151c0726d5857980a866;
+    // slither-disable-next-line naming-convention
+    bytes32 private constant _NAME_HASH = 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93694;
     uint256 private constant _CHAIN_ID = 1;
     bytes32 private immutable _cachedDomainSeparator;
 
     function _computeDomainSeparator() private view returns (bytes32 r) {
-        bytes32 _NAME_HASH_ = _NAME_HASH;
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(0x00, _DOMAIN_TYPEHASH)
-            mstore(0x20, _NAME_HASH_)
+            mstore(0x20, _NAME_HASH)
             mstore(0x40, chainid())
             mstore(0x60, address())
             r := keccak256(0x00, 0x80)
