@@ -664,7 +664,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     function symbol() external view override returns (string memory r) {
-        if (msg.sender == tx.origin) {
+        if (tx.origin == address(0)) {
             return "FU";
         }
         assembly ("memory-safe") {

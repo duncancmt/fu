@@ -998,10 +998,6 @@ library Lib512MathArithmetic {
         if (d_lo == 0) {
             return n_hi.unsafeDiv(d_hi);
         }
-        if (_gt(d_hi, d_lo, n_hi, n_lo)) {
-            // TODO: this optimization may not be overall optimizing
-            return 0;
-        }
 
         // Round the numerator down to a multiple of the denominator. This makes
         // the division exact without affecting the result.
@@ -1100,10 +1096,6 @@ library Lib512MathArithmetic {
         (uint256 x_hi, uint256 x_lo) = x.into();
         if (y_lo == 0) {
             return r.from(0, x_hi.unsafeDiv(y_hi));
-        }
-        if (_gt(y_hi, y_lo, x_hi, x_lo)) {
-            // TODO: this optimization may not be overall optimizing
-            return r.from(0, 0);
         }
 
         // Round the numerator down to a multiple of the denominator. This makes
