@@ -576,14 +576,18 @@ contract FU is ERC20Base, TransientStorageLayout {
                 clock()
             );
         } else {
-            $.checkpoints.burn($.delegates[from], originalFromShares.toVotes() - newFromShares.toVotes(), clock());
-            $.checkpoints.burn($.delegates[to], originalToShares.toVotes() - newToShares.toVotes(), clock());
+            $.checkpoints.burn(
+                $.delegates[from],
+                originalFromShares.toVotes() - newFromShares.toVotes(),
+                $.delegates[to],
+                originalToShares.toVotes() - newToShares.toVotes(),
+                clock()
+            );
         }
 
         _rebaseQueueForFrom(
             $, from, fromBalance, amount, originalFromShares, newFromShares, cachedTotalSupply, newTotalShares
         );
-
         _rebaseQueueForTo($, to, amount, originalToShares, newToShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
