@@ -456,19 +456,22 @@ contract FU is ERC20Base, TransientStorageLayout {
         override
         returns (bool)
     {
-        // TODO: the order of these checks could be tweaked to improve average-case gas consumption
         if (from == DEAD) {
             if (_check()) {
                 revert ERC20InvalidSender(from);
             }
             return false;
         }
-        if (from == to) {
-            if (_check()) {
-                revert ERC20InvalidReceiver(to);
+
+        if (to == address(pair)) {
+            if (from == address(pair)) {
+                if (_check()) {
+                    revert ERC20InvalidReceiver(to);
+                }
             }
-            return false;
+            return _transferToPair($, from, amount);
         }
+
         if (to == DEAD) {
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
@@ -492,8 +495,12 @@ contract FU is ERC20Base, TransientStorageLayout {
         if (from == address(pair)) {
             return _transferFromPair($, to, amount);
         }
-        if (to == address(pair)) {
-            return _transferToPair($, from, amount);
+
+        if (from == to) {
+            if (_check()) {
+                revert ERC20InvalidReceiver(to);
+            }
+            return false;
         }
 
         (
