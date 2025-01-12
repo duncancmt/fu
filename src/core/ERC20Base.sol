@@ -69,10 +69,11 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
 
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
+        CrazyBalance amount_ = amount.toCrazyBalance();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance($, from, amount.toCrazyBalance());
-        return success && _transfer($, from, to, amount.toCrazyBalance())
-            && _spendAllowance($, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance) && _success();
+            _checkAllowance($, from, amount_);
+        return success && _transfer($, from, to, amount_)
+            && _spendAllowance($, from, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 
     function eip712Domain()
@@ -221,17 +222,19 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
 
     function burnFrom(address from, uint256 amount) external returns (bool) {
         Storage storage $ = _$();
+        CrazyBalance amount_ = amount.toCrazyBalance();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance($, from, amount.toCrazyBalance());
-        return success && _burn($, from, amount.toCrazyBalance())
-            && _spendAllowance($, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance) && _success();
+            _checkAllowance($, from, amount_);
+        return success && _burn($, from, amount_)
+            && _spendAllowance($, from, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 
     function deliverFrom(address from, uint256 amount) external returns (bool) {
         Storage storage $ = _$();
+        CrazyBalance amount_ = amount.toCrazyBalance();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance($, from, amount.toCrazyBalance());
-        return success && _deliver($, from, amount.toCrazyBalance())
-            && _spendAllowance($, from, amount.toCrazyBalance(), currentTempAllowance, currentAllowance) && _success();
+            _checkAllowance($, from, amount_);
+        return success && _deliver($, from, amount_)
+            && _spendAllowance($, from, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 }
