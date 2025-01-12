@@ -42,24 +42,11 @@ library LibCheckpoints {
         }
         if (incr > decr) {
             _mint(checkpoints, incr - decr, clock);
-        }
-        if (incr < decr) {
+        } else if (incr < decr) {
             _burn(checkpoints, decr - incr, clock);
         }
-        {
-            Checkpoint[] storage arr = checkpoints.each[from];
-            (Votes oldValue, uint256 len) = _get(arr, clock);
-            Votes newValue = oldValue - decr;
-            _set(arr, clock, newValue, len);
-            emit IERC5805.DelegateVotesChanged(from, oldValue.toExternal(), newValue.toExternal());
-        }
-        {
-            Checkpoint[] storage arr = checkpoints.each[to];
-            (Votes oldValue, uint256 len) = _get(arr, clock);
-            Votes newValue = oldValue + incr;
-            _set(arr, clock, newValue, len);
-            emit IERC5805.DelegateVotesChanged(to, oldValue.toExternal(), newValue.toExternal());
-        }
+        _burn(checkpoints.each[from], from, decr, clock);
+        _mint(checkpoints.each[to], to, incr, clock);
     }
 
     function mint(Checkpoints storage checkpoints, address to, Votes incr, uint48 clock) internal {
@@ -101,12 +88,12 @@ library LibCheckpoints {
         }
     }
 
-    function _get(Checkpoint[] storage arr, uint48 clock) private returns (Votes value, uint256 len) {
+    function _get(Checkpoint[] storage arr, uint256 clock) private returns (Votes value, uint256 len) {
         uint256 key;
         bytes32 slotValue;
         (value, len, key, slotValue) = _load(arr);
         assembly ("memory-safe") {
-            if mul(key, gt(and(0xffffffffffff, clock), key)) {
+            if mul(key, gt(clock, key)) {
                 mstore(0x00, arr.slot)
                 sstore(
                     add(keccak256(0x00, 0x20), len),
@@ -117,46 +104,52 @@ library LibCheckpoints {
         }
     }
 
-    function _set(Checkpoint[] storage arr, uint48 clock, Votes value, uint256 len) private {
+    function _set(Checkpoint[] storage arr, uint256 clock, Votes value, uint256 len) private {
         assembly ("memory-safe") {
             sstore(
                 arr.slot,
                 or(
                     shl(0x98, len),
-                    or(shl(0xd0, and(0xffffffffffff, clock)), and(0x1ffffffffffffffffffffffffffffffffffff, value))
+                    or(shl(0xd0, clock), and(0x1ffffffffffffffffffffffffffffffffffff, value))
                 )
             )
         }
     }
 
-    function _mint(Checkpoints storage checkpoints, Votes incr, uint48 clock) private {
+    function _mint(Checkpoints storage checkpoints, Votes incr, uint256 clock) private {
         Checkpoint[] storage arr = checkpoints.total;
         (Votes oldValue, uint256 len) = _get(arr, clock);
         _set(arr, clock, oldValue + incr, len);
     }
 
-    function _mint(Checkpoints storage checkpoints, address to, Votes incr, uint48 clock) private {
-        _mint(checkpoints, incr, clock);
-        Checkpoint[] storage arr = checkpoints.each[to];
-        (Votes oldValue, uint256 len) = _get(arr, clock);
+    function _mint(Checkpoint[] storage array, address to, Votes incr, uint256 clock) private {
+        (Votes oldValue, uint256 len) = _get(array, clock);
         Votes newValue = oldValue + incr;
-        _set(arr, clock, newValue, len);
+        _set(array, clock, newValue, len);
         emit IERC5805.DelegateVotesChanged(to, oldValue.toExternal(), newValue.toExternal());
     }
 
-    function _burn(Checkpoints storage checkpoints, Votes decr, uint48 clock) private {
+    function _mint(Checkpoints storage checkpoints, address to, Votes incr, uint256 clock) private {
+        _mint(checkpoints, incr, clock);
+        _mint(checkpoints.each[to], to, incr, clock);
+    }
+
+    function _burn(Checkpoints storage checkpoints, Votes decr, uint256 clock) private {
         Checkpoint[] storage arr = checkpoints.total;
         (Votes oldValue, uint256 len) = _get(arr, clock);
         _set(arr, clock, oldValue - decr, len);
     }
 
-    function _burn(Checkpoints storage checkpoints, address from, Votes decr, uint48 clock) private {
-        _burn(checkpoints, decr, clock);
-        Checkpoint[] storage arr = checkpoints.each[from];
-        (Votes oldValue, uint256 len) = _get(arr, clock);
+    function _burn(Checkpoint[] storage array, address from, Votes decr, uint256 clock) private {
+        (Votes oldValue, uint256 len) = _get(array, clock);
         Votes newValue = oldValue - decr;
-        _set(arr, clock, newValue, len);
+        _set(array, clock, newValue, len);
         emit IERC5805.DelegateVotesChanged(from, oldValue.toExternal(), newValue.toExternal());
+    }
+
+    function _burn(Checkpoints storage checkpoints, address from, Votes decr, uint256 clock) private {
+        _burn(checkpoints, decr, clock);
+        _burn(checkpoints.each[from], from, decr, clock);
     }
 
     function _burn(
@@ -165,21 +158,11 @@ library LibCheckpoints {
         Votes decr0,
         address from1,
         Votes decr1,
-        uint48 clock
+        uint256 clock
     ) private {
         _burn(checkpoints, decr0 + decr1, clock);
-
-        Checkpoint[] storage arr = checkpoints.each[from0];
-        (Votes oldValue, uint256 len) = _get(arr, clock);
-        Votes newValue = oldValue - decr0;
-        _set(arr, clock, newValue, len);
-        emit IERC5805.DelegateVotesChanged(from0, oldValue.toExternal(), newValue.toExternal());
-
-        arr = checkpoints.each[from1];
-        (oldValue, len) = _get(arr, clock);
-        newValue = oldValue - decr1;
-        _set(arr, clock, newValue, len);
-        emit IERC5805.DelegateVotesChanged(from1, oldValue.toExternal(), newValue.toExternal());
+        _burn(checkpoints.each[from0], from0, decr0, clock);
+        _burn(checkpoints.each[from1], from1, decr1, clock);
     }
 
     function current(Checkpoints storage checkpoints, address account) internal view returns (Votes value) {
