@@ -17,7 +17,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
 
     constructor() {
         require(_DOMAIN_TYPEHASH == keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"));
-        require(_NAME_HASH() == keccak256(bytes(name)));
+        require(_NAME_HASH == keccak256(bytes(name)));
         require(
             _PERMIT_TYPEHASH
                 == keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)")
@@ -52,8 +52,6 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         CrazyBalance currentAllowance
     ) internal virtual returns (bool);
 
-    // slither-disable-next-line naming-convention
-    function _NAME_HASH() internal pure virtual returns (bytes32);
     function _consumeNonce(Storage storage $, address account) internal virtual returns (uint256);
     function clock() public view virtual override returns (uint48);
 
@@ -100,7 +98,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
     bytes32 private immutable _cachedDomainSeparator;
 
     function _computeDomainSeparator() private view returns (bytes32 r) {
-        bytes32 _NAME_HASH_ = _NAME_HASH();
+        bytes32 _NAME_HASH_ = _NAME_HASH;
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(0x00, _DOMAIN_TYPEHASH)

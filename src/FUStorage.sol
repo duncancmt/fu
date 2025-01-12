@@ -35,6 +35,8 @@ abstract contract FUStorage is IERC20, INonces, IERC5805 {
     }
 
     string public constant override name = "Fuck You!";
+    // slither-disable-next-line naming-convention
+    bytes32 internal constant _NAME_HASH = 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93694;
 
     constructor() {
         Storage storage $ = _$();

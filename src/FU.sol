@@ -683,11 +683,6 @@ contract FU is ERC20Base, TransientStorageLayout {
 
     uint8 public constant override decimals = Settings.DECIMALS;
 
-    // slither-disable-next-line naming-convention
-    function _NAME_HASH() internal pure override returns (bytes32) {
-        return 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93694;
-    }
-
     function clock() public view override returns (uint48) {
         unchecked {
             // slither-disable-next-line divide-before-multiply
