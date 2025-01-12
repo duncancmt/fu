@@ -134,7 +134,12 @@ library LibRebaseQueue {
         address cursor = self.head;
         RebaseQueueElem storage elem = self.queue[cursor];
         Shares limit = totalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
-        for (uint256 i = gasleft() & 7;; i = i.unsafeDec()) {
+        uint256 i;
+        assembly ("memory-safe") {
+            mstore(0x00, gas())
+            i := and(0x07, keccak256(0x00, 0x20))
+        }
+        for (;; i = i.unsafeDec()) {
             Shares shares = sharesOf[cursor].load();
 
             shares = (shares > limit).ternary(limit, shares);
