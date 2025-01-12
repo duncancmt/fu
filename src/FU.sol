@@ -328,7 +328,10 @@ contract FU is ERC20Base, TransientStorageLayout {
         }
     }
 
-    function _transferFromPair(Storage storage $, address pair_, address to, CrazyBalance amount) private returns (bool) {
+    function _transferFromPair(Storage storage $, address pair_, address to, CrazyBalance amount)
+        private
+        returns (bool)
+    {
         // We don't need to check that `pair` is transferring less than its balance. The
         // `UniswapV2Pair` code does that for us. Additionally, `pair`'s balance can never reach
         // zero.
@@ -391,7 +394,10 @@ contract FU is ERC20Base, TransientStorageLayout {
         return true;
     }
 
-    function _transferToPair(Storage storage $, address from, address pair_, CrazyBalance amount) private returns (bool) {
+    function _transferToPair(Storage storage $, address from, address pair_, CrazyBalance amount)
+        private
+        returns (bool)
+    {
         (
             CrazyBalance balance,
             Shares originalShares,
