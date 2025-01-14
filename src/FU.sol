@@ -479,7 +479,7 @@ contract FU is ERC20Base, TransientStorageLayout {
                 }
                 return false;
             }
-            return _transferToPair($, from, pair_, amount);
+            return _transferToPair($, from, to, amount);
         }
 
         if (to == DEAD || to == address(this) || uint160(to) < Settings.ADDRESS_DIVISOR) {
@@ -490,7 +490,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         }
 
         if (from == pair_) {
-            return _transferFromPair($, pair_, to, amount);
+            return _transferFromPair($, from, to, amount);
         }
 
         if (from == to) {
