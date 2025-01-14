@@ -38,7 +38,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
     function _deliver(Storage storage $, address from, CrazyBalance amount) internal virtual returns (bool);
     function _delegate(Storage storage $, address delegator, address delegatee) internal virtual;
 
-    function _approve(Storage storage $, address owner, address spender, CrazyBalance amount) internal virtual;
+    function _approve(Storage storage $, address owner, address spender, CrazyBalance amount) internal virtual returns (bool);
     function _checkAllowance(Storage storage $, address owner, CrazyBalance amount)
         internal
         view
@@ -60,8 +60,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
-        _approve(_$(), msg.sender, spender, amount.toCrazyBalance());
-        return _success();
+        return _approve(_$(), msg.sender, spender, amount.toCrazyBalance()) && _success();
     }
 
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
@@ -160,7 +159,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         if (signer != owner) {
             revert ERC2612InvalidSigner(signer, owner);
         }
-        _approve($, owner, spender, amount.toCrazyBalance());
+        require(_approve($, owner, spender, amount.toCrazyBalance()));
     }
 
     bytes32 private constant _DELEGATION_TYPEHASH = 0xe48329057bfd03d55e49b547132e39cffd9c1820ad7b9d4c5307691425d15adf;
