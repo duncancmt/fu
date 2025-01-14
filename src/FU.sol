@@ -603,18 +603,23 @@ contract FU is ERC20Base, TransientStorageLayout {
         if (spender == PERMIT2) {
             return true;
         }
-        if (owner == address(pair)) {
-            if (_check()) {
-                revert ERC20InvalidApprover(owner);
-            }
-            return false;
-        }
         $.allowance[owner][spender] = amount;
         emit Approval(owner, spender, amount.toExternal());
         return true;
     }
 
+    function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
+        if (spender == PERMIT2) {
+            return _success();
+        }
+        _setTemporaryAllowance(msg.sender, spender, amount.toCrazyBalance());
+        return _success();
+    }
+
     function allowance(address owner, address spender) external view override returns (uint256) {
+        if (owner == address(pair)) {
+            return 0;
+        }
         if (spender == PERMIT2) {
             return type(uint256).max;
         }
@@ -631,6 +636,15 @@ contract FU is ERC20Base, TransientStorageLayout {
         override
         returns (bool, CrazyBalance, CrazyBalance)
     {
+        if (owner == address(pair)) {
+            if (amount == ZERO_BALANCE) {
+                return (true, ZERO_BALANCE, ZERO_BALANCE);
+            }
+            if (_check()) {
+                revert ERC20InsufficientAllowance(msg.sender, 0, amount.toExternal());
+            }
+            return (false, ZERO_BALANCE, ZERO_BALANCE);
+        }
         if (msg.sender == PERMIT2) {
             return (true, MAX_BALANCE, ZERO_BALANCE);
         }
@@ -722,20 +736,6 @@ contract FU is ERC20Base, TransientStorageLayout {
         $.delegates[delegator] = delegatee;
         Votes votes = shares.toVotes();
         $.checkpoints.transfer(oldDelegatee, delegatee, votes, votes, clock());
-    }
-
-    function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
-        if (spender == PERMIT2) {
-            return _success();
-        }
-        if (msg.sender == address(pair)) {
-            if (_check()) {
-                revert ERC20InvalidApprover(msg.sender);
-            }
-            return false;
-        }
-        _setTemporaryAllowance(msg.sender, spender, amount.toCrazyBalance());
-        return _success();
     }
 
     function _burn(Storage storage $, address from, CrazyBalance amount) internal override returns (bool) {
