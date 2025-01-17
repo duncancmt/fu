@@ -22,3 +22,42 @@ The code that handles rounding error in `ReflectMath` is _really_ inefficient. I
 to handle this? Is my implementation of the reflection arithmetic faulty?
 
 I may have missed using `unchecked` some places where it really ought to be.
+
+In the fallback function (that donates ETH to the pair), should I check that `address(0)` owns a
+supermajority of the LP? If so, what is the threshold whereupon a sandwich attack becomes
+potentially profitable?
+
+
+Invariant testing:
+  * on `transfer{,From}`:
+    * blacklisted addresses
+      * never possible to transfer to/from the dead address
+      * not possible to transfer to self (from)
+      * not possible to transfer to token
+      * not possible to transfer to efficient addresses
+    * atomicity
+    * `from`'s balance decreases by exactly `amount`
+      * whale limit
+        * pair
+    * `to`'s balance increases by `amount * (1 - fee)` (and crazy balance scaling factor)
+      * whale limit
+        * pair
+    * all other accounts' balances are nondecreasing
+      * whale limit
+        * pair
+    * rebase queue
+      * rebase queue event exactly reflects the balances of the accounts that it touches
+
+  * `totalSupply`
+    * lower bounded (inclusive) by scaling up the balance of each address according to the crazy balance rule
+    * upper bounded (exclusive) by adding one to each balance and then scaling up according to the crazy balance rule
+
+  * `*From` check allowance
+    * Permit2 special case
+    * transient allowance special case
+
+  * `permit`
+  * `delegateBySig`
+
+  * on `burn{,From}`
+    * only `from`'s balance decreases
