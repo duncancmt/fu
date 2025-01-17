@@ -601,7 +601,11 @@ contract FU is ERC20Base, TransientStorageLayout {
         return true;
     }
 
-    function _approve(Storage storage $, address owner, address spender, CrazyBalance amount) internal override returns (bool) {
+    function _approve(Storage storage $, address owner, address spender, CrazyBalance amount)
+        internal
+        override
+        returns (bool)
+    {
         if (spender == PERMIT2) {
             return true;
         }

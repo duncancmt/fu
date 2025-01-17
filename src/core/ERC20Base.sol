@@ -38,7 +38,10 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
     function _deliver(Storage storage $, address from, CrazyBalance amount) internal virtual returns (bool);
     function _delegate(Storage storage $, address delegator, address delegatee) internal virtual;
 
-    function _approve(Storage storage $, address owner, address spender, CrazyBalance amount) internal virtual returns (bool);
+    function _approve(Storage storage $, address owner, address spender, CrazyBalance amount)
+        internal
+        virtual
+        returns (bool);
     function _checkAllowance(Storage storage $, address owner, CrazyBalance amount)
         internal
         view
