@@ -17,8 +17,8 @@ library FastTransferLib {
                 returndatacopy(ptr, 0x00, returndatasize())
                 revert(ptr, returndatasize())
             }
-            // Check for short calldata and missing code
-            if iszero(gt(returndatasize(), 0x1f)) { revert(0x00, 0x00) }
+            // We assume that `token`'s code exists and that it conforms to ERC20 (won't return
+            // short calldata). We do not bother to check for either of these conditions.
 
             r := mload(0x00)
         }
