@@ -13,7 +13,7 @@ import {UnsafeMath} from "../lib/UnsafeMath.sol";
 library Settings {
     using UnsafeMath for uint256;
 
-    uint256 internal constant INITIAL_LIQUIDITY_DIVISOR = 10;
+    uint256 internal constant INITIAL_LIQUIDITY_DIVISOR = 5;
     // An amount of shares above `totalShares / 4` makes `ReflectMath` break down. Also setting it
     // near to `INITIAL_LIQUIDITY_DIVISOR` will cause unexpected reverts. This must also evenly
     // divide `BASIS` (10_000).

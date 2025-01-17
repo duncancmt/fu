@@ -76,7 +76,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
         // slither-disable-next-line tx-origin
         require(tx.origin == 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6);
-        require(msg.value >= 1 ether);
+        require(msg.value >= 5 ether);
         require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
         pair = pairFor(WETH, this);
