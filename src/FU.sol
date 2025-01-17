@@ -290,8 +290,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     function whaleLimit(address potentialWhale) external view returns (uint256) {
-        Storage storage $ = _$();
-        return $.totalSupply.div(Settings.ANTI_WHALE_DIVISOR).toCrazyBalance(potentialWhale).toExternal();
+        return _$().totalSupply.div(Settings.ANTI_WHALE_DIVISOR).toCrazyBalance(potentialWhale).toExternal();
     }
 
     function _pokeRebaseQueueFrom(
