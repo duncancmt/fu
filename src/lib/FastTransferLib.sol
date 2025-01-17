@@ -9,9 +9,9 @@ library FastTransferLib {
             mstore(0x14, acct) // Store the `acct` argument.
             mstore(0x00, 0x70a08231000000000000000000000000) // Selector for `balanceOf(address)`, with `acct`'s padding.
 
-            // Call and check for revert. Storing the selector with padding in
-            // memory at 0 results in a start of calldata at offset 16. Calldata
-            // is 36 bytes long (4 bytes selector, 32 bytes argument)
+            // Call and check for revert. Storing the selector with padding in memory at 0 results
+            // in a start of calldata at offset 16. Calldata is 36 bytes long (4 bytes selector, 32
+            // bytes argument)
             if iszero(staticcall(gas(), token, 0x10, 0x24, 0x00, 0x20)) {
                 let ptr := mload(0x40)
                 returndatacopy(ptr, 0x00, returndatasize())
