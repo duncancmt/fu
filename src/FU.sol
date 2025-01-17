@@ -5,7 +5,7 @@ import {ERC20Base} from "./core/ERC20Base.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
-import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
+import {IUniswapV2Pair, FastUniswapV2PairLib} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
 import {Settings} from "./core/Settings.sol";
@@ -33,6 +33,7 @@ import {
 
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 import {IPFS} from "./lib/IPFS.sol";
+import {FastTransferLib} from "./lib/FastTransferLib.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
@@ -51,6 +52,8 @@ contract FU is ERC20Base, TransientStorageLayout {
     using LibRebaseQueue for RebaseQueue;
     using IPFS for string;
     using IPFS for bytes32;
+    using FastTransferLib for IERC20;
+    using FastUniswapV2PairLib for IUniswapV2Pair;
 
     function totalSupply() external view override returns (uint256) {
         Storage storage $ = _$();
@@ -88,7 +91,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         // slither-disable-next-line low-level-calls
         (bool success,) = address(WETH).call{value: address(this).balance}("");
         require(success);
-        require(WETH.transfer(address(pair), WETH.balanceOf(address(this))));
+        WETH.fastTransfer(address(pair), WETH.balanceOf(address(this)));
 
         Storage storage $ = _$();
 
@@ -857,7 +860,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         (bool success,) = address(WETH).call{value: address(this).balance}("");
         require(success);
         IUniswapV2Pair pair_ = pair;
-        require(WETH.transfer(address(pair_), WETH.balanceOf(address(this))));
-        pair_.sync();
+        WETH.fastTransfer(address(pair_), WETH.fastBalanceOf(address(this)));
+        pair_.fastSync();
     }
 }
