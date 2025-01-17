@@ -12,11 +12,14 @@ library FastUniswapV2PairLib {
     function fastSync(IUniswapV2Pair pair) internal {
         assembly ("memory-safe") {
             mstore(0x00, 0xfff6cae9) // Selector for `sync()`
+
             if iszero(call(gas(), pair, 0x00, 0x1c, 0x04, 0x00, 0x00)) {
                 let ptr := mload(0x40)
                 returndatacopy(ptr, 0x00, returndatasize())
                 revert(ptr, returndatasize())
             }
+            // We do not bother to check that `pair` has code (vacuous success). We assume that it
+            // does have code and that failure is signaled by reverting.
         }
     }
 }
