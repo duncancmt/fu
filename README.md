@@ -43,10 +43,11 @@ being technically correct.
 
 ## Restrictions
 
-FU is designed to still be strictly compliant with
-[ERC20](https://eips.ethereum.org/EIPS/eip-20) as written. However, to make
-things a little more interesting, there are some additional restrictions beyond
-what ERC20 literally requires.
+FU is designed to still be almost completely compliant with
+[ERC20](https://eips.ethereum.org/EIPS/eip-20) as written (ERC20 doesn't allow
+tokens to return nothing to signal success). However, to make things a little
+more interesting, there are some additional restrictions the authors adopted
+during development beyond what ERC20 literally requires.
 
 * Calls to `transfer` or `transferFrom` reduce the balance of the caller/`from`
   by exactly the specified amount
