@@ -61,3 +61,5 @@ Invariant testing:
 
   * on `burn{,From}`
     * only `from`'s balance decreases
+
+  * `balanceOf(...)` cannot return zero while the corresponding shares slot is nonzero
