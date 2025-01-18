@@ -841,9 +841,8 @@ contract FU is ERC20Base, TransientStorageLayout {
             newTotalShares = cachedTotalShares - cachedShares;
             newShares = ZERO_SHARES;
         } else {
-            Tokens amountUnCrazy = amount.toTokens(from);
             (newShares, newTotalShares) =
-                ReflectMath.getDeliverShares(amountUnCrazy, cachedTotalSupply, cachedTotalShares, cachedShares);
+                ReflectMath.getDeliverShares(amount.toTokens(from), cachedTotalSupply, cachedTotalShares, cachedShares);
         }
 
         $.rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
