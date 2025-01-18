@@ -16,7 +16,7 @@ import {RebaseQueue, LibRebaseQueue} from "./core/RebaseQueue.sol";
 import {MoonPhase} from "./core/MoonPhase.sol";
 
 import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
-import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE} from "./types/Shares.sol";
+import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE, SharesStorage} from "./types/Shares.sol";
 import {Tokens} from "./types/Tokens.sol";
 import {SharesToTokens} from "./types/TokensXShares.sol";
 import {SharesToTokensProportional} from "./types/TokensXBasisPointsXShares.sol";
@@ -34,10 +34,19 @@ import {
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 import {IPFS} from "./lib/IPFS.sol";
 import {FastTransferLib} from "./lib/FastTransferLib.sol";
+import {UnsafeMath} from "./lib/UnsafeMath.sol";
 
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+
+library UnsafeArray {
+    function unsafeGet(address[] memory a, uint256 i) internal pure returns (address r) {
+        assembly ("memory-safe") {
+            r := mload(add(a, add(0x20, shl(0x05, i))))
+        }
+    }
+}
 
 /// @custom:security-contact security@fuckyou.finance
 contract FU is ERC20Base, TransientStorageLayout {
@@ -54,6 +63,8 @@ contract FU is ERC20Base, TransientStorageLayout {
     using IPFS for bytes32;
     using FastTransferLib for IERC20;
     using FastUniswapV2PairLib for IUniswapV2Pair;
+    using UnsafeArray for address[];
+    using UnsafeMath for uint256;
 
     function totalSupply() external view override returns (uint256) {
         Storage storage $ = _$();
@@ -77,7 +88,8 @@ contract FU is ERC20Base, TransientStorageLayout {
         // slither-disable-next-line tx-origin
         require(tx.origin == 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6);
         require(address(this).balance >= 5 ether);
-        require(initialHolders.length >= Settings.ANTI_WHALE_DIVISOR * 2);
+        uint256 length = initialHolders.length;
+        require(length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
         pair = pairFor(WETH, this);
         require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
@@ -115,28 +127,30 @@ contract FU is ERC20Base, TransientStorageLayout {
         }
         {
             Shares toMint = totalShares - $.sharesOf[DEAD].load();
+            address prev = initialHolders.unsafeGet(0);
+            require(uint160(prev) >= Settings.ADDRESS_DIVISOR);
             // slither-disable-next-line divide-before-multiply
-            Shares sharesRest = toMint.div(initialHolders.length);
+            Shares sharesRest = toMint.div(length);
             {
-                Shares sharesFirst = toMint - sharesRest.mul(initialHolders.length - 1);
+                Shares sharesFirst = toMint - sharesRest.mul(length - 1);
                 CrazyBalance amount = sharesFirst.toCrazyBalance(totalSupply_, totalShares);
 
-                address to = initialHolders[0];
-                assert(to != DEAD);
-                require(uint160(to) >= Settings.ANTI_WHALE_DIVISOR);
-                $.sharesOf[to] = sharesFirst.store();
-                emit Transfer(address(0), to, amount.toExternal());
-                $.rebaseQueue.enqueue(to, amount);
+                require(prev != DEAD);
+                $.sharesOf[prev] = sharesFirst.store();
+                emit Transfer(address(0), prev, amount.toExternal());
+                $.rebaseQueue.enqueue(prev, amount);
             }
             {
                 CrazyBalance amount = sharesRest.toCrazyBalance(totalSupply_, totalShares);
-                for (uint256 i = 1; i < initialHolders.length; i++) {
-                    address to = initialHolders[i];
-                    assert($.sharesOf[to].load() == ZERO_SHARES);
-                    require(uint160(to) >= Settings.ANTI_WHALE_DIVISOR);
-                    $.sharesOf[to] = sharesRest.store();
+                SharesStorage sharesRestStorage = sharesRest.store();
+                for (uint256 i = 1; i < length; i = i.unsafeInc()) {
+                    address to = initialHolders.unsafeGet(i);
+                    require(to != DEAD);
+                    require(to > prev);
+                    $.sharesOf[to] = sharesRestStorage;
                     emit Transfer(address(0), to, amount.toExternal());
                     $.rebaseQueue.enqueue(to, amount);
+                    prev = to;
                 }
             }
         }
