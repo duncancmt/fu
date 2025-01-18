@@ -707,6 +707,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     function symbol() external view override returns (string memory r) {
+        // slither-disable-next-line tx-origin
         if (tx.origin == address(0)) {
             return "FU";
         }
