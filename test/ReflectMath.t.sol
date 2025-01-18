@@ -315,7 +315,7 @@ contract ReflectMathTest is Boilerplate, Test {
         amount = Tokens.wrap(
             bound(
                 Tokens.unwrap(amount),
-                1 wei,
+                0,
                 Tokens.unwrap(
                     Settings.INITIAL_SUPPLY - toBalance > totalSupply.div(Settings.ANTI_WHALE_DIVISOR)
                         ? totalSupply.div(Settings.ANTI_WHALE_DIVISOR)
