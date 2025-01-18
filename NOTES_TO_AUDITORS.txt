@@ -1,7 +1,5 @@
 I need help writing a bounded invariant test for the token as a whole
 
-I know there's a lot of unused code, but I can't get Slither to run reliably. Help me out?
-
 While ReflectMath.t.sol thoroughly tests the various functions in ReflectMath, the overall transfer
 logic has crucial components that are implemented in FU. This reduces confidence that the actual
 transfer logic/math is correct.
@@ -27,7 +25,6 @@ In the fallback function (that donates ETH to the pair), should I check that `ad
 supermajority of the LP? If so, what is the threshold whereupon a sandwich attack becomes
 potentially profitable?
 
-
 Invariant testing:
   * on `transfer{,From}`:
     * blacklisted addresses
@@ -35,7 +32,7 @@ Invariant testing:
       * not possible to transfer to self (from)
       * not possible to transfer to token
       * not possible to transfer to efficient addresses
-    * atomicity
+    * atomicity (not returning false after doing a state mutation)
     * `from`'s balance decreases by exactly `amount`
       * whale limit
         * pair
