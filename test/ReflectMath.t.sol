@@ -246,6 +246,13 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance) =
             _boundCommon(totalSupply, totalShares, fromShares, sharesRatio);
+
+        // The only way that it's possible for an account to reach zero balance is by calling one of
+        // the `All` variants, which explicitly zeroes the shares
+        if (Tokens.unwrap(fromBalance) == 0) {
+            assume(Shares.unwrap(fromShares) == 0);
+        }
+
         taxRate = BasisPoints.wrap(
             uint16(
                 bound(
