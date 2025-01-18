@@ -17,6 +17,16 @@ import {Shares2XBasisPoints, alloc as allocS2Bp} from "../types/Shares2XBasisPoi
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
+/*
+
+WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING
+  ***                                                                     ***
+WARNING                     This code is unaudited                      WARNING
+  ***                                                                     ***
+WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING
+
+*/
+
 library ReflectMath {
     using UnsafeMath for uint256;
     using SharesToTokens for Shares;
