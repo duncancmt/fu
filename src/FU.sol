@@ -441,8 +441,8 @@ contract FU is ERC20Base, TransientStorageLayout {
         CrazyBalance transferAmount = newPairTokens.toCrazyBalance(from) - cachedPairTokens.toCrazyBalance(from);
         CrazyBalance burnAmount = amount - transferAmount;
 
-        // There is no need to apply the whale limit. `pair` holds tokens directly and is allowed to
-        // go over the limit.
+        // There is no need to apply the whale limit. `pair` holds tokens directly (not shares) and
+        // is allowed to go over the limit.
 
         // State modification starts here. No more bailing out allowed.
         $.rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
