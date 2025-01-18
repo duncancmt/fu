@@ -91,7 +91,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         // slither-disable-next-line low-level-calls
         (bool success,) = address(WETH).call{value: address(this).balance}("");
         require(success);
-        WETH.fastTransfer(address(pair), WETH.balanceOf(address(this)));
+        WETH.fastTransfer(address(pair), WETH.fastBalanceOf(address(this)));
 
         Storage storage $ = _$();
 
