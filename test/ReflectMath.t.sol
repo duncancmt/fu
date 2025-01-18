@@ -54,8 +54,8 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance) =
             _boundCommon(totalSupply, totalShares, fromShares, sharesRatio);
-        assume(Tokens.unwrap(fromBalance) > 1 wei);
-        amount = Tokens.wrap(bound(Tokens.unwrap(amount), 0, Tokens.unwrap(fromBalance) - 1 wei));
+        amount = Tokens.wrap(bound(Tokens.unwrap(amount), 0, Tokens.unwrap(fromBalance)));
+        assume(amount != fromBalance);
         return (totalSupply, totalShares, fromShares, fromBalance, amount);
     }
 
