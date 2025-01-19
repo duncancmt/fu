@@ -9,6 +9,7 @@ import {pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 import {Math} from "./Math.sol";
 import {ItoA} from "./ItoA.sol";
 import {Hexlify} from "./Hexlify.sol";
+import {QuickSort} from "./QuickSort.sol";
 import {stdJson} from "@forge-std/StdJson.sol";
 
 import {FU} from "src/FU.sol";
@@ -32,6 +33,7 @@ interface IMulticall {
 contract DeployFU is Script {
     using ItoA for uint256;
     using Hexlify for bytes32;
+    using QuickSort for address[];
     using stdJson for string;
 
     address internal constant _DEPLOYER_PROXY = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
@@ -40,8 +42,9 @@ contract DeployFU is Script {
     IERC20 internal constant _WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     function run(bytes32 salt) external {
-        string memory json = vm.readFile(string.concat(vm.projectRoot(), "/airdrop.json"));
-        address[] memory initialHolders = abi.decode(json.parseRaw("$"), (address[]));
+        address[] memory initialHolders =
+            abi.decode(vm.readFile(string.concat(vm.projectRoot(), "/airdrop.json")).parseRaw("$"), (address[]));
+        initialHolders.quickSort();
         string memory image = vm.readFile(string.concat(vm.projectRoot(), "/image.svg"));
 
         bytes20 gitCommit;
