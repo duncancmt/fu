@@ -61,9 +61,13 @@ contract DeployFU is Script {
         }
 
         bytes memory initcode = bytes.concat(type(FU).creationCode, abi.encode(gitCommit, image, initialHolders));
-        IERC20 fu = IERC20(
-            address(
-                uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, salt, keccak256(initcode)))))
+        FU fu = FU(
+            payable(
+                address(
+                    uint160(
+                        uint256(keccak256(abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, salt, keccak256(initcode))))
+                    )
+                )
             )
         );
         IUniswapV2Pair pair = pairFor(fu, _WETH);
@@ -101,5 +105,7 @@ contract DeployFU is Script {
         uint256 fuBalance = fu.balanceOf(address(pair));
         uint256 liquidity = Math.sqrt(fuBalance * wethBalance);
         require(pair.balanceOf(address(0)) == liquidity);
+
+        console.log("FU.image():", fu.image());
     }
 }
