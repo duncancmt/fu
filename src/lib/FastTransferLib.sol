@@ -4,6 +4,16 @@ pragma solidity ^0.8.28;
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
 library FastTransferLib {
+    function fastSendEth(address payable to, uint256 value) internal {
+        assembly ("memory-safe") {
+            if iszero(call(gas(), to, value, 0x00, 0x00, 0x00, 0x00)) {
+                let ptr := mload(0x40)
+                returndatacopy(ptr, 0x00, returndatasize())
+                revert(ptr, returndatasize())
+            }
+        }
+    }
+
     function fastBalanceOf(IERC20 token, address acct) internal view returns (uint256 r) {
         assembly ("memory-safe") {
             mstore(0x14, acct) // Store the `acct` argument.

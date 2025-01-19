@@ -61,6 +61,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     using LibRebaseQueue for RebaseQueue;
     using IPFS for string;
     using IPFS for bytes32;
+    using FastTransferLib for address payable;
     using FastTransferLib for IERC20;
     using FastUniswapV2PairLib for IUniswapV2Pair;
     using UnsafeArray for address[];
@@ -100,9 +101,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         emit GitCommit(gitCommit);
         _imageHash = image_.dagPbUnixFsHash();
 
-        // slither-disable-next-line low-level-calls
-        (bool success,) = address(WETH).call{value: address(this).balance}("");
-        require(success);
+        payable(address(WETH)).fastSendEth(address(this).balance);
         WETH.fastTransfer(address(pair), WETH.fastBalanceOf(address(this)));
 
         Storage storage $ = _$();
@@ -876,9 +875,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     receive() external payable {
-        // slither-disable-next-line low-level-calls
-        (bool success,) = address(WETH).call{value: address(this).balance}("");
-        require(success);
+        payable(address(WETH)).fastSendEth(address(this).balance);
         IUniswapV2Pair pair_ = pair;
         WETH.fastTransfer(address(pair_), WETH.fastBalanceOf(address(this)));
         pair_.fastSync();
