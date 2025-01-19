@@ -42,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("Usage: {} <initcode_hash> <leading_zeros>", args[0]);
         eprintln!("Example:");
         eprintln!(
-            "  {} 0x0000000000000000000000000000000000000000000000000000000000000000 16",
+            "  {} 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54 16",
             args[0]
         );
         process::exit(1);
