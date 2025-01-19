@@ -8,7 +8,7 @@ import {Test} from "@forge-std/Test.sol";
 contract QuickSortTest is Test {
     using QuickSort for address[];
 
-    mapping(address => bool) internal seen;
+    mapping(address => uint256) internal count;
 
     function testQuickSort() external {
         address[] memory a = new address[](3);
@@ -18,35 +18,27 @@ contract QuickSortTest is Test {
         testQuickSort(a);
     }
 
-    function testQuickSort(address[] memory x) public {
-        address[] memory y = new address[](x.length);
-        {
-            uint256 j;
-            for (uint256 i; i < x.length; i++) {
-                address a = x[i];
-                if (seen[a]) {
-                    continue;
-                }
-                seen[a] = true;
-                y[j++] = a;
-            }
-            assembly ("memory-safe") {
-                mstore(y, j)
-            }
-
-            y.quickSort();
-            assertEq(y.length, j);
+    function testQuickSort(address[] memory a) public {
+        uint256 length = a.length;
+        for (uint256 i; i < length; i++) {
+            count[a[i]]++;
         }
+        a.quickSort();
+        assertEq(a.length, length);
 
-        if (y.length == 0) {
+        if (a.length == 0) {
             return;
         }
 
-        address prev = y[0];
-        for (uint256 i = 1; i < y.length; i++) {
-            address a = y[i];
-            assertTrue(a > prev);
-            prev = a;
+        // By the pigeonhole principle, the check that the length is unmodified and the underflow
+        // checks on `--` together ensure that the contents of `a` is unmodified, only the order.
+        address prev = a[0];
+        count[prev]--;
+        for (uint256 i = 1; i < length; i++) {
+            address x = a[i];
+            count[x]--;
+            assertTrue(x >= prev);
+            prev = x;
         }
     }
 }
