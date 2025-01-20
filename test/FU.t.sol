@@ -11,6 +11,8 @@ import {QuickSort} from "script/QuickSort.sol";
 import {Test} from "@forge-std/Test.sol";
 import {Boilerplate} from "./Boilerplate.sol";
 
+import {console} from "@forge-std/console.sol";
+
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 address constant TX_ORIGIN = 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6;
@@ -35,13 +37,16 @@ contract FUTest is Boilerplate, Test {
         }
         initialHolders.quickSort();
 
-        vm.prank(DEPLOYER, TX_ORIGIN);
+        bytes memory initcode = bytes.concat(type(FU).creationCode, abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders));
+        console.log("inithash");
+        console.logBytes32(keccak256(initcode));
 
-        FUContract = new FU{value: 1 ether}(
-            bytes20(keccak256("gitCommit")),
-            "I am totally an SVG image, I promise",
-            initialHolders
-        );
+        vm.chainId(1);
+        vm.deal(TX_ORIGIN, 5 ether);
+        vm.prank(TX_ORIGIN, TX_ORIGIN);
+
+        (bool success,) = DEPLOYER.call{value: 5 ether}(bytes.concat(bytes32(0), initcode));
+        require(success);
     }
 
     function setUp() public virtual override {
