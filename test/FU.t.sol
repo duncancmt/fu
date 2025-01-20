@@ -14,11 +14,11 @@ address constant DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 address constant TX_ORIGIN = 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6;
 //address[] public actors;
 
-contract FUTest is Test {
+contract FUTest is Test, MedusaBoilerplate {
     IUniswapV2Factory public FACTORY;
     FU public FUContract;
 
-    function setUp() public virtual {
+    function setUpTheRealOne() internal {
         address[] memory initialHolders = new address[](Settings.ANTI_WHALE_DIVISOR * 2);
         for (uint i = 0; i < initialHolders.length; i++) {
             initialHolders[i] = address(uint160(i + 1)); // Generate unique addresses
@@ -31,5 +31,9 @@ contract FUTest is Test {
             "image_hash",
             initialHolders
         );
+    }
+
+    function setUp() public view virtual override {
+        return smuggle(setUpTheRealOne)();
     }
 }

@@ -14,9 +14,8 @@ import {Boilerplate, MedusaBoilerplate} from "./Boilerplate.sol";
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
 
 contract MedusaFUTest is MedusaBoilerplate, FUTest {
-    function setUp() public override(MedusaBoilerplate, FUTest) {
-        assume(targetContracts().length == 0);
-        return smuggle(super.setUp)();
+    constructor() public override(MedusaBoilerplate, FUTest) {
+            super.setUpTheRealOne();
     }
 
     function assertTrue(bool condition) internal pure override(MedusaBoilerplate, StdAssertions) {
