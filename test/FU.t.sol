@@ -66,8 +66,11 @@ contract FUTest is Boilerplate, Test {
         vm.prank(fuTxOrigin, fuTxOrigin);
         (bool success, bytes memory returndata) = deterministicDeployerFactory.call{value: 5 ether}(bytes.concat(bytes32(0x00000000000000000000000000000000000000000000000000000000a7e0e6c5), initcode));
         require(success);
+        FU fu = FU(payable(address(uint160(bytes20(returndata)))));
 
-        vm.stopPrank();
+        // Lock initial liquidity
+        IUniswapV2Pair pair = fu.pair();
+        pair.mint(address(0));
     }
 
     function setUp() public virtual override {
