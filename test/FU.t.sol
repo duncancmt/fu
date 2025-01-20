@@ -26,7 +26,7 @@ contract FUTest is Boilerplate, Test {
 
     function deployFu() internal {
         address[] memory initialHolders = new address[](Settings.ANTI_WHALE_DIVISOR * 2);
-        for (uint i = 0; i < initialHolders.length; i++) {
+        for (uint256 i; i < initialHolders.length; i++) {
             // Generate unique addresses
             address holder;
             assembly ("memory-safe") {
@@ -37,7 +37,10 @@ contract FUTest is Boilerplate, Test {
         }
         initialHolders.quickSort();
 
-        bytes memory initcode = bytes.concat(type(FU).creationCode, abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders));
+        bytes memory initcode = bytes.concat(
+            type(FU).creationCode,
+            abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)
+        );
         console.log("inithash");
         console.logBytes32(keccak256(initcode));
 
