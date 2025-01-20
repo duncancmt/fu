@@ -25,8 +25,8 @@ bytes constant univ2FactoryInit = hex"608060405234801561001057600080fd5b50604051
 contract FUTest is Boilerplate, Test {
     using QuickSort for address[];
 
-    IUniswapV2Factory public FACTORY;
-    FU public FUContract;
+    FU internal fu;
+    address[] internal actors;
 
     function deployFu() internal {
         address[] memory initialHolders = new address[](Settings.ANTI_WHALE_DIVISOR * 2);
@@ -40,6 +40,7 @@ contract FUTest is Boilerplate, Test {
             initialHolders[i] = holder;
         }
         initialHolders.quickSort();
+        actors = initialHolders;
 
         vm.chainId(1);
 
@@ -68,7 +69,7 @@ contract FUTest is Boilerplate, Test {
         vm.prank(fuTxOrigin, fuTxOrigin);
         (bool success, bytes memory returndata) = deterministicDeployerFactory.call{value: 5 ether}(bytes.concat(bytes32(0x00000000000000000000000000000000000000000000000000000000a7e0e6c5), initcode));
         require(success);
-        FU fu = FU(payable(address(uint160(bytes20(returndata)))));
+        fu = FU(payable(address(uint160(bytes20(returndata)))));
 
         // Lock initial liquidity
         IUniswapV2Pair pair = fu.pair();
