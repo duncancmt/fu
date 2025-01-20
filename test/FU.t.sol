@@ -88,6 +88,8 @@ contract FUTest is Boilerplate, Test {
         // Lock initial liquidity
         vm.label(address(fu.pair()), "FU/WETH UniV2 Pair");
         fu.pair().mint(address(0));
+
+        vm.label(0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD, "Super dead");
     }
 
     function setUp() public virtual override {
