@@ -81,7 +81,7 @@ contract FUTest is Boilerplate, Test {
         vm.deal(fuTxOrigin, 5 ether);
         vm.prank(fuTxOrigin, fuTxOrigin);
         (bool success, bytes memory returndata) = deterministicDeployerFactory.call{value: 5 ether}(
-            bytes.concat(bytes32(0x000000000000000000000000000000000000000000000000000000023fe82af9), initcode)
+            bytes.concat(bytes32(0x0000000000000000000000000000000000000000000000000000000239e40721), initcode)
         );
         require(success);
         fu = IFU(payable(address(uint160(bytes20(returndata)))));
@@ -98,4 +98,8 @@ contract FUTest is Boilerplate, Test {
     function setUp() public virtual override {
         return deployFu();
     }
+
+    /*
+    function test_vacuous() external {}
+    */
 }
