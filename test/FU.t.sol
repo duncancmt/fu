@@ -3,19 +3,16 @@ pragma solidity ^0.8.28;
 
 import {FU} from "src/FU.sol";
 import {Settings} from "src/core/Settings.sol";
+import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory} from "src/interfaces/IUniswapV2Factory.sol";
-import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
 import {QuickSort} from "script/QuickSort.sol";
 
 import {Test} from "@forge-std/Test.sol";
 import {Boilerplate} from "./Boilerplate.sol";
 
-import {console} from "@forge-std/console.sol";
-
-IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
-address constant DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
-address constant TX_ORIGIN = 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6;
+address constant deterministicDeployerFactory = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
+address constant fuTxOrigin = 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6;
 
 address constant wethDeployer = 0x4F26FfBe5F04ED43630fdC30A87638d53D0b0876;
 uint64 constant wethDeployerNonce = 446;
@@ -65,11 +62,9 @@ contract FUTest is Boilerplate, Test {
             type(FU).creationCode,
             abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)
         );
-
-        vm.deal(TX_ORIGIN, 5 ether);
-        vm.startPrank(TX_ORIGIN, TX_ORIGIN);
-
-        (bool success,) = DEPLOYER.call{value: 5 ether}(bytes.concat(bytes32(0x00000000000000000000000000000000000000000000000000000000a7e0e6c5), initcode));
+        vm.deal(fuTxOrigin, 5 ether);
+        vm.prank(fuTxOrigin, fuTxOrigin);
+        (bool success, bytes memory returndata) = deterministicDeployerFactory.call{value: 5 ether}(bytes.concat(bytes32(0x00000000000000000000000000000000000000000000000000000000a7e0e6c5), initcode));
         require(success);
 
         vm.stopPrank();
