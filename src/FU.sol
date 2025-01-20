@@ -36,6 +36,7 @@ import {IPFS} from "./lib/IPFS.sol";
 import {FastTransferLib} from "./lib/FastTransferLib.sol";
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
 
+/// @custom:security non-reentrant
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
@@ -72,6 +73,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         return Tokens.unwrap($.totalSupply + $.pairTokens);
     }
 
+    /// @custom:security non-reentrant
     IUniswapV2Pair public immutable pair;
 
     bytes32 private immutable _imageHash;
