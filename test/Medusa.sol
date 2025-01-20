@@ -8,9 +8,97 @@ import {Votes} from "src/types/Votes.sol";
 
 import {ReflectMathTest} from "./ReflectMath.t.sol";
 import {CheckpointsTest} from "./Checkpoints.t.sol";
+import {FUTest} from "./FU.t.sol";
 
 import {Boilerplate, MedusaBoilerplate} from "./Boilerplate.sol";
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
+
+contract MedusaFUTest is MedusaBoilerplate, FUTest {
+    function setUp() public override(MedusaBoilerplate, FUTest) {
+        assume(targetContracts().length == 0);
+        return smuggle(super.setUp)();
+    }
+
+    function assertTrue(bool condition) internal pure override(MedusaBoilerplate, StdAssertions) {
+        super.assertTrue(condition);
+    }
+
+    function assertTrue(bool condition, string memory err) internal pure override(MedusaBoilerplate, StdAssertions) {
+        super.assertTrue(condition, err);
+    }
+
+    function assertNotEq(uint256 left, uint256 right) internal pure override(MedusaBoilerplate, StdAssertions) {
+        return super.assertNotEq(left, right);
+    }
+
+    function assertNotEq(uint256 left, uint256 right, string memory err)
+        internal
+        pure
+        override(MedusaBoilerplate, StdAssertions)
+    {
+        return super.assertNotEq(left, right, err);
+    }
+
+    function assertLt(uint256 left, uint256 right) internal pure override(MedusaBoilerplate, StdAssertions) {
+        return super.assertLt(left, right);
+    }
+
+    function assertLt(uint256 left, uint256 right, string memory err)
+        internal
+        pure
+        override(MedusaBoilerplate, StdAssertions)
+    {
+        return super.assertLt(left, right, err);
+    }
+
+    function assertLe(uint256 left, uint256 right) internal pure override(MedusaBoilerplate, StdAssertions) {
+        return super.assertLe(left, right);
+    }
+
+    function assertLe(uint256 left, uint256 right, string memory err)
+        internal
+        pure
+        override(MedusaBoilerplate, StdAssertions)
+    {
+        return super.assertLe(left, right, err);
+    }
+
+    function assertGt(uint256 left, uint256 right) internal pure override(MedusaBoilerplate, StdAssertions) {
+        return super.assertGt(left, right);
+    }
+
+    function assertGt(uint256 left, uint256 right, string memory err)
+        internal
+        pure
+        override(MedusaBoilerplate, StdAssertions)
+    {
+        return super.assertGt(left, right, err);
+    }
+
+    function assertGe(uint256 left, uint256 right) internal pure override(MedusaBoilerplate, StdAssertions) {
+        return super.assertGe(left, right);
+    }
+
+    function assertGe(uint256 left, uint256 right, string memory err)
+        internal
+        pure
+        override(MedusaBoilerplate, StdAssertions)
+    {
+        return super.assertGe(left, right, err);
+    }
+
+    function assertEq(uint256 left, uint256 right) internal pure override(MedusaBoilerplate, StdAssertions) {
+        return super.assertEq(left, right);
+    }
+
+    function assertEq(uint256 left, uint256 right, string memory err)
+        internal
+        pure
+        override(MedusaBoilerplate, StdAssertions)
+    {
+        return super.assertEq(left, right, err);
+    }
+}
 
 contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
     function testTransferSome(Tokens, Shares, Shares, Shares, Tokens, BasisPoints, uint256) public view override {
@@ -62,7 +150,7 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
     }
 
     // solc inheritance is so stupid
-    function setUp() public view override(Boilerplate, MedusaBoilerplate) {
+    function setUp() public override(Boilerplate, MedusaBoilerplate) {
         return super.setUp();
     }
 

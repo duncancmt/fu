@@ -13,7 +13,7 @@ abstract contract Boilerplate is TestBase {
 }
 
 abstract contract MedusaBoilerplate is Boilerplate, StdAssertions {
-    function setUp() public view virtual override {}
+    function setUp() public virtual override {}
 
     constructor() {
         super.setUp();
