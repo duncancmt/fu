@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import {FU} from "src/FU.sol";
 import {Settings} from "src/core/Settings.sol";
-import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory} from "src/interfaces/IUniswapV2Factory.sol";
 
 import {QuickSort} from "script/QuickSort.sol";
@@ -72,8 +71,7 @@ contract FUTest is Boilerplate, Test {
         fu = FU(payable(address(uint160(bytes20(returndata)))));
 
         // Lock initial liquidity
-        IUniswapV2Pair pair = fu.pair();
-        pair.mint(address(0));
+        fu.pair().mint(address(0));
     }
 
     function setUp() public virtual override {
