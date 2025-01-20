@@ -74,7 +74,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     /// @custom:security non-reentrant
-    address public override immutable pair;
+    address public immutable override pair;
 
     bytes32 private immutable _imageHash;
 
