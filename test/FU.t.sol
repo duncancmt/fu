@@ -49,17 +49,23 @@ contract FUTest is Boilerplate, Test {
         bytes memory initcode = wethInit;
         vm.setNonceUnsafe(wethDeployer, wethDeployerNonce);
         vm.prank(wethDeployer, wethDeployer);
+        address weth;
         assembly ("memory-safe") {
-            pop(create(0x00, add(0x20, initcode), mload(initcode)))
+            weth := create(0x00, add(0x20, initcode), mload(initcode))
         }
+        require(weth != address(0));
+        vm.label(weth, "WETH");
 
         // Deploy the UniswapV2 factory
         initcode = univ2FactoryInit;
         vm.setNonceUnsafe(univ2FactoryDeployer, univ2FactoryDeployerNonce);
         vm.prank(univ2FactoryDeployer, univ2FactoryDeployer);
+        address univ2Factory;
         assembly ("memory-safe") {
-            pop(create(0x00, add(0x20, initcode), mload(initcode)))
+            univ2Factory := create(0x00, add(0x20, initcode), mload(initcode))
         }
+        require(univ2Factory != address(0));
+        vm.label(univ2Factory, "Uniswap V2 Factory");
 
         // Deploy FU
         initcode = bytes.concat(
@@ -73,8 +79,10 @@ contract FUTest is Boilerplate, Test {
         );
         require(success);
         fu = FU(payable(address(uint160(bytes20(returndata)))));
+        vm.label(address(fu), "FU");
 
         // Lock initial liquidity
+        vm.label(address(fu.pair()), "FU/WETH UniV2 Pair");
         fu.pair().mint(address(0));
     }
 
