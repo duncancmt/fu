@@ -1,18 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IERC20} from "@forge-std/interfaces/IERC20.sol";
-import {IERC2612} from "../interfaces/IERC2612.sol";
-import {IERC5267} from "../interfaces/IERC5267.sol";
-import {IERC5805} from "../interfaces/IERC5805.sol";
-import {IERC6093} from "../interfaces/IERC6093.sol";
-import {IERC7674} from "../interfaces/IERC7674.sol";
+import {IFU} from "../interfaces/IFU.sol";
 
 import {FUStorage} from "../FUStorage.sol";
 
 import {CrazyBalance, toCrazyBalance} from "../types/CrazyBalance.sol";
 
-abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674, FUStorage {
+abstract contract ERC20Base is IFU, FUStorage {
     using {toCrazyBalance} for uint256;
 
     constructor() {
@@ -212,15 +207,15 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
         return _delegate($, signer, delegatee);
     }
 
-    function burn(uint256 amount) external returns (bool) {
+    function burn(uint256 amount) external override returns (bool) {
         return _burn(_$(), msg.sender, amount.toCrazyBalance()) && _success();
     }
 
-    function deliver(uint256 amount) external returns (bool) {
+    function deliver(uint256 amount) external override returns (bool) {
         return _deliver(_$(), msg.sender, amount.toCrazyBalance()) && _success();
     }
 
-    function burnFrom(address from, uint256 amount) external returns (bool) {
+    function burnFrom(address from, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
         CrazyBalance amount_ = amount.toCrazyBalance();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
@@ -229,7 +224,7 @@ abstract contract ERC20Base is IERC2612, IERC5267, IERC5805, IERC6093, IERC7674,
             && _spendAllowance($, from, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 
-    function deliverFrom(address from, uint256 amount) external returns (bool) {
+    function deliverFrom(address from, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
         CrazyBalance amount_ = amount.toCrazyBalance();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =

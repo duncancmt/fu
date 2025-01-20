@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IFU} from "src/interfaces/IFU.sol";
 import {FU} from "src/FU.sol";
 import {Settings} from "src/core/Settings.sol";
+import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory} from "src/interfaces/IUniswapV2Factory.sol";
 
 import {QuickSort} from "script/QuickSort.sol";
@@ -28,7 +30,7 @@ bytes constant univ2FactoryInit =
 contract FUTest is Boilerplate, Test {
     using QuickSort for address[];
 
-    FU internal fu;
+    IFU internal fu;
     address[] internal actors;
 
     function deployFu() internal {
@@ -82,12 +84,13 @@ contract FUTest is Boilerplate, Test {
             bytes.concat(bytes32(0x000000000000000000000000000000000000000000000000000000023fe82af9), initcode)
         );
         require(success);
-        fu = FU(payable(address(uint160(bytes20(returndata)))));
+        fu = IFU(payable(address(uint160(bytes20(returndata)))));
         vm.label(address(fu), "FU");
 
         // Lock initial liquidity
-        vm.label(address(fu.pair()), "FU/WETH UniV2 Pair");
-        fu.pair().mint(address(0));
+        IUniswapV2Pair pair = IUniswapV2Pair(fu.pair());
+        vm.label(address(pair), "FU/WETH UniV2 Pair");
+        pair.mint(address(0));
 
         vm.label(0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD, "Super dead");
     }

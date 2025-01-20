@@ -74,15 +74,13 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     /// @custom:security non-reentrant
-    IUniswapV2Pair public immutable pair;
+    address public override immutable pair;
 
     bytes32 private immutable _imageHash;
 
-    function image() external view returns (string memory) {
+    function image() external view override returns (string memory) {
         return _imageHash.CIDv0();
     }
-
-    event GitCommit(bytes20 indexed gitCommit);
 
     constructor(bytes20 gitCommit, string memory image_, address[] memory initialHolders) payable {
         assert(Settings.SHARES_TO_VOTES_DIVISOR >= Settings.INITIAL_SHARES_RATIO);
@@ -98,8 +96,8 @@ contract FU is ERC20Base, TransientStorageLayout {
         uint256 length = initialHolders.length;
         require(length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
-        pair = pairFor(WETH, this);
-        require(uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR == 1);
+        pair = address(pairFor(WETH, this));
+        require(uint256(uint160(pair)) / Settings.ADDRESS_DIVISOR == 1);
 
         assembly ("memory-safe") {
             log0(add(0x20, image_), mload(image_))
@@ -108,14 +106,14 @@ contract FU is ERC20Base, TransientStorageLayout {
         _imageHash = image_.dagPbUnixFsHash();
 
         payable(address(WETH)).fastSendEth(address(this).balance);
-        WETH.fastTransfer(address(pair), WETH.fastBalanceOf(address(this)));
+        WETH.fastTransfer(pair, WETH.fastBalanceOf(address(this)));
 
         Storage storage $ = _$();
 
         Tokens pairTokens = Settings.INITIAL_SUPPLY.div(Settings.INITIAL_LIQUIDITY_DIVISOR);
         pairTokens = pairTokens - Tokens.wrap(Tokens.unwrap(pairTokens) % Settings.CRAZY_BALANCE_BASIS);
         $.pairTokens = pairTokens;
-        emit Transfer(address(0), address(pair), Tokens.unwrap(pairTokens));
+        emit Transfer(address(0), pair, Tokens.unwrap(pairTokens));
 
         Tokens totalSupply_ = Settings.INITIAL_SUPPLY - pairTokens;
         $.totalSupply = totalSupply_;
@@ -161,9 +159,9 @@ contract FU is ERC20Base, TransientStorageLayout {
         }
 
         try FACTORY.createPair(WETH, this) returns (IUniswapV2Pair newPair) {
-            require(pair == newPair);
+            require(pair == address(newPair));
         } catch {
-            require(pair == FACTORY.getPair(WETH, this));
+            require(pair == address(FACTORY.getPair(WETH, this)));
         }
 
         // We can't call `pair.mint` from within the constructor because it wants to call back into
@@ -274,7 +272,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
     function balanceOf(address account) external view override returns (uint256) {
         Storage storage $ = _$();
-        if (account == address(pair)) {
+        if (account == pair) {
             return $.pairTokens.toPairBalance().toExternal();
         }
         if (account == DEAD) {
@@ -307,11 +305,11 @@ contract FU is ERC20Base, TransientStorageLayout {
         return MoonPhase.moonPhase(block.timestamp);
     }
 
-    function tax() external view returns (uint256) {
+    function tax() external view override returns (uint256) {
         return BasisPoints.unwrap(_tax());
     }
 
-    function whaleLimit(address potentialWhale) external view returns (uint256) {
+    function whaleLimit(address potentialWhale) external view override returns (uint256) {
         return _$().totalSupply.div(Settings.ANTI_WHALE_DIVISOR).toCrazyBalance(potentialWhale).toExternal();
     }
 
@@ -495,7 +493,7 @@ contract FU is ERC20Base, TransientStorageLayout {
             return false;
         }
 
-        address pair_ = address(pair);
+        address pair_ = pair;
         if (to == pair_) {
             if (from == to) {
                 if (_check()) {
@@ -645,7 +643,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     function allowance(address owner, address spender) external view override returns (uint256) {
-        if (owner == address(pair)) {
+        if (owner == pair) {
             return 0;
         }
         if (spender == PERMIT2) {
@@ -664,7 +662,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         override
         returns (bool, CrazyBalance, CrazyBalance)
     {
-        if (owner == address(pair)) {
+        if (owner == pair) {
             if (amount == ZERO_BALANCE) {
                 return (true, ZERO_BALANCE, ZERO_BALANCE);
             }
@@ -749,11 +747,11 @@ contract FU is ERC20Base, TransientStorageLayout {
         return _$().checkpoints.get(account, uint48(timepoint)).toExternal();
     }
 
-    function getTotalVotes() external view returns (uint256) {
+    function getTotalVotes() external view override returns (uint256) {
         return _$().checkpoints.currentTotal().toExternal();
     }
 
-    function getPastTotalVotes(uint256 timepoint) external view returns (uint256) {
+    function getPastTotalVotes(uint256 timepoint) external view override returns (uint256) {
         return _$().checkpoints.getTotal(uint48(timepoint)).toExternal();
     }
 
@@ -773,7 +771,7 @@ contract FU is ERC20Base, TransientStorageLayout {
             }
             return false;
         }
-        if (from == address(pair)) {
+        if (from == pair) {
             // `amount` is zero or we would not have passed `_checkAllowance`
             emit Transfer(from, address(0), 0);
             $.rebaseQueue.processQueue($.sharesOf, $.totalSupply, $.totalShares);
@@ -833,7 +831,7 @@ contract FU is ERC20Base, TransientStorageLayout {
             }
             return false;
         }
-        if (from == address(pair)) {
+        if (from == pair) {
             // `amount` is zero or we would not have passed `_checkAllowance`
             emit Transfer(from, address(0), 0);
             $.rebaseQueue.processQueue($.sharesOf, $.totalSupply, $.totalShares);
@@ -882,7 +880,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     receive() external payable {
         // Cache these for gas efficiency
         Storage storage $ = _$();
-        IUniswapV2Pair pair_ = pair;
+        IUniswapV2Pair pair_ = IUniswapV2Pair(pair);
 
         // Deposit ETH to WETH and then figure out how much WETH we're going to send to the pair
         payable(address(WETH)).fastSendEth(address(this).balance);
