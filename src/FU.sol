@@ -879,9 +879,26 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     receive() external payable {
-        payable(address(WETH)).fastSendEth(address(this).balance);
+        // Cache these for gas efficiency
+        Storage storage $ = _$();
         IUniswapV2Pair pair_ = pair;
-        WETH.fastTransfer(address(pair_), WETH.fastBalanceOf(address(this)));
-        pair_.fastSync();
+
+        // Deposit ETH to WETH and then figure out how much WETH we're going to send to the pair
+        payable(address(WETH)).fastSendEth(address(this).balance);
+        uint256 wethForMint = WETH.fastBalanceOf(address(this));
+
+        // Temporarily modify the pair balance so that when we send WETH to the pair, it will be a
+        // proportional deposit
+        unchecked {
+            uint256 pairWethBalance = WETH.fastBalanceOf(address(pair_));
+            Tokens cachedPairTokens = $.pairTokens;
+            $.pairTokens = cachedPairTokens.mul(pairWethBalance).div(wethForMint + pairWethBalance);
+            pair_.fastSync();
+            $.pairTokens = cachedPairTokens;
+        }
+
+        // Send WETH to the pair and mint it as liquidity (locked forever)
+        WETH.fastTransfer(address(pair_), wethForMint);
+        pair_.fastMint(address(0));
     }
 }

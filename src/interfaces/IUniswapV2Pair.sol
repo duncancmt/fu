@@ -22,6 +22,19 @@ library FastUniswapV2PairLib {
             // does have code and that failure is signaled by reverting.
         }
     }
+
+    function fastMint(IUniswapV2Pair pair, address to) internal returns (uint256 r) {
+        assembly ("memory-safe") {
+            mstore(0x14, to)
+            mstore(0x00, 0x6a627842000000000000000000000000)
+            if iszero(call(gas(), pair, 0x00, 0x10, 0x24, 0x00, 0x20)) {
+                let ptr := mload(0x40)
+                returndatacopy(ptr, 0x00, returndatasize())
+                revert(ptr, returndatasize())
+            }
+            r := mload(0x00)
+        }
+    }
 }
 
 bytes32 constant INIT_HASH = 0x96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f;
