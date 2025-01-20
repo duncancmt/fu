@@ -85,7 +85,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     event GitCommit(bytes20 indexed gitCommit);
 
     constructor(bytes20 gitCommit, string memory image_, address[] memory initialHolders) payable {
-        assert(Settings.SHARES_TO_VOTES_DIVISOR > Settings.INITIAL_SHARES_RATIO);
+        assert(Settings.SHARES_TO_VOTES_DIVISOR >= Settings.INITIAL_SHARES_RATIO);
         assert(
             Shares.unwrap(Settings.oneTokenInShares())
                 > Settings.MIN_SHARES_RATIO * Tokens.unwrap(Settings.INITIAL_SUPPLY)
