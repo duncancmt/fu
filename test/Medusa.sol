@@ -14,8 +14,18 @@ import {Boilerplate, MedusaBoilerplate} from "./Boilerplate.sol";
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
 
 contract MedusaFUTest is MedusaBoilerplate, FUTest {
-    constructor() public override(MedusaBoilerplate, FUTest) {
-            super.setUpTheRealOne();
+    constructor() {
+        super.deployFu();
+    }
+
+    function setUp() public view override(MedusaBoilerplate, FUTest) {
+        assume(targetContracts().length == 0);
+        return smuggle(super.setUp)();
+    }
+
+    // solc inheritance is so stupid
+    function assume(bool condition) internal pure override(Boilerplate, MedusaBoilerplate) {
+        return super.assume(condition);
     }
 
     function assertTrue(bool condition) internal pure override(MedusaBoilerplate, StdAssertions) {
