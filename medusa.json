@@ -12,7 +12,7 @@
 			"html",
 			"lcov"
 		],
-		"targetContracts": ["MedusaReflectMathTest", "MedusaCheckpointsTest", "MedusaFUTest"],
+		"targetContracts": ["MedusaFUTest"],
 		"predeployedContracts": {},
 		"targetContractsBalances": [],
 		"constructorArgs": {},

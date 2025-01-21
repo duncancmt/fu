@@ -47,25 +47,25 @@ contract FUTest is Boilerplate, Test {
 
         // Deploy WETH
         bytes memory initcode = wethInit;
-        vm.setNonceUnsafe(wethDeployer, wethDeployerNonce);
-        vm.prank(wethDeployer, wethDeployer);
+        vm.setNonce(wethDeployer, wethDeployerNonce);
+        vm.prank(wethDeployer);
         address weth;
         assembly ("memory-safe") {
             weth := create(0x00, add(0x20, initcode), mload(initcode))
         }
         require(weth != address(0));
-        vm.label(weth, "WETH");
+        label(weth, "WETH");
 
         // Deploy the UniswapV2 factory
         initcode = univ2FactoryInit;
-        vm.setNonceUnsafe(univ2FactoryDeployer, univ2FactoryDeployerNonce);
-        vm.prank(univ2FactoryDeployer, univ2FactoryDeployer);
+        vm.setNonce(univ2FactoryDeployer, univ2FactoryDeployerNonce);
+        vm.prank(univ2FactoryDeployer);
         address univ2Factory;
         assembly ("memory-safe") {
             univ2Factory := create(0x00, add(0x20, initcode), mload(initcode))
         }
         require(univ2Factory != address(0));
-        vm.label(univ2Factory, "Uniswap V2 Factory");
+        label(univ2Factory, "Uniswap V2 Factory");
 
         // Deploy FU
         initcode = bytes.concat(
@@ -73,19 +73,20 @@ contract FUTest is Boilerplate, Test {
             abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)
         );
         vm.deal(fuTxOrigin, 5 ether);
-        vm.prank(fuTxOrigin, fuTxOrigin);
+        vm.prank(fuTxOrigin);
+        vm.fee(6 wei); // causes the `isSimulation` check to pass; Medusa is unable to prank `tx.origin`
         (bool success, bytes memory returndata) = deterministicDeployerFactory.call{value: 5 ether}(
             bytes.concat(bytes32(0x00000000000000000000000000000000000000000000000000000000a7e0e6c5), initcode)
         );
         require(success);
         fu = FU(payable(address(uint160(bytes20(returndata)))));
-        vm.label(address(fu), "FU");
+        label(address(fu), "FU");
 
         // Lock initial liquidity
-        vm.label(address(fu.pair()), "FU/WETH UniV2 Pair");
+        label(address(fu.pair()), "FU/WETH UniV2 Pair");
         fu.pair().mint(address(0));
 
-        vm.label(0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD, "Super dead");
+        label(0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD, "Super dead");
     }
 
     function setUp() public virtual override {

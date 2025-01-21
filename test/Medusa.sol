@@ -28,6 +28,10 @@ contract MedusaFUTest is MedusaBoilerplate, FUTest {
         return super.assume(condition);
     }
 
+    function label(address target, string memory name) internal pure override(Boilerplate, MedusaBoilerplate) {
+        return super.label(target, name);
+    }
+
     function assertTrue(bool condition) internal pure override(MedusaBoilerplate, StdAssertions) {
         super.assertTrue(condition);
     }
@@ -165,6 +169,10 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
 
     function assume(bool condition) internal pure override(Boilerplate, MedusaBoilerplate) {
         return super.assume(condition);
+    }
+
+    function label(address target, string memory name) internal pure override(Boilerplate, MedusaBoilerplate) {
+        return super.label(target, name);
     }
 
     function assertTrue(bool data) internal pure override(MedusaBoilerplate, StdAssertions) {
@@ -314,6 +322,10 @@ contract MedusaCheckpointsTest is CheckpointsTest, MedusaBoilerplate {
 
     function assume(bool condition) internal pure override(Boilerplate, MedusaBoilerplate) {
         return super.assume(condition);
+    }
+
+    function label(address target, string memory name) internal pure override(Boilerplate, MedusaBoilerplate) {
+        return super.label(target, name);
     }
 
     function assertTrue(bool data) internal pure override(MedusaBoilerplate, StdAssertions) {

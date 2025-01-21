@@ -10,6 +10,10 @@ abstract contract Boilerplate is TestBase {
     function assume(bool condition) internal pure virtual {
         vm.assume(condition);
     }
+
+    function label(address target, string memory name) internal virtual {
+        vm.label(target, name);
+    }
 }
 
 abstract contract MedusaBoilerplate is Boilerplate, StdAssertions {
@@ -26,6 +30,8 @@ abstract contract MedusaBoilerplate is Boilerplate, StdAssertions {
             }
         }
     }
+
+    function label(address, string memory) internal pure virtual override {}
 
     function smuggle(function () internal contraband) internal pure returns (function () internal pure smuggled) {
         assembly ("memory-safe") {
