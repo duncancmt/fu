@@ -124,7 +124,7 @@ contract FUTest is Boilerplate, Test {
         vm.fee(6 wei); // causes the `isSimulation` check to pass; Medusa is unable to prank `tx.origin`
         vm.prank(fuTxOrigin);
         (bool success, bytes memory returndata) = deterministicDeployerFactory.call{value: 5 ether}(
-            bytes.concat(bytes32(0x0000000000000000000000000000000000000000000000000000000037936fd0), initcode)
+            bytes.concat(bytes32(0x0000000000000000000000000000000000000000000000000000000073046f09), initcode)
         );
         require(success);
         fu = FU(payable(address(uint160(bytes20(returndata)))));
