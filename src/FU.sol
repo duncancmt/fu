@@ -200,7 +200,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     function _applyWhaleLimit(Shares shares, Shares totalShares_) private pure returns (Shares, Shares) {
         Shares limit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         if (shares > limit) {
-            limit = (totalShares_ - shares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
+            limit = (totalShares_ - shares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
             totalShares_ = totalShares_ - (shares - limit);
             shares = limit;
         }
@@ -215,9 +215,9 @@ contract FU is ERC20Base, TransientStorageLayout {
         (Shares sharesHi, Shares sharesLo) = (shares0 > shares1) ? (shares0, shares1) : (shares1, shares0);
         Shares limit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         if (sharesHi > limit) {
-            limit = (totalShares_ - sharesHi).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
+            limit = (totalShares_ - sharesHi).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
             if (sharesLo > limit) {
-                limit = (totalShares_ - sharesHi - sharesLo).div(Settings.ANTI_WHALE_DIVISOR - 2) - ONE_SHARE;
+                limit = (totalShares_ - sharesHi - sharesLo).div(Settings.ANTI_WHALE_DIVISOR_MINUS_TWO) - ONE_SHARE;
                 totalShares_ = totalShares_ - (sharesHi + sharesLo - limit.mul(2));
                 sharesHi = limit;
                 sharesLo = limit;
@@ -375,9 +375,9 @@ contract FU is ERC20Base, TransientStorageLayout {
         Tokens balanceTokensHi = cachedShares.toTokensUp(cachedTotalSupply, cachedTotalShares);
         if (
             castUp(scale(amountTokens, BASIS - taxRate)) + balanceTokensHi
-                >= (cachedTotalSupply - balanceTokensHi).div(Settings.ANTI_WHALE_DIVISOR - 1)
+                >= (cachedTotalSupply - balanceTokensHi).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE)
         ) {
-            newShares = (cachedTotalShares - cachedShares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
+            newShares = (cachedTotalShares - cachedShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
             newTotalShares = cachedTotalShares + newShares - cachedShares;
             newTotalSupply = cachedTotalSupply + amountTokens;
         } else {

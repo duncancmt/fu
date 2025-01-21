@@ -263,7 +263,7 @@ library ReflectMath {
         returns (Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
         // Called when `to`'s final shares will be the whale limit and `from` is sending their entire balance
-        newToShares = (totalShares - fromShares - toShares).div(Settings.ANTI_WHALE_DIVISOR - 1) - ONE_SHARE;
+        newToShares = (totalShares - fromShares - toShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
         counterfactualToShares =
             cast(scale(totalShares, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(fromShares, BASIS - taxRate));
         newTotalShares = totalShares + newToShares - fromShares - toShares;
