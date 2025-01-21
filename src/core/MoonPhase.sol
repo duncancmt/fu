@@ -14,8 +14,12 @@ library MoonPhase {
     // This is the AVERAGE length of the synodic month at the epoch. The duration between actual new
     // moons varies significantly over short periods of time. Over long periods of time, the average
     // length of the synodic month increases slightly.
-    uint256 private constant _SYNODIC_MONTH = 29.530588907 * 10 ** 7 * 1 days;
-    uint256 private constant _SCALE = 2 ** 64 * 10 ** 7;
+    uint256 private constant _SYNODIC_MONTH = 0x17348a775920; // 29.530588907 * 10 ** 7 * 1 days
+    uint256 private constant _SCALE = 0x9896800000000000000000; // 2 ** 64 * 10 ** 7
+
+    int256 private constant _ONE_HALF = 0x8000000000000000; // 0.5 * 2 ** 64
+    int256 private constant _ONE_QUARTER = 0x4000000000000000; // 0.25 * 2 ** 64
+    int256 private constant _THREE_QUARTERS = 0xc000000000000000; // 0.75 * 2 ** 64
 
     function moonPhase(uint256 timestamp) internal pure returns (BasisPoints) {
         // This is performed outside the `unchecked` block because we want underflow checking
@@ -29,7 +33,7 @@ library MoonPhase {
             // given the relatively small second and third moments (compared to "reasonable"
             // timescales) as well as the significant additional complexity in taking the integral
             // of that approximation from the epoch to the present.
-            uint256 monthElapsed = (reEpoch * _SCALE / _SYNODIC_MONTH) & type(uint64).max;
+            int256 monthElapsed = int256((reEpoch * _SCALE / _SYNODIC_MONTH) & type(uint64).max);
 
             // Now that we have the sawtooth function `monthElapsed` that ranges from 0 at the new
             // moon to 0.5 at the full moon to 1 at the next new moon, we want to convert that into
@@ -42,12 +46,12 @@ library MoonPhase {
             // sin(x)` instead.
             int256 x;
             {
-                int256 thresh = (monthElapsed < 0.5 * 2 ** 64).ternary(int256(0.25 * 2 ** 64), int256(0.75 * 2 ** 64));
-                x = (monthElapsed < uint256(thresh)).ternary(
-                    thresh - int256(monthElapsed), int256(monthElapsed) - thresh
+                int256 thresh = (monthElapsed < _ONE_HALF).ternary(_ONE_QUARTER, _THREE_QUARTERS);
+                x = (monthElapsed < thresh).ternary(
+                    thresh - monthElapsed, monthElapsed - thresh
                 );
             }
-            int256 sign = (monthElapsed - 0.25 * 2 ** 64 < 0.5 * 2 ** 64).ternary(-1, 1);
+            int256 sign = (uint256(monthElapsed) - uint256(_ONE_QUARTER) < uint256(_ONE_HALF)).ternary(-1, 1);
 
             // Now we approximate `sign * sin(x)` via a (4, 3)-term monic-numerator rational
             // polynomial. This technique was popularized by Remco Bloemen
