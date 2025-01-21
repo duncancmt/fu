@@ -17,8 +17,6 @@ library Settings {
     // An amount of shares above `totalShares / 4` makes `ReflectMath` break down. Also setting it
     // near to `INITIAL_LIQUIDITY_DIVISOR` will cause unexpected reverts. This must also evenly
     // divide `BASIS` (10_000).
-    // TODO: verify that it's still possible to `deliver` without serious issue even when the
-    // balance is well above the limit
     uint256 internal constant ANTI_WHALE_DIVISOR = 40;
     uint256 internal constant ANTI_WHALE_DIVISOR_MINUS_ONE = 39;
     uint256 internal constant ANTI_WHALE_DIVISOR_MINUS_TWO = 38;
