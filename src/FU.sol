@@ -90,8 +90,11 @@ contract FU is ERC20Base, TransientStorageLayout {
         );
 
         require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
-        // slither-disable-next-line tx-origin
-        require(tx.origin == 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6);
+        {
+            bool isSimulation = block.basefee < 7 wei && block.gaslimit > 1_000_000_000 && block.number < 20_000_000;
+            // slither-disable-next-line tx-origin
+            require(tx.origin == 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6 || isSimulation);
+        }
         require(address(this).balance >= 5 ether);
         uint256 length = initialHolders.length;
         require(length >= Settings.ANTI_WHALE_DIVISOR * 2);

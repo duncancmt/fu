@@ -23,9 +23,17 @@ contract MedusaFUTest is MedusaBoilerplate, FUTest {
         return smuggle(super.setUp)();
     }
 
+    function deployFuDependencies() internal override {
+        return deployFuDependenciesMedusa();
+    }
+
     // solc inheritance is so stupid
     function assume(bool condition) internal pure override(Boilerplate, MedusaBoilerplate) {
         return super.assume(condition);
+    }
+
+    function label(address target, string memory name) internal pure override(Boilerplate, MedusaBoilerplate) {
+        return super.label(target, name);
     }
 
     function assertTrue(bool condition) internal pure override(MedusaBoilerplate, StdAssertions) {
@@ -165,6 +173,10 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
 
     function assume(bool condition) internal pure override(Boilerplate, MedusaBoilerplate) {
         return super.assume(condition);
+    }
+
+    function label(address target, string memory name) internal pure override(Boilerplate, MedusaBoilerplate) {
+        return super.label(target, name);
     }
 
     function assertTrue(bool data) internal pure override(MedusaBoilerplate, StdAssertions) {
@@ -314,6 +326,10 @@ contract MedusaCheckpointsTest is CheckpointsTest, MedusaBoilerplate {
 
     function assume(bool condition) internal pure override(Boilerplate, MedusaBoilerplate) {
         return super.assume(condition);
+    }
+
+    function label(address target, string memory name) internal pure override(Boilerplate, MedusaBoilerplate) {
+        return super.label(target, name);
     }
 
     function assertTrue(bool data) internal pure override(MedusaBoilerplate, StdAssertions) {
