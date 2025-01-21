@@ -47,9 +47,7 @@ library MoonPhase {
             int256 x;
             {
                 int256 thresh = (monthElapsed < _ONE_HALF).ternary(_ONE_QUARTER, _THREE_QUARTERS);
-                x = (monthElapsed < thresh).ternary(
-                    thresh - monthElapsed, monthElapsed - thresh
-                );
+                x = (monthElapsed < thresh).ternary(thresh - monthElapsed, monthElapsed - thresh);
             }
             int256 sign = (uint256(monthElapsed) - uint256(_ONE_QUARTER) < uint256(_ONE_HALF)).ternary(-1, 1);
 
