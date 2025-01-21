@@ -23,6 +23,10 @@ contract MedusaFUTest is MedusaBoilerplate, FUTest {
         return smuggle(super.setUp)();
     }
 
+    function deployFuDependencies() internal override {
+        return deployFuDependenciesMedusa();
+    }
+
     // solc inheritance is so stupid
     function assume(bool condition) internal pure override(Boilerplate, MedusaBoilerplate) {
         return super.assume(condition);
