@@ -49,7 +49,7 @@ library MoonPhase {
                 int256 thresh = (monthElapsed < _ONE_HALF).ternary(_ONE_QUARTER, _THREE_QUARTERS);
                 x = (monthElapsed < thresh).ternary(thresh - monthElapsed, monthElapsed - thresh);
             }
-            int256 sign = (uint256(monthElapsed) - uint256(_ONE_QUARTER) < uint256(_ONE_HALF)).ternary(-1, 1);
+            int256 sign = (uint256(monthElapsed) - uint256(_ONE_QUARTER) < uint256(_ONE_HALF)).ternary(-1, 1); // underflow is desired
 
             // Now we approximate `sign * sin(x)` via a (4, 3)-term monic-numerator rational
             // polynomial. This technique was popularized by Remco Bloemen
