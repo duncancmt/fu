@@ -69,7 +69,8 @@ outgoing transfers.
 
 ## Extension standards
 
-FU is a full-featured token, supporting the following extensions to the ERC20 standard (with metadata)
+FU is a full-featured token, supporting the following extensions to the ERC20
+standard (with metadata)
 
  * [ERC2612](https://eips.ethereum.org/EIPS/eip-2612) -- EIP-20 approvals via EIP-712 secp256k1 signatures
  * [ERC5267](https://eips.ethereum.org/EIPS/eip-5267) -- Retrieval of EIP-712 domain
