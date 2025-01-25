@@ -67,6 +67,8 @@ abstract contract Common {
 
 // Copied directly from Foundry
 abstract contract Bound {
+    using ItoA for int256;
+
     function bound(uint256 x, uint256 min, uint256 max) internal pure virtual returns (uint256 result) {
         require(min <= max, "StdUtils bound(uint256,uint256,uint256): Max is less than min.");
         // If x is between min and max, return x directly. This is to ensure that dictionary values
@@ -135,7 +137,7 @@ abstract contract Bound {
         returns (int256 result)
     {
         result = bound(x, min, max);
-        console.log(name, ItoA.itoa(result));
+        console.log(name, result.itoa());
     }
 }
 
@@ -146,6 +148,8 @@ interface ListOfInvariants {
 }
 
 contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
+    using ItoA for uint256;
+
     IFU internal immutable fu;
     address[] internal actors;
     mapping(address => bool) internal isActor;
@@ -174,17 +178,23 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     bytes32 private constant _BASE_SLOT = 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93600;
 
+    function _sharesSlot(address account) internal pure returns (bytes32 r) {
+        assembly ("memory-safe") {
+            mstore(0x00, and(0xffffffffffffffffffffffffffffffffffffffff, account))
+            mstore(0x20, _BASE_SLOT)
+            r := keccak256(0x00, 0x40)
+        }
+    }
+
     function getShares(address account) internal view returns (uint256) {
-        bytes32 slot = keccak256(abi.encode(account, _BASE_SLOT));
-        uint256 value = uint256(load(address(fu), slot));
-        assertEq(value & 0xffffffffff00000000000000000000000000000000000000000000ffffffffff, 0, "dirty shares slot");
+        uint256 value = uint256(load(address(fu), _sharesSlot(account)));
+        assertEq(value & 0xffffffffff00000000000000000000000000000000000000000000ffffffffff, 0, string.concat("dirty shares slot: ", value.itoa()));
         return value >> 40;
     }
 
     function getTotalShares() internal view returns (uint256) {
-        bytes32 slot = bytes32(uint256(_BASE_SLOT) + 3);
-        uint256 value = uint256(load(address(fu), slot));
-        assertEq(value >> 176, 0, "dirty total supply slot");
+        uint256 value = uint256(load(address(fu), bytes32(uint256(_BASE_SLOT) + 3)));
+        assertEq(value >> 177, 0, string.concat("dirty total supply slot: ", value.itoa()));
         return value;
     }
 
