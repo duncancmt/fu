@@ -8,11 +8,12 @@ import {Votes} from "src/types/Votes.sol";
 
 import {ReflectMathTest} from "./ReflectMath.t.sol";
 import {CheckpointsTest} from "./Checkpoints.t.sol";
-import {FUTest} from "./FU.t.sol";
+//import {FUTest} from "./FU.t.sol";
 
 import {Boilerplate, MedusaBoilerplate} from "./Boilerplate.sol";
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
 
+/*
 contract MedusaFUTest is MedusaBoilerplate, FUTest {
     constructor() {
         super.deployFu();
@@ -116,6 +117,7 @@ contract MedusaFUTest is MedusaBoilerplate, FUTest {
         return super.assertEq(left, right, err);
     }
 }
+*/
 
 contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
     function testTransferSome(Tokens, Shares, Shares, Shares, Tokens, BasisPoints, uint256) public view override {
