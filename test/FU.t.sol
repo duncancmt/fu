@@ -9,44 +9,197 @@ import {IUniswapV2Factory} from "src/interfaces/IUniswapV2Factory.sol";
 
 import {QuickSort} from "script/QuickSort.sol";
 
-import {Test} from "@forge-std/Test.sol";
-import {Boilerplate} from "./Boilerplate.sol";
+import {StdAssertions} from "@forge-std/StdAssertions.sol";
+import {StdInvariant} from "@forge-std/StdInvariant.sol";
+import {Vm} from "@forge-std/Vm.sol";
 
 import "./EnvironmentConstants.sol";
 
 import {console} from "@forge-std/console.sol";
 
-contract FUTest is Boilerplate, Test {
-    using QuickSort for address[];
+address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 
+abstract contract Common {
+    Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+
+    function assume(bool condition) internal pure virtual {
+        vm.assume(condition);
+    }
+
+    function label(address target, string memory name) internal virtual {
+        vm.label(target, name);
+    }
+
+    function prank(address sender) internal virtual {
+        vm.prank(sender);
+    }
+
+    function setNonce(address who, uint64 newNonce) internal virtual {
+        vm.setNonce(who, newNonce);
+    }
+
+    function deal(address who, uint256 value) internal virtual {
+        vm.deal(who, value);
+    }
+
+    function setBaseFee(uint256 newBaseFee) internal {
+        vm.fee(newBaseFee);
+    }
+
+    function setChainId(uint256 newChainId) internal {
+        vm.chainId(newChainId);
+    }
+}
+
+contract FUGuide is StdAssertions, Common {
     IFU internal fu;
     address[] internal actors;
+    mapping(address => bool) internal isActor;
+    mapping(address => uint256) internal lastBalance;
+    mapping(address => address) internal shadowDelegates;
+
+    constructor (IFU fu_, address[] memory actors_) {
+        fu = fu_;
+        actors = actors_;
+
+        address pair = fu.pair();
+        lastBalance[pair] = fu.balanceOf(pair);
+        lastBalance[DEAD] = fu.balanceOf(DEAD);
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            isActor[actor] = true;
+            lastBalance[actor] = fu.balanceOf(actor);
+        }
+    }
+
+    function callOptionalReturn(bytes memory data) internal {
+        (bool success, bytes memory returndata) = address(fu).call(data);
+        if (!success) {
+            assembly ("memory-safe") {
+                revert(add(0x20, returndata), mload(returndata))
+            }
+        }
+        if (returndata.length != 0) {
+            require(returndata.length == 32);
+            success = abi.decode(data, (bool));
+            require(success, "returned `false` to signal failure");
+        } else {
+            require(address(fu).code.length != 0);
+        }
+    }
+
+    function getActor(uint256 actorIndex) internal returns (address actor) {
+        actor = actors[actorIndex % actors.length];
+        uint256 balance = fu.balanceOf(actor);
+        assertGe(balance, lastBalance[actor], "negative rebase");
+        lastBalance[actor] = balance;
+        assertEq(fu.delegates(actor), shadowDelegates[actor]);
+    }
+
+    function maybeCreateActor(address newActor) internal {
+        if (newActor == fu.pair()) {
+            return;
+        }
+        if (newActor == DEAD) {
+            return;
+        }
+        if (isActor[newActor]) {
+            return;
+        }
+        isActor[newActor] = true;
+        actors.push(newActor);
+        assertEq(fu.balanceOf(newActor), 0);
+        assertEq(fu.delegates(newActor), address(0));
+    }
+
+    function saveActor(address actor) internal {
+        if (actor != fu.pair()) {
+            assertNotEq(actor, DEAD);
+            assertTrue(isActor[actor]);
+        }
+        lastBalance[actor] = fu.balanceOf(actor);
+        shadowDelegates[actor] = fu.delegates(actor);
+    }
+
+    function addActor(address newActor) external {
+        assume(newActor != DEAD);
+        maybeCreateActor(newActor);
+        saveActor(newActor);
+    }
+
+    function transfer(uint256 actorIndex, address to, uint256 amount) external {
+        address actor = getActor(actorIndex);
+        maybeCreateActor(to);
+
+        prank(actor);
+        callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
+
+        saveActor(actor);
+        saveActor(to);
+    }
+
+    function delegate(uint256 actorIndex, address delegatee) external {
+        address actor = getActor(actorIndex);
+        maybeCreateActor(delegatee);
+
+        prank(actor);
+        fu.delegate(delegatee); // ERC5805 requires that this function return nothing or revert
+
+        saveActor(actor);
+        saveActor(delegatee);
+    }
+
+    function burn(uint256 actorIndex, uint256 amount) external {
+        address actor = getActor(actorIndex);
+
+        prank(actor);
+        callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
+
+        saveActor(actor);
+    }
+
+    function deliver(uint256 actorIndex, uint256 amount) external {
+        address actor = getActor(actorIndex);
+
+        prank(actor);
+        callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
+
+        saveActor(actor);
+    }
+}
+
+contract FUInvariants is StdInvariant, Common {
+    using QuickSort for address[];
+
+    bool public constant IS_TEST = true;
 
     function deployFuDependenciesFoundry() internal {
         // Deploy WETH
         bytes memory initcode = wethInit;
-        vm.setNonce(wethDeployer, wethDeployerNonce);
-        vm.prank(wethDeployer);
+        setNonce(wethDeployer, wethDeployerNonce);
+        prank(wethDeployer);
         assembly ("memory-safe") {
             if xor(weth, create(0x00, add(0x20, initcode), mload(initcode))) { revert(0x00, 0x00) }
         }
         label(weth, "WETH");
+        excludeContract(weth);
 
         // Deploy the UniswapV2 factory
         initcode = univ2FactoryInit;
-        vm.setNonce(univ2FactoryDeployer, univ2FactoryDeployerNonce);
-        vm.prank(univ2FactoryDeployer);
+        setNonce(univ2FactoryDeployer, univ2FactoryDeployerNonce);
+        prank(univ2FactoryDeployer);
         assembly ("memory-safe") {
             if xor(univ2Factory, create(0x00, add(0x20, initcode), mload(initcode))) { revert(0x00, 0x00) }
         }
         label(univ2Factory, "Uniswap V2 Factory");
+        excludeContract(univ2Factory);
 
         // Optionally deploy the deployment proxy, if it doesn't exist
         if (deterministicDeployerFactory.codehash != 0x2fa86add0aed31f33a762c9d88e807c475bd51d0f52bd0955754b2608f7e4989)
         {
             initcode = deterministicDeployerFactoryInit;
-            vm.setNonce(deterministicDeployerFactoryDeployer, deterministicDeployerFactoryDeployerNonce);
-            vm.prank(deterministicDeployerFactoryDeployer);
+            setNonce(deterministicDeployerFactoryDeployer, deterministicDeployerFactoryDeployerNonce);
+            prank(deterministicDeployerFactoryDeployer);
             assembly ("memory-safe") {
                 if xor(deterministicDeployerFactory, create(0x00, add(0x20, initcode), mload(initcode))) {
                     revert(0x00, 0x00)
@@ -56,6 +209,7 @@ contract FUTest is Boilerplate, Test {
         }
     }
 
+    /*
     function deployFuDependenciesMedusa() internal {
         // Deploy WETH
         vm.etch(weth, wethRuntime);
@@ -70,13 +224,14 @@ contract FUTest is Boilerplate, Test {
         vm.etch(deterministicDeployerFactory, deterministicDeployerFactoryRuntime);
         label(deterministicDeployerFactory, "Create2Deployer");
     }
+    */
 
     function deployFuDependencies() internal virtual {
         return deployFuDependenciesFoundry();
     }
 
-    function deployFu() internal {
-        address[] memory initialHolders = new address[](Settings.ANTI_WHALE_DIVISOR * 2);
+    function deployFu() internal returns (IFU fu, address[] memory initialHolders) {
+        initialHolders = new address[](Settings.ANTI_WHALE_DIVISOR * 2);
         for (uint256 i; i < initialHolders.length; i++) {
             // Generate unique addresses
             address holder;
@@ -87,9 +242,8 @@ contract FUTest is Boilerplate, Test {
             initialHolders[i] = holder;
         }
         initialHolders.quickSort();
-        actors = initialHolders;
 
-        vm.chainId(1);
+        setChainId(1);
 
         deployFuDependencies();
 
@@ -100,30 +254,31 @@ contract FUTest is Boilerplate, Test {
         );
         console.log("FU mock inithash");
         console.logBytes32(keccak256(initcode));
-        vm.deal(address(this), 5 ether);
-        vm.deal(fuTxOrigin, 5 ether);
-        vm.fee(6 wei); // causes the `isSimulation` check to pass; Medusa is unable to prank `tx.origin`
-        vm.prank(fuTxOrigin);
+        deal(address(this), 5 ether);
+        deal(fuTxOrigin, 5 ether);
+        setBaseFee(6 wei); // causes the `isSimulation` check to pass; Medusa is unable to prank `tx.origin`
+        prank(fuTxOrigin);
         (bool success, bytes memory returndata) = deterministicDeployerFactory.call{value: 5 ether}(
             bytes.concat(bytes32(0x000000000000000000000000000000000000000000000000000000007b69935d), initcode)
         );
         require(success);
         fu = IFU(payable(address(uint160(bytes20(returndata)))));
         label(address(fu), "FU");
+        excludeContract(address(fu));
 
         // Lock initial liquidity
         IUniswapV2Pair pair = IUniswapV2Pair(fu.pair());
         label(address(pair), "FU/WETH UniV2 Pair");
         pair.mint(address(0));
+        excludeContract(address(pair));
 
-        label(0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD, "Super dead");
+        label(DEAD, "Super dead");
     }
 
-    function setUp() public virtual override {
-        return deployFu();
+    function setUp() external {
+        (IFU fu, address[] memory actors) = deployFu();
+        new FUGuide(fu, actors);
     }
 
-    /*
-    function test_vacuous() external {}
-    */
+    function invariant_vacuous() external {}
 }
