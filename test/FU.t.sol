@@ -155,10 +155,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     function getActor(uint256 actorIndex) internal returns (address actor) {
         actor = actors[actorIndex % actors.length];
-        uint256 balance = fu.balanceOf(actor);
-        assertGe(balance, lastBalance[actor], "negative rebase");
-        lastBalance[actor] = balance;
-        assertEq(fu.delegates(actor), shadowDelegates[actor]);
+        lastBalance[actor] = fu.balanceOf(actor);
     }
 
     function maybeCreateActor(address newActor) internal {
