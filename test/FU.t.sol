@@ -179,12 +179,15 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function maybeCreateActor(address newActor) internal {
+        // TODO: change naming here as this may not be a new actor
         if (newActor == DEAD) {
             return;
         }
         if (isActor[newActor]) {
             return;
         }
+
+        // turn potential actor into a new actor as this passes all checks and is not, in fact, sussy
         isActor[newActor] = true;
         actors.push(newActor);
         assertEq(fu.balanceOf(newActor), 0);
@@ -240,7 +243,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         fu.delegate(delegatee); // ERC5805 requires that this function return nothing or revert
 
         saveActor(actor);
-        saveActor(delegatee);
+        if (delegatee != DEAD) {
+            saveActor(delegatee);
+        }
     }
 
     function burn(uint256 actorIndex, uint256 amount, bool boundAmount) external {
@@ -311,6 +316,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             uint256 balance = fu.balanceOf(actor);
             if (uint160(actor) < Settings.ADDRESS_DIVISOR) {
                 assertEq(balance, 0);
+                assertEq(lastBalance[actor], 0);
                 continue;
             }
             if (balance < fu.whaleLimit(actor)) {
