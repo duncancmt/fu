@@ -94,7 +94,12 @@ abstract contract Bound {
         }
     }
 
-    function bound(uint256 x, uint256 min, uint256 max, string memory name) internal pure virtual returns (uint256 result) {
+    function bound(uint256 x, uint256 min, uint256 max, string memory name)
+        internal
+        pure
+        virtual
+        returns (uint256 result)
+    {
         result = bound(x, min, max);
         console.log(name, result);
     }
@@ -110,16 +115,25 @@ abstract contract Bound {
         // If the given integer value is -2**255, we cannot use `-uint256(-x)` because of the overflow.
         // So, use `~uint256(x) + 1` instead.
         uint256 _x = x < 0 ? (uint256(type(int256).min) - ~uint256(x) - 1) : (uint256(x) + uint256(type(int256).min));
-        uint256 _min = min < 0 ? (uint256(type(int256).min) - ~uint256(min) - 1) : (uint256(min) + uint256(type(int256).min));
-        uint256 _max = max < 0 ? (uint256(type(int256).min) - ~uint256(max) - 1) : (uint256(max) + uint256(type(int256).min));
+        uint256 _min =
+            min < 0 ? (uint256(type(int256).min) - ~uint256(min) - 1) : (uint256(min) + uint256(type(int256).min));
+        uint256 _max =
+            max < 0 ? (uint256(type(int256).min) - ~uint256(max) - 1) : (uint256(max) + uint256(type(int256).min));
 
         uint256 y = bound(_x, _min, _max);
 
         // To move it back to int256 value, subtract INT256_MIN_ABS at here.
-        result = y < uint256(type(int256).min) ? int256(~(uint256(type(int256).min) - y) + 1) : int256(y - uint256(type(int256).min));
+        result = y < uint256(type(int256).min)
+            ? int256(~(uint256(type(int256).min) - y) + 1)
+            : int256(y - uint256(type(int256).min));
     }
 
-    function bound(int256 x, int256 min, int256 max, string memory name) internal pure virtual returns (int256 result) {
+    function bound(int256 x, int256 min, int256 max, string memory name)
+        internal
+        pure
+        virtual
+        returns (int256 result)
+    {
         result = bound(x, min, max);
         console.log(name, ItoA.itoa(result));
     }
@@ -137,7 +151,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     mapping(address => uint256) internal lastBalance;
     mapping(address => address) internal shadowDelegates;
 
-    constructor (IFU fu_, address[] memory actors_) {
+    constructor(IFU fu_, address[] memory actors_) {
         fu = fu_;
         actors = actors_;
 
