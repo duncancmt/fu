@@ -60,8 +60,8 @@ abstract contract Common {
     }
 }
 
-abstract contract ListOfInvariants {
-    function invariant_vacuous() external virtual;
+interface ListOfInvariants {
+    function invariant_vacuous() external;
 }
 
 contract FUGuide is StdAssertions, Common, ListOfInvariants {
