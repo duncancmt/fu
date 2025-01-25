@@ -25,4 +25,12 @@ library ItoA {
             mstore(r, length)
         }
     }
+
+    function itoa(int256 value) internal pure returns (string memory) {
+        if (value < 0) {
+            return string.concat("-", itoa(uint256(-value)));
+        } else {
+            return itoa(uint256(value));
+        }
+    }
 }
