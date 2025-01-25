@@ -61,9 +61,9 @@ abstract contract Common {
     }
 }
 
+// Copied directly from Foundry
 abstract contract Bound {
-    // Copied directly from Foundry
-    function _bound(uint256 x, uint256 min, uint256 max) internal pure virtual returns (uint256 result) {
+    function bound(uint256 x, uint256 min, uint256 max) internal pure virtual returns (uint256 result) {
         require(min <= max, "StdUtils bound(uint256,uint256,uint256): Max is less than min.");
         // If x is between min and max, return x directly. This is to ensure that dictionary values
         // do not get shifted if the min is nonzero. More info: https://github.com/foundry-rs/forge-std/issues/188
@@ -90,12 +90,12 @@ abstract contract Bound {
         }
     }
 
-    function bound(uint256 x, uint256 min, uint256 max) internal pure virtual returns (uint256 result) {
-        result = _bound(x, min, max);
-        console.log("Bound result", result);
+    function bound(uint256 x, uint256 min, uint256 max, string memory name) internal pure virtual returns (uint256 result) {
+        result = bound(x, min, max);
+        console.log(name, result);
     }
 
-    function _bound(int256 x, int256 min, int256 max) internal pure virtual returns (int256 result) {
+    function bound(int256 x, int256 min, int256 max) internal pure virtual returns (int256 result) {
         require(min <= max, "StdUtils bound(int256,int256,int256): Max is less than min.");
 
         // Shifting all int256 values to uint256 to use _bound function. The range of two types are:
@@ -115,9 +115,9 @@ abstract contract Bound {
         result = y < uint256(type(int256).min) ? int256(~(uint256(type(int256).min) - y) + 1) : int256(y - uint256(type(int256).min));
     }
 
-    function bound(int256 x, int256 min, int256 max) internal pure virtual returns (int256 result) {
-        result = _bound(x, min, max);
-        console.log("Bound result", ItoA.itoa(result));
+    function bound(int256 x, int256 min, int256 max, string memory name) internal pure virtual returns (int256 result) {
+        result = bound(x, min, max);
+        console.log(name, ItoA.itoa(result));
     }
 }
 
@@ -191,7 +191,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     function transfer(uint256 actorIndex, address to, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
         if (boundAmount) {
-            amount = bound(amount, 0, fu.balanceOf(actor));
+            amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         }
         if (actor == fu.pair()) {
             assume(amount < fu.balanceOf(actor));
@@ -226,7 +226,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     function burn(uint256 actorIndex, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
         if (boundAmount) {
-            amount = bound(amount, 0, fu.balanceOf(actor));
+            amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         }
         assume(actor != fu.pair() || amount == 0);
 
@@ -245,7 +245,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     function deliver(uint256 actorIndex, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
         if (boundAmount) {
-            amount = bound(amount, 0, fu.balanceOf(actor));
+            amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         }
         assume(actor != fu.pair() || amount == 0);
 
