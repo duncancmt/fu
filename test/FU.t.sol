@@ -194,7 +194,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             amount = bound(amount, 0, fu.balanceOf(actor));
         }
         if (actor == fu.pair()) {
-            assume(amount <= fu.balanceOf(actor));
+            assume(amount < fu.balanceOf(actor));
         }
         maybeCreateActor(to);
 
