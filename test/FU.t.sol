@@ -75,9 +75,10 @@ contract FUGuide is StdAssertions, Common, ListOfInvariants {
         fu = fu_;
         actors = actors_;
 
-        address pair = fu.pair();
-        lastBalance[pair] = fu.balanceOf(pair);
         lastBalance[DEAD] = fu.balanceOf(DEAD);
+        address pair = fu.pair();
+        actors.push(pair);
+
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
             isActor[actor] = true;
@@ -99,9 +100,6 @@ contract FUGuide is StdAssertions, Common, ListOfInvariants {
     }
 
     function maybeCreateActor(address newActor) internal {
-        if (newActor == fu.pair()) {
-            return;
-        }
         if (newActor == DEAD) {
             return;
         }
@@ -115,10 +113,8 @@ contract FUGuide is StdAssertions, Common, ListOfInvariants {
     }
 
     function saveActor(address actor) internal {
-        if (actor != fu.pair()) {
-            assertNotEq(actor, DEAD);
-            assertTrue(isActor[actor]);
-        }
+        assertNotEq(actor, DEAD);
+        assertTrue(isActor[actor]);
         lastBalance[actor] = fu.balanceOf(actor);
         shadowDelegates[actor] = fu.delegates(actor);
     }
@@ -135,6 +131,9 @@ contract FUGuide is StdAssertions, Common, ListOfInvariants {
 
     function transfer(uint256 actorIndex, address to, uint256 amount) external {
         address actor = getActor(actorIndex);
+        if (actor == fu.pair()) {
+            assume(amount <= fu.balanceOf(actor));
+        }
         maybeCreateActor(to);
 
         prank(actor);
@@ -150,6 +149,7 @@ contract FUGuide is StdAssertions, Common, ListOfInvariants {
 
     function delegate(uint256 actorIndex, address delegatee) external {
         address actor = getActor(actorIndex);
+        assume(actor != fu.pair());
         maybeCreateActor(delegatee);
 
         prank(actor);
@@ -161,6 +161,7 @@ contract FUGuide is StdAssertions, Common, ListOfInvariants {
 
     function burn(uint256 actorIndex, uint256 amount) external {
         address actor = getActor(actorIndex);
+        assume(actor != fu.pair() || amount == 0);
 
         prank(actor);
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
@@ -174,6 +175,7 @@ contract FUGuide is StdAssertions, Common, ListOfInvariants {
 
     function deliver(uint256 actorIndex, uint256 amount) external {
         address actor = getActor(actorIndex);
+        assume(actor != fu.pair() || amount == 0);
 
         prank(actor);
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
