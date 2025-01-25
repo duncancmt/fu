@@ -142,6 +142,7 @@ abstract contract Bound {
 interface ListOfInvariants {
     function invariant_nonNegativeRebase() external;
     function invariant_delegatesNotChanged() external;
+    function invariant_sumOfShares() external;
 }
 
 contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
@@ -346,6 +347,14 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             assertEq(fu.delegates(actor), shadowDelegates[actor], "delegates mismatch");
         }
     }
+
+    function invariant_sumOfShares() external view override {
+        uint256 total = getShares(DEAD);
+        for (uint256 i; i < actors.length; i++) {
+            total += getShares(actors[i]);
+        }
+        assertEq(total, getTotalShares(), "sum(shares) mismatch with totalShares");
+    }
 }
 
 contract FUInvariants is StdInvariant, Common, ListOfInvariants {
@@ -468,5 +477,9 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
 
     function invariant_delegatesNotChanged() public virtual override {
         return guide.invariant_delegatesNotChanged();
+    }
+
+    function invariant_sumOfShares() public virtual override {
+        return guide.invariant_sumOfShares();
     }
 }
