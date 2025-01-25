@@ -59,6 +59,10 @@ abstract contract Common {
     function getBlockTimestamp() internal view returns (uint256) {
         return vm.getBlockTimestamp();
     }
+
+    function load(address account, bytes32 slot) internal view returns (bytes32) {
+        return vm.load(account, slot);
+    }
 }
 
 // Copied directly from Foundry
@@ -109,7 +113,7 @@ abstract contract Bound {
         uint256 _min = min < 0 ? (uint256(type(int256).min) - ~uint256(min) - 1) : (uint256(min) + uint256(type(int256).min));
         uint256 _max = max < 0 ? (uint256(type(int256).min) - ~uint256(max) - 1) : (uint256(max) + uint256(type(int256).min));
 
-        uint256 y = _bound(_x, _min, _max);
+        uint256 y = bound(_x, _min, _max);
 
         // To move it back to int256 value, subtract INT256_MIN_ABS at here.
         result = y < uint256(type(int256).min) ? int256(~(uint256(type(int256).min) - y) + 1) : int256(y - uint256(type(int256).min));
@@ -127,7 +131,7 @@ interface ListOfInvariants {
 }
 
 contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
-    IFU internal fu;
+    IFU internal immutable fu;
     address[] internal actors;
     mapping(address => bool) internal isActor;
     mapping(address => uint256) internal lastBalance;
@@ -151,6 +155,22 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     function callOptionalReturn(bytes memory data) internal returns (bool success, bytes memory returndata) {
         (success, returndata) = address(fu).call(data);
         success = success && (returndata.length == 0 || abi.decode(returndata, (bool)));
+    }
+
+    bytes32 private constant _BASE_SLOT = 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93600;
+
+    function getShares(address account) internal view returns (uint256) {
+        bytes32 slot = keccak256(abi.encode(account, _BASE_SLOT));
+        uint256 value = uint256(load(address(fu), slot));
+        assertEq(value & 0xffffffffff00000000000000000000000000000000000000000000ffffffffff, 0, "dirty shares slot");
+        return value >> 40;
+    }
+
+    function getTotalShares() internal view returns (uint256) {
+        bytes32 slot = bytes32(uint256(_BASE_SLOT) + 3);
+        uint256 value = uint256(load(address(fu), slot));
+        assertEq(value >> 176, 0, "dirty total supply slot");
+        return value;
     }
 
     function getActor(uint256 actorIndex) internal returns (address actor) {
@@ -230,6 +250,13 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
         assume(actor != fu.pair() || amount == 0);
 
+        address delegatee = shadowDelegates[actor];
+
+        uint256 beforeBalance = fu.balanceOf(actor);
+        uint256 beforeSupply = fu.totalSupply();
+        uint256 beforeVotingPower = fu.getVotes(delegatee);
+        uint256 beforeShares = getShares(actor);
+
         prank(actor);
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
 
@@ -240,6 +267,23 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
 
         saveActor(actor);
+
+        uint256 afterBalance = fu.balanceOf(actor);
+        uint256 afterSupply = fu.totalSupply();
+        uint256 afterVotingPower = fu.getVotes(delegatee);
+        uint256 afterShares = getShares(actor);
+
+        // TODO: tighten bounds; this is compensating for rounding error in the "CrazyBalance" calculation
+        assertLe(beforeBalance - afterBalance, amount + 1, "balance delta upper");
+        assertGe(beforeBalance - afterBalance + 1, amount, "balance delta lower");
+        /*
+        assertEq(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / (uint256(uint160(actor)) / Settings.ADDRESS_DIVISOR), "supply delta mismatch");
+        if (delegatee != address(0)) {
+            assertEq(beforeVotingPower - afterVotingPower, (beforeShares - afterShares) / Settings.SHARES_TO_VOTES_DIVISOR, "voting power delta mismatch");
+        } else {
+            assertEq(beforeVotingPower, afterVotingPower, "no delegation, but voting power changed");
+        }
+        */
     }
 
     function deliver(uint256 actorIndex, uint256 amount, bool boundAmount) external {
@@ -264,8 +308,14 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     function invariant_nonNegativeRebase() external view override {
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
-            // TODO: this should eventually fail when an account reaches the whale limit and somebody calls `burn`
-            assertGe(fu.balanceOf(actor), lastBalance[actor], "negative rebase");
+            uint256 balance = fu.balanceOf(actor);
+            if (uint160(actor) < Settings.ADDRESS_DIVISOR) {
+                assertEq(balance, 0);
+                continue;
+            }
+            if (balance < fu.whaleLimit(actor)) {
+                assertGe(fu.balanceOf(actor), lastBalance[actor], "negative rebase");
+            }
         }
     }
 
@@ -391,11 +441,11 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
         warp(EPOCH);
     }
 
-    function invariant_nonNegativeRebase() external override {
+    function invariant_nonNegativeRebase() public virtual override {
         return guide.invariant_nonNegativeRebase();
     }
 
-    function invariant_delegatesNotChanged() external override {
+    function invariant_delegatesNotChanged() public virtual override {
         return guide.invariant_delegatesNotChanged();
     }
 }
