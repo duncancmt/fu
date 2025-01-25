@@ -109,7 +109,7 @@ abstract contract Bound {
         uint256 _min = min < 0 ? (uint256(type(int256).min) - ~uint256(min) - 1) : (uint256(min) + uint256(type(int256).min));
         uint256 _max = max < 0 ? (uint256(type(int256).min) - ~uint256(max) - 1) : (uint256(max) + uint256(type(int256).min));
 
-        uint256 y = _bound(_x, _min, _max);
+        uint256 y = bound(_x, _min, _max);
 
         // To move it back to int256 value, subtract INT256_MIN_ABS at here.
         result = y < uint256(type(int256).min) ? int256(~(uint256(type(int256).min) - y) + 1) : int256(y - uint256(type(int256).min));
