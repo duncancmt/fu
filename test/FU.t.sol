@@ -176,6 +176,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     function getActor(uint256 actorIndex) internal returns (address actor) {
         actor = actors[actorIndex % actors.length];
         lastBalance[actor] = fu.balanceOf(actor);
+        console.log("actor", actor);
     }
 
     function maybeCreateActor(address newActor) internal {
@@ -240,7 +241,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         fu.delegate(delegatee); // ERC5805 requires that this function return nothing or revert
 
         saveActor(actor);
-        saveActor(delegatee);
+        if (delegatee != DEAD) {
+            saveActor(delegatee);
+        }
     }
 
     function burn(uint256 actorIndex, uint256 amount, bool boundAmount) external {
