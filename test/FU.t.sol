@@ -7,6 +7,8 @@ import {Settings} from "src/core/Settings.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory} from "src/interfaces/IUniswapV2Factory.sol";
 
+import {tmp} from "src/lib/512Math.sol";
+
 import {QuickSort} from "script/QuickSort.sol";
 import {ItoA} from "script/ItoA.sol";
 
@@ -62,6 +64,10 @@ abstract contract Common {
 
     function load(address account, bytes32 slot) internal view returns (bytes32) {
         return vm.load(account, slot);
+    }
+
+    function store(address account, bytes32 slot, bytes32 newValue) internal {
+        return vm.store(account, slot, newValue);
     }
 }
 
@@ -155,6 +161,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     mapping(address => bool) internal isActor;
     mapping(address => uint256) internal lastBalance;
     mapping(address => address) internal shadowDelegates;
+    uint32 internal shareRatio = 1;
 
     constructor(IFU fu_, address[] memory actors_) {
         fu = fu_;
@@ -192,10 +199,18 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         return value >> 40;
     }
 
+    function setShares(address account, uint256 newShares) internal {
+        return store(address(fu), _sharesSlot(account), bytes32(newShares << 40));
+    }
+
     function getTotalShares() internal view returns (uint256) {
         uint256 value = uint256(load(address(fu), bytes32(uint256(_BASE_SLOT) + 3)));
         assertEq(value >> 177, 0, string.concat("dirty total supply slot: ", value.itoa()));
         return value;
+    }
+
+    function setTotalShares(uint256 newTotalShares) internal {
+        return store(address(fu), bytes32(uint256(_BASE_SLOT) + 3), bytes32(newTotalShares));
     }
 
     function getActor(uint256 actorIndex) internal returns (address actor) {
@@ -236,6 +251,24 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     function warp(uint24 incr) external {
         warp(getBlockTimestamp() + incr);
     }
+
+    /*
+    function setSharesRatio(uint32 divisor) external {
+        uint32 oldRatio = shareRatio;
+        divisor = uint32(bound(divisor, 1, 858993459 / oldRatio, "shares divisor"));
+        uint32 newRatio = divisor * oldRatio;
+        uint256 total;
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            uint256 shares = getShares(actor);
+            shares = tmp().omul(shares, oldRatio).div(newRatio);
+            total += shares;
+            setShares(actor, shares);
+        }
+        setTotalShares(total);
+        shareRatio = newRatio;
+    }
+    */
 
     function transfer(uint256 actorIndex, address to, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
