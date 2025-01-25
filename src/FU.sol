@@ -735,12 +735,13 @@ contract FU is ERC20Base, TransientStorageLayout {
 
     function clock() public view override returns (uint48) {
         unchecked {
-            return uint48(block.timestamp / 1 days);
+            // slither-disable-next-line divide-before-multiply
+            return uint48(block.timestamp / 1 days * 1 days);
         }
     }
 
     // slither-disable-next-line naming-convention
-    string public constant override CLOCK_MODE = "mode=timestamp_days";
+    string public constant override CLOCK_MODE = "mode=timestamp&epoch=1970-01-01T00%3A00%3A00Z&quantum=86400";
 
     function getVotes(address account) external view override returns (uint256) {
         return _$().checkpoints.current(account).toExternal();
