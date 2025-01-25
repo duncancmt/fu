@@ -18,6 +18,7 @@ import "./EnvironmentConstants.sol";
 import {console} from "@forge-std/console.sol";
 
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
+uint256 constant EPOCH = 1740721485;
 
 abstract contract Common {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -49,9 +50,17 @@ abstract contract Common {
     function setChainId(uint256 newChainId) internal {
         vm.chainId(newChainId);
     }
+
+    function warp(uint256 newTimestamp) internal {
+        vm.warp(newTimestamp);
+    }
 }
 
-contract FUGuide is StdAssertions, Common {
+abstract contract ListOfInvariants {
+    function invariant_vacuous() external virtual;
+}
+
+contract FUGuide is StdAssertions, Common, ListOfInvariants {
     IFU internal fu;
     address[] internal actors;
     mapping(address => bool) internal isActor;
@@ -167,12 +176,15 @@ contract FUGuide is StdAssertions, Common {
             saveActor(actor);
         }
     }
+
+    function invariant_vacuous() external override {}
 }
 
-contract FUInvariants is StdInvariant, Common {
+contract FUInvariants is StdInvariant, Common, ListOfInvariants {
     using QuickSort for address[];
 
     bool public constant IS_TEST = true;
+    FUGuide internal guide;
 
     function deployFuDependenciesFoundry() internal {
         // Deploy WETH
@@ -278,8 +290,11 @@ contract FUInvariants is StdInvariant, Common {
 
     function setUp() external {
         (IFU fu, address[] memory actors) = deployFu();
-        new FUGuide(fu, actors);
+        guide = new FUGuide(fu, actors);
+        warp(EPOCH);
     }
 
-    function invariant_vacuous() external {}
+    function invariant_vacuous() external override {
+        guide.invariant_vacuous();
+    }
 }
