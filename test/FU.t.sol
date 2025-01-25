@@ -54,6 +54,10 @@ abstract contract Common {
     function warp(uint256 newTimestamp) internal {
         vm.warp(newTimestamp);
     }
+
+    function getBlockTimestamp() internal view returns (uint256) {
+        return vm.getBlockTimestamp();
+    }
 }
 
 abstract contract ListOfInvariants {
@@ -123,6 +127,10 @@ contract FUGuide is StdAssertions, Common, ListOfInvariants {
         assume(newActor != DEAD);
         maybeCreateActor(newActor);
         saveActor(newActor);
+    }
+
+    function warp(uint24 incr) external {
+        warp(getBlockTimestamp() + incr);
     }
 
     function transfer(uint256 actorIndex, address to, uint256 amount) external {
