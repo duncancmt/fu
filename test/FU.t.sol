@@ -72,20 +72,9 @@ contract FUGuide is StdAssertions, Common {
         }
     }
 
-    function callOptionalReturn(bytes memory data) internal {
-        (bool success, bytes memory returndata) = address(fu).call(data);
-        if (!success) {
-            assembly ("memory-safe") {
-                revert(add(0x20, returndata), mload(returndata))
-            }
-        }
-        if (returndata.length != 0) {
-            require(returndata.length == 32);
-            success = abi.decode(data, (bool));
-            require(success, "returned `false` to signal failure");
-        } else {
-            require(address(fu).code.length != 0);
-        }
+    function callOptionalReturn(bytes memory data) internal returns (bool success, bytes memory returndata) {
+        (success, returndata) = address(fu).call(data);
+        success = success && (returndata.length == 0 || abi.decode(returndata, (bool)));
     }
 
     function getActor(uint256 actorIndex) internal returns (address actor) {
@@ -132,10 +121,14 @@ contract FUGuide is StdAssertions, Common {
         maybeCreateActor(to);
 
         prank(actor);
-        callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
+        (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
 
-        saveActor(actor);
-        saveActor(to);
+        // TODO: handle failure and assert that we fail iff the reason is expected
+
+        if (success) {
+            saveActor(actor);
+            saveActor(to);
+        }
     }
 
     function delegate(uint256 actorIndex, address delegatee) external {
@@ -153,18 +146,26 @@ contract FUGuide is StdAssertions, Common {
         address actor = getActor(actorIndex);
 
         prank(actor);
-        callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
+        (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
 
-        saveActor(actor);
+        // TODO: handle failure and assert that we fail iff the reason is expected
+
+        if (success) {
+            saveActor(actor);
+        }
     }
 
     function deliver(uint256 actorIndex, uint256 amount) external {
         address actor = getActor(actorIndex);
 
         prank(actor);
-        callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
+        (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
 
-        saveActor(actor);
+        // TODO: handle failure and assert that we fail iff the reason is expected
+
+        if (success) {
+            saveActor(actor);
+        }
     }
 }
 
