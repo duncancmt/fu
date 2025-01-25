@@ -198,9 +198,8 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     function _applyWhaleLimit(Shares shares, Shares totalShares_) private pure returns (Shares, Shares) {
-        Shares limit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+        Shares limit = (totalShares_ - shares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
         if (shares > limit) {
-            limit = (totalShares_ - shares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
             totalShares_ = totalShares_ - (shares - limit);
             shares = limit;
         }
@@ -213,18 +212,17 @@ contract FU is ERC20Base, TransientStorageLayout {
         returns (Shares, Shares, Shares)
     {
         (Shares sharesHi, Shares sharesLo) = (shares0 > shares1) ? (shares0, shares1) : (shares1, shares0);
-        Shares limit = totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
-        if (sharesHi > limit) {
-            limit = (totalShares_ - sharesHi).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
-            if (sharesLo > limit) {
-                limit = (totalShares_ - sharesHi - sharesLo).div(Settings.ANTI_WHALE_DIVISOR_MINUS_TWO) - ONE_SHARE;
-                totalShares_ = totalShares_ - (sharesHi + sharesLo - limit.mul(2));
-                sharesHi = limit;
-                sharesLo = limit;
+        Shares firstLimit = (totalShares_ - sharesHi).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
+        if (sharesHi > firstLimit) {
+            Shares secondLimit = (totalShares_ - sharesHi - sharesLo).div(Settings.ANTI_WHALE_DIVISOR_MINUS_TWO) - ONE_SHARE;
+            if (sharesLo > secondLimit) {
+                totalShares_ = totalShares_ - (sharesHi + sharesLo - secondLimit.mul(2));
+                sharesHi = secondLimit;
+                sharesLo = secondLimit;
                 // TODO: verify that this *EXACTLY* satisfied the postcondition `sharesHi == sharesLo == totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE`
             } else {
-                totalShares_ = totalShares_ - (sharesHi - limit);
-                sharesHi = limit;
+                totalShares_ = totalShares_ - (sharesHi - firstLimit);
+                sharesHi = firstLimit;
             }
         }
         (shares0, shares1) = (shares0 > shares1) ? (sharesHi, sharesLo) : (sharesLo, sharesHi);
@@ -313,7 +311,11 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     function whaleLimit(address potentialWhale) external view override returns (uint256) {
-        return _$().totalSupply.div(Settings.ANTI_WHALE_DIVISOR).toCrazyBalance(potentialWhale).toExternal();
+        return Tokens.unwrap(
+            _$().totalSupply.mul(uint256(uint160(potentialWhale)) / Settings.ADDRESS_DIVISOR).div(
+                Settings.CRAZY_BALANCE_BASIS_TIMES_ANTI_WHALE_DIVISOR
+            )
+        );
     }
 
     function _pokeRebaseQueueFrom(

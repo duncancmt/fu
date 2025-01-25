@@ -21,5 +21,5 @@ max_test_rejects = 4_294_967_295
 
 [invariant]
 fail_on_revert = true
-runs = 100
-depth = 5
+runs = 1000
+depth = 100

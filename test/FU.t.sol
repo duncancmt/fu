@@ -8,6 +8,7 @@ import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory} from "src/interfaces/IUniswapV2Factory.sol";
 
 import {QuickSort} from "script/QuickSort.sol";
+import {ItoA} from "script/ItoA.sol";
 
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
 import {StdInvariant} from "@forge-std/StdInvariant.sol";
@@ -18,6 +19,7 @@ import "./EnvironmentConstants.sol";
 import {console} from "@forge-std/console.sol";
 
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
+uint256 constant EPOCH = 1740721485;
 
 abstract contract Common {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -49,22 +51,114 @@ abstract contract Common {
     function setChainId(uint256 newChainId) internal {
         vm.chainId(newChainId);
     }
+
+    function warp(uint256 newTimestamp) internal {
+        vm.warp(newTimestamp);
+    }
+
+    function getBlockTimestamp() internal view returns (uint256) {
+        return vm.getBlockTimestamp();
+    }
+
+    function load(address account, bytes32 slot) internal view returns (bytes32) {
+        return vm.load(account, slot);
+    }
 }
 
-contract FUGuide is StdAssertions, Common {
-    IFU internal fu;
+// Copied directly from Foundry
+abstract contract Bound {
+    function bound(uint256 x, uint256 min, uint256 max) internal pure virtual returns (uint256 result) {
+        require(min <= max, "StdUtils bound(uint256,uint256,uint256): Max is less than min.");
+        // If x is between min and max, return x directly. This is to ensure that dictionary values
+        // do not get shifted if the min is nonzero. More info: https://github.com/foundry-rs/forge-std/issues/188
+        if (x >= min && x <= max) return x;
+
+        uint256 size = max - min + 1;
+
+        // If the value is 0, 1, 2, 3, wrap that to min, min+1, min+2, min+3. Similarly for the UINT256_MAX side.
+        // This helps ensure coverage of the min/max values.
+        if (x <= 3 && size > x) return min + x;
+        if (x >= type(uint256).max - 3 && size > type(uint256).max - x) return max - (type(uint256).max - x);
+
+        // Otherwise, wrap x into the range [min, max], i.e. the range is inclusive.
+        if (x > max) {
+            uint256 diff = x - max;
+            uint256 rem = diff % size;
+            if (rem == 0) return max;
+            result = min + rem - 1;
+        } else if (x < min) {
+            uint256 diff = min - x;
+            uint256 rem = diff % size;
+            if (rem == 0) return min;
+            result = max - rem + 1;
+        }
+    }
+
+    function bound(uint256 x, uint256 min, uint256 max, string memory name)
+        internal
+        pure
+        virtual
+        returns (uint256 result)
+    {
+        result = bound(x, min, max);
+        console.log(name, result);
+    }
+
+    function bound(int256 x, int256 min, int256 max) internal pure virtual returns (int256 result) {
+        require(min <= max, "StdUtils bound(int256,int256,int256): Max is less than min.");
+
+        // Shifting all int256 values to uint256 to use _bound function. The range of two types are:
+        // int256 : -(2**255) ~ (2**255 - 1)
+        // uint256:     0     ~ (2**256 - 1)
+        // So, add 2**255, INT256_MIN_ABS to the integer values.
+        //
+        // If the given integer value is -2**255, we cannot use `-uint256(-x)` because of the overflow.
+        // So, use `~uint256(x) + 1` instead.
+        uint256 _x = x < 0 ? (uint256(type(int256).min) - ~uint256(x) - 1) : (uint256(x) + uint256(type(int256).min));
+        uint256 _min =
+            min < 0 ? (uint256(type(int256).min) - ~uint256(min) - 1) : (uint256(min) + uint256(type(int256).min));
+        uint256 _max =
+            max < 0 ? (uint256(type(int256).min) - ~uint256(max) - 1) : (uint256(max) + uint256(type(int256).min));
+
+        uint256 y = bound(_x, _min, _max);
+
+        // To move it back to int256 value, subtract INT256_MIN_ABS at here.
+        result = y < uint256(type(int256).min)
+            ? int256(~(uint256(type(int256).min) - y) + 1)
+            : int256(y - uint256(type(int256).min));
+    }
+
+    function bound(int256 x, int256 min, int256 max, string memory name)
+        internal
+        pure
+        virtual
+        returns (int256 result)
+    {
+        result = bound(x, min, max);
+        console.log(name, ItoA.itoa(result));
+    }
+}
+
+interface ListOfInvariants {
+    function invariant_nonNegativeRebase() external;
+    function invariant_delegatesNotChanged() external;
+}
+
+contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
+    IFU internal immutable fu;
     address[] internal actors;
     mapping(address => bool) internal isActor;
     mapping(address => uint256) internal lastBalance;
     mapping(address => address) internal shadowDelegates;
 
-    constructor (IFU fu_, address[] memory actors_) {
+    constructor(IFU fu_, address[] memory actors_) {
         fu = fu_;
         actors = actors_;
 
-        address pair = fu.pair();
-        lastBalance[pair] = fu.balanceOf(pair);
         lastBalance[DEAD] = fu.balanceOf(DEAD);
+        address pair = fu.pair();
+        actors.push(pair);
+
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
             isActor[actor] = true;
@@ -72,34 +166,34 @@ contract FUGuide is StdAssertions, Common {
         }
     }
 
-    function callOptionalReturn(bytes memory data) internal {
-        (bool success, bytes memory returndata) = address(fu).call(data);
-        if (!success) {
-            assembly ("memory-safe") {
-                revert(add(0x20, returndata), mload(returndata))
-            }
-        }
-        if (returndata.length != 0) {
-            require(returndata.length == 32);
-            success = abi.decode(data, (bool));
-            require(success, "returned `false` to signal failure");
-        } else {
-            require(address(fu).code.length != 0);
-        }
+    function callOptionalReturn(bytes memory data) internal returns (bool success, bytes memory returndata) {
+        (success, returndata) = address(fu).call(data);
+        success = success && (returndata.length == 0 || abi.decode(returndata, (bool)));
+    }
+
+    bytes32 private constant _BASE_SLOT = 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93600;
+
+    function getShares(address account) internal view returns (uint256) {
+        bytes32 slot = keccak256(abi.encode(account, _BASE_SLOT));
+        uint256 value = uint256(load(address(fu), slot));
+        assertEq(value & 0xffffffffff00000000000000000000000000000000000000000000ffffffffff, 0, "dirty shares slot");
+        return value >> 40;
+    }
+
+    function getTotalShares() internal view returns (uint256) {
+        bytes32 slot = bytes32(uint256(_BASE_SLOT) + 3);
+        uint256 value = uint256(load(address(fu), slot));
+        assertEq(value >> 176, 0, "dirty total supply slot");
+        return value;
     }
 
     function getActor(uint256 actorIndex) internal returns (address actor) {
         actor = actors[actorIndex % actors.length];
-        uint256 balance = fu.balanceOf(actor);
-        assertGe(balance, lastBalance[actor], "negative rebase");
-        lastBalance[actor] = balance;
-        assertEq(fu.delegates(actor), shadowDelegates[actor]);
+        lastBalance[actor] = fu.balanceOf(actor);
+        console.log("actor", actor);
     }
 
     function maybeCreateActor(address newActor) internal {
-        if (newActor == fu.pair()) {
-            return;
-        }
         if (newActor == DEAD) {
             return;
         }
@@ -113,10 +207,8 @@ contract FUGuide is StdAssertions, Common {
     }
 
     function saveActor(address actor) internal {
-        if (actor != fu.pair()) {
-            assertNotEq(actor, DEAD);
-            assertTrue(isActor[actor]);
-        }
+        assertNotEq(actor, DEAD);
+        assertTrue(isActor[actor]);
         lastBalance[actor] = fu.balanceOf(actor);
         shadowDelegates[actor] = fu.delegates(actor);
     }
@@ -127,12 +219,28 @@ contract FUGuide is StdAssertions, Common {
         saveActor(newActor);
     }
 
-    function transfer(uint256 actorIndex, address to, uint256 amount) external {
+    function warp(uint24 incr) external {
+        warp(getBlockTimestamp() + incr);
+    }
+
+    function transfer(uint256 actorIndex, address to, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
+        if (boundAmount) {
+            amount = bound(amount, 0, fu.balanceOf(actor), "amount");
+        }
+        if (actor == fu.pair()) {
+            assume(amount < fu.balanceOf(actor));
+        }
         maybeCreateActor(to);
 
         prank(actor);
-        callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
+        (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
+
+        // TODO: handle failure and assert that we fail iff the reason is expected
+        if (!success) {
+            // TODO: assert that there are no state modifications
+            return;
+        }
 
         saveActor(actor);
         saveActor(to);
@@ -140,38 +248,107 @@ contract FUGuide is StdAssertions, Common {
 
     function delegate(uint256 actorIndex, address delegatee) external {
         address actor = getActor(actorIndex);
+        assume(actor != fu.pair());
         maybeCreateActor(delegatee);
 
         prank(actor);
         fu.delegate(delegatee); // ERC5805 requires that this function return nothing or revert
 
         saveActor(actor);
-        saveActor(delegatee);
+        if (delegatee != DEAD) {
+            saveActor(delegatee);
+        }
     }
 
-    function burn(uint256 actorIndex, uint256 amount) external {
+    function burn(uint256 actorIndex, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
+        if (boundAmount) {
+            amount = bound(amount, 0, fu.balanceOf(actor), "amount");
+        }
+        assume(actor != fu.pair() || amount == 0);
+
+        address delegatee = shadowDelegates[actor];
+
+        uint256 beforeBalance = fu.balanceOf(actor);
+        uint256 beforeSupply = fu.totalSupply();
+        uint256 beforeVotingPower = fu.getVotes(delegatee);
+        uint256 beforeShares = getShares(actor);
 
         prank(actor);
-        callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
+        (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
+
+        // TODO: handle failure and assert that we fail iff the reason is expected
+        if (!success) {
+            // TODO: assert that there are no state modifications
+            return;
+        }
+
+        saveActor(actor);
+
+        uint256 afterBalance = fu.balanceOf(actor);
+        uint256 afterSupply = fu.totalSupply();
+        uint256 afterVotingPower = fu.getVotes(delegatee);
+        uint256 afterShares = getShares(actor);
+
+        // TODO: tighten bounds; this is compensating for rounding error in the "CrazyBalance" calculation
+        assertLe(beforeBalance - afterBalance, amount + 1, "balance delta upper");
+        assertGe(beforeBalance - afterBalance + 1, amount, "balance delta lower");
+        /*
+        assertEq(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / (uint256(uint160(actor)) / Settings.ADDRESS_DIVISOR), "supply delta mismatch");
+        if (delegatee != address(0)) {
+            assertEq(beforeVotingPower - afterVotingPower, (beforeShares - afterShares) / Settings.SHARES_TO_VOTES_DIVISOR, "voting power delta mismatch");
+        } else {
+            assertEq(beforeVotingPower, afterVotingPower, "no delegation, but voting power changed");
+        }
+        */
+    }
+
+    function deliver(uint256 actorIndex, uint256 amount, bool boundAmount) external {
+        address actor = getActor(actorIndex);
+        if (boundAmount) {
+            amount = bound(amount, 0, fu.balanceOf(actor), "amount");
+        }
+        assume(actor != fu.pair() || amount == 0);
+
+        prank(actor);
+        (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
+
+        // TODO: handle failure and assert that we fail iff the reason is expected
+        if (!success) {
+            // TODO: assert that there are no state modifications
+            return;
+        }
 
         saveActor(actor);
     }
 
-    function deliver(uint256 actorIndex, uint256 amount) external {
-        address actor = getActor(actorIndex);
+    function invariant_nonNegativeRebase() external view override {
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            uint256 balance = fu.balanceOf(actor);
+            if (uint160(actor) < Settings.ADDRESS_DIVISOR) {
+                assertEq(balance, 0);
+                continue;
+            }
+            if (balance < fu.whaleLimit(actor)) {
+                assertGe(balance, lastBalance[actor], "negative rebase");
+            }
+        }
+    }
 
-        prank(actor);
-        callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
-
-        saveActor(actor);
+    function invariant_delegatesNotChanged() external view override {
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            assertEq(fu.delegates(actor), shadowDelegates[actor], "delegates mismatch");
+        }
     }
 }
 
-contract FUInvariants is StdInvariant, Common {
+contract FUInvariants is StdInvariant, Common, ListOfInvariants {
     using QuickSort for address[];
 
     bool public constant IS_TEST = true;
+    FUGuide internal guide;
 
     function deployFuDependenciesFoundry() internal {
         // Deploy WETH
@@ -277,8 +454,15 @@ contract FUInvariants is StdInvariant, Common {
 
     function setUp() external {
         (IFU fu, address[] memory actors) = deployFu();
-        new FUGuide(fu, actors);
+        guide = new FUGuide(fu, actors);
+        warp(EPOCH);
     }
 
-    function invariant_vacuous() external {}
+    function invariant_nonNegativeRebase() public virtual override {
+        return guide.invariant_nonNegativeRebase();
+    }
+
+    function invariant_delegatesNotChanged() public virtual override {
+        return guide.invariant_delegatesNotChanged();
+    }
 }
