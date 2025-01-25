@@ -317,7 +317,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 continue;
             }
             if (balance < fu.whaleLimit(actor)) {
-                assertGe(fu.balanceOf(actor), lastBalance[actor], "negative rebase");
+                assertGe(balance, lastBalance[actor], "negative rebase");
             }
         }
     }
