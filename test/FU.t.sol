@@ -140,11 +140,13 @@ contract FUGuide is StdAssertions, Common, ListOfInvariants {
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
 
         // TODO: handle failure and assert that we fail iff the reason is expected
-
-        if (success) {
-            saveActor(actor);
-            saveActor(to);
+        if (!success) {
+            // TODO: assert that there are no state modifications
+            return;
         }
+
+        saveActor(actor);
+        saveActor(to);
     }
 
     function delegate(uint256 actorIndex, address delegatee) external {
@@ -167,10 +169,12 @@ contract FUGuide is StdAssertions, Common, ListOfInvariants {
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
 
         // TODO: handle failure and assert that we fail iff the reason is expected
-
-        if (success) {
-            saveActor(actor);
+        if (!success) {
+            // TODO: assert that there are no state modifications
+            return;
         }
+
+        saveActor(actor);
     }
 
     function deliver(uint256 actorIndex, uint256 amount) external {
@@ -181,10 +185,12 @@ contract FUGuide is StdAssertions, Common, ListOfInvariants {
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
 
         // TODO: handle failure and assert that we fail iff the reason is expected
-
-        if (success) {
-            saveActor(actor);
+        if (!success) {
+            // TODO: assert that there are no state modifications
+            return;
         }
+
+        saveActor(actor);
     }
 
     function invariant_vacuous() external override {}
