@@ -122,7 +122,8 @@ abstract contract Bound {
 }
 
 interface ListOfInvariants {
-    function invariant_vacuous() external;
+    function invariant_nonNegativeRebase() external;
+    function invariant_delegatesNotChanged() external;
 }
 
 contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
@@ -263,7 +264,20 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         saveActor(actor);
     }
 
-    function invariant_vacuous() external override {}
+    function invariant_nonNegativeRebase() external view override {
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            // TODO: this should eventually fail when an account reaches the whale limit and somebody calls `burn`
+            assertGe(fu.balanceOf(actor), lastBalance[actor], "negative rebase");
+        }
+    }
+
+    function invariant_delegatesNotChanged() external view override {
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            assertEq(fu.delegates(actor), shadowDelegates[actor], "delegates mismatch");
+        }
+    }
 }
 
 contract FUInvariants is StdInvariant, Common, ListOfInvariants {
@@ -380,7 +394,11 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
         warp(EPOCH);
     }
 
-    function invariant_vacuous() external override {
-        guide.invariant_vacuous();
+    function invariant_nonNegativeRebase() external override {
+        return guide.invariant_nonNegativeRebase();
+    }
+
+    function invariant_delegatesNotChanged() external override {
+        return guide.invariant_delegatesNotChanged();
     }
 }
