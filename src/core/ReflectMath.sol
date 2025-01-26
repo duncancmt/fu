@@ -291,7 +291,7 @@ library ReflectMath {
             allocTBpS().omul(scale(amount, BASIS - taxRate), totalShares).iadd(t).imul(totalShares - toShares);
 
         newToShares = n.div(d);
-        newTotalShares = newToShares - toShares + totalShares;
+        newTotalShares = totalShares + newToShares - toShares;
         newTotalSupply = totalSupply + amount;
 
         // Fixup rounding error
