@@ -215,6 +215,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         return store(address(fu), bytes32(uint256(_BASE_SLOT) + 3), bytes32(newTotalShares));
     }
 
+    function getCirculatingTokens() internal view returns (uint256) {
+        uint256 value = uint256(load(address(fu), bytes32(uint256(_BASE_SLOT) + 1)));
+        assertEq(value >> 145, 0, string.concat("dirty circulating tokens slot: ", value.itoa()));
+        return value;
+    }
+
     function getActor(uint256 actorIndex) internal returns (address actor) {
         actor = actors[actorIndex % actors.length];
         lastBalance[actor] = fu.balanceOf(actor);
@@ -294,7 +300,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
         maybeCreateActor(to);
 
-        uint256 beforeSupply = fu.totalSupply();
+        uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
 
         prank(actor);
@@ -309,10 +315,15 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         saveActor(actor);
         saveActor(to);
 
-        uint256 afterSupply = fu.totalSupply();
+        uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
 
-        assertTrue(alloc().omul(beforeTotalShares, afterSupply) > tmp().omul(afterTotalShares, beforeSupply), "shares to tokens ratio increased");
+        if (amount == 0) {
+            assertEq(beforeTotalShares, afterTotalShares);
+            assertEq(afterCirculating, beforeCirculating);
+        } else {
+            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio increased");
+        }
     }
 
     function delegate(uint256 actorIndex, address delegatee) external {
@@ -341,6 +352,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeBalance = fu.balanceOf(actor);
         uint256 beforeSupply = fu.totalSupply();
         uint256 beforeTotalShares = getTotalShares();
+        uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeVotingPower = fu.getVotes(delegatee);
         uint256 beforeShares = getShares(actor);
 
@@ -358,10 +370,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterBalance = fu.balanceOf(actor);
         uint256 afterSupply = fu.totalSupply();
         uint256 afterTotalShares = getTotalShares();
+        uint256 afterCirculating = getCirculatingTokens();
         uint256 afterVotingPower = fu.getVotes(delegatee);
         uint256 afterShares = getShares(actor);
 
-        assertTrue(alloc().omul(beforeTotalShares, afterSupply) >= tmp().omul(afterTotalShares, beforeSupply), "shares to tokens ratio increased");
+        assertTrue(alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio increased");
 
         // TODO: tighten bounds; this is compensating for rounding error in the "CrazyBalance" calculation
         assertLe(beforeBalance - afterBalance, amount, "balance delta upper");
@@ -389,7 +402,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
         assume(actor != fu.pair() || amount == 0);
 
-        uint256 beforeSupply = fu.totalSupply();
+        uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
 
         prank(actor);
@@ -403,10 +416,15 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         saveActor(actor);
 
-        uint256 afterSupply = fu.totalSupply();
+        uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
 
-        assertTrue(alloc().omul(beforeTotalShares, afterSupply) > tmp().omul(afterTotalShares, beforeSupply), "shares to tokens ratio increased");
+        if (amount == 0) {
+            assertEq(beforeTotalShares, afterTotalShares);
+            assertEq(afterCirculating, beforeCirculating);
+        } else {
+            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio increased");
+        }
     }
 
     function invariant_nonNegativeRebase() external view override {
