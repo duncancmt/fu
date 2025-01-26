@@ -252,7 +252,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     function setSharesRatio(uint32 newRatio) external {
         uint32 oldRatio = shareRatio;
-        uint256 fudge = 10; // TODO: decrease
+        uint256 fudge = 1000; // TODO: decrease
         newRatio = uint32(bound(newRatio, oldRatio, Settings.INITIAL_SHARES_RATIO / (Settings.MIN_SHARES_RATIO * fudge), "shares divisor"));
         if (newRatio == oldRatio) {
             return;
