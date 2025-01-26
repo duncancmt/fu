@@ -6,6 +6,7 @@ import {FU} from "src/FU.sol";
 import {Settings} from "src/core/Settings.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory} from "src/interfaces/IUniswapV2Factory.sol";
+import {ChecksumAddress} from "src/lib/ChecksumAddress.sol";
 
 import {QuickSort} from "script/QuickSort.sol";
 import {ItoA} from "script/ItoA.sol";
@@ -153,6 +154,7 @@ interface ListOfInvariants {
 
 contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     using ItoA for uint256;
+    using ChecksumAddress for address;
 
     IFU internal immutable fu;
     address[] internal actors;
@@ -388,8 +390,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 assertEq(lastBalance[actor], 0);
                 continue;
             }
-            if (balance < fu.whaleLimit(actor)) {
-                assertGe(balance, lastBalance[actor], "negative rebase");
+            uint256 whaleLimit = fu.whaleLimit(actor);
+            assertLe(balance, whaleLimit);
+            if (balance != whaleLimit) {
+                assertGe(balance, lastBalance[actor], string.concat("negative rebase: ", actor.toChecksumAddress()));
             }
         }
     }

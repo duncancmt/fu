@@ -197,10 +197,16 @@ contract FU is ERC20Base, TransientStorageLayout {
         return true;
     }
 
+    function _whaleLimit(Shares shares, Shares totalShares_) private pure returns (Shares limit, Shares newTotalShares) {
+        Shares uninvolved = totalShares_ - shares;
+        limit = uninvolved.div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
+        newTotalShares = uninvolved + limit;
+    }
+
     function _applyWhaleLimit(Shares shares, Shares totalShares_) private pure returns (Shares, Shares) {
-        Shares limit = (totalShares_ - shares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
+        (Shares limit, Shares newTotalShares) = _whaleLimit(shares, totalShares_);
         if (shares > limit) {
-            totalShares_ = totalShares_ - (shares - limit);
+            totalShares_ = newTotalShares;
             shares = limit;
         }
         return (shares, totalShares_);
@@ -212,16 +218,17 @@ contract FU is ERC20Base, TransientStorageLayout {
         returns (Shares, Shares, Shares)
     {
         (Shares sharesHi, Shares sharesLo) = (shares0 > shares1) ? (shares0, shares1) : (shares1, shares0);
-        Shares firstLimit = (totalShares_ - sharesHi).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
+        (Shares firstLimit, Shares newTotalShares) = _whaleLimit(sharesHi, totalShares_);
         if (sharesHi > firstLimit) {
-            Shares secondLimit = (totalShares_ - sharesHi - sharesLo).div(Settings.ANTI_WHALE_DIVISOR_MINUS_TWO) - ONE_SHARE;
+            Shares uninvolved = totalShares_ - sharesHi - sharesLo;
+            Shares secondLimit = uninvolved.div(Settings.ANTI_WHALE_DIVISOR_MINUS_TWO) - ONE_SHARE;
             if (sharesLo > secondLimit) {
-                totalShares_ = totalShares_ - (sharesHi + sharesLo - secondLimit.mul(2));
+                totalShares_ = uninvolved + secondLimit.mul(2);
                 sharesHi = secondLimit;
                 sharesLo = secondLimit;
                 // TODO: verify that this *EXACTLY* satisfied the postcondition `sharesHi == sharesLo == totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE`
             } else {
-                totalShares_ = totalShares_ - (sharesHi - firstLimit);
+                totalShares_ = newTotalShares;
                 sharesHi = firstLimit;
             }
         }
@@ -311,11 +318,12 @@ contract FU is ERC20Base, TransientStorageLayout {
     }
 
     function whaleLimit(address potentialWhale) external view override returns (uint256) {
-        return Tokens.unwrap(
-            _$().totalSupply.mul(uint256(uint160(potentialWhale)) / Settings.ADDRESS_DIVISOR).div(
-                Settings.CRAZY_BALANCE_BASIS_TIMES_ANTI_WHALE_DIVISOR
-            )
-        );
+        // This looks gas-wasteful and baroque, but loading all this additional state is required for
+        // exact correctness in the face of rounding error. This exactly replicates the rounding
+        // behavior applied when calling `balanceOf(potentialWhale)`.
+        Storage storage $ = _$();
+        (Shares limit, Shares totalShares_) = _whaleLimit($.sharesOf[potentialWhale].load(), $.totalShares);
+        return limit.toCrazyBalance(potentialWhale, $.totalSupply, totalShares_).toExternal();
     }
 
     function _pokeRebaseQueueFrom(
