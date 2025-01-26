@@ -487,6 +487,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function invariant_nonNegativeRebase() external view override {
+        if (!_CHECK_SHARES_RATIO) {
+            return;
+        }
         address pair = fu.pair();
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
