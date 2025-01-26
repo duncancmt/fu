@@ -8,6 +8,8 @@ import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory} from "src/interfaces/IUniswapV2Factory.sol";
 import {ChecksumAddress} from "src/lib/ChecksumAddress.sol";
 
+import {alloc, tmp} from "src/lib/512Math.sol";
+
 import {QuickSort} from "script/QuickSort.sol";
 import {ItoA} from "script/ItoA.sol";
 
@@ -292,6 +294,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
         maybeCreateActor(to);
 
+        uint256 beforeSupply = fu.totalSupply();
+        uint256 beforeTotalShares = getTotalShares();
+
         prank(actor);
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
 
@@ -303,6 +308,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         saveActor(actor);
         saveActor(to);
+
+        uint256 afterSupply = fu.totalSupply();
+        uint256 afterTotalShares = getTotalShares();
+
+        assertTrue(alloc().omul(beforeTotalShares, afterSupply) > tmp().omul(afterTotalShares, beforeSupply), "shares to tokens ratio increased");
     }
 
     function delegate(uint256 actorIndex, address delegatee) external {
@@ -330,6 +340,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         uint256 beforeBalance = fu.balanceOf(actor);
         uint256 beforeSupply = fu.totalSupply();
+        uint256 beforeTotalShares = getTotalShares();
         uint256 beforeVotingPower = fu.getVotes(delegatee);
         uint256 beforeShares = getShares(actor);
 
@@ -346,8 +357,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         uint256 afterBalance = fu.balanceOf(actor);
         uint256 afterSupply = fu.totalSupply();
+        uint256 afterTotalShares = getTotalShares();
         uint256 afterVotingPower = fu.getVotes(delegatee);
         uint256 afterShares = getShares(actor);
+
+        assertTrue(alloc().omul(beforeTotalShares, afterSupply) >= tmp().omul(afterTotalShares, beforeSupply), "shares to tokens ratio increased");
 
         // TODO: tighten bounds; this is compensating for rounding error in the "CrazyBalance" calculation
         assertLe(beforeBalance - afterBalance, amount, "balance delta upper");
@@ -375,6 +389,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
         assume(actor != fu.pair() || amount == 0);
 
+        uint256 beforeSupply = fu.totalSupply();
+        uint256 beforeTotalShares = getTotalShares();
+
         prank(actor);
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
 
@@ -385,6 +402,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
 
         saveActor(actor);
+
+        uint256 afterSupply = fu.totalSupply();
+        uint256 afterTotalShares = getTotalShares();
+
+        assertTrue(alloc().omul(beforeTotalShares, afterSupply) > tmp().omul(afterTotalShares, beforeSupply), "shares to tokens ratio increased");
     }
 
     function invariant_nonNegativeRebase() external view override {
