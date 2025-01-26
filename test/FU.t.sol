@@ -535,6 +535,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function invariant_votingDelegation() external override {
+        uint256 total;
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
             address delegatee = shadowDelegates[actor];
@@ -543,11 +544,13 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             }
             uint256 shares = getShares(actor);
             uint256 votes = shares / Settings.SHARES_TO_VOTES_DIVISOR;
+            total += votes;
             assembly ("memory-safe") {
                 delegatee := and(0xffffffffffffffffffffffffffffffffffffffff, delegatee)
                 tstore(delegatee, add(votes, tload(delegatee)))
             }
         }
+        assertEq(fu.getTotalVotes(), total);
         {
             uint256 power;
             assembly ("memory-safe") {
