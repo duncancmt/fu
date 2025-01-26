@@ -350,10 +350,15 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterShares = getShares(actor);
 
         // TODO: tighten bounds; this is compensating for rounding error in the "CrazyBalance" calculation
-        assertLe(beforeBalance - afterBalance, amount + 1, "balance delta upper");
+        assertLe(beforeBalance - afterBalance, amount, "balance delta upper");
         assertGe(beforeBalance - afterBalance + 1, amount, "balance delta lower");
+        uint256 divisor = (uint256(uint160(actor)) / Settings.ADDRESS_DIVISOR);
+        if (divisor == 0) {
+            assertEq(amount, 0, "efficient address edge case");
+            return;
+        }
+        assertEq(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta mismatch");
         /*
-        assertEq(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / (uint256(uint160(actor)) / Settings.ADDRESS_DIVISOR), "supply delta mismatch");
         if (delegatee != address(0)) {
             assertEq(beforeVotingPower - afterVotingPower, (beforeShares - afterShares) / Settings.SHARES_TO_VOTES_DIVISOR, "voting power delta mismatch");
         } else {
