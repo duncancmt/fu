@@ -152,6 +152,7 @@ interface ListOfInvariants {
     function invariant_nonNegativeRebase() external;
     function invariant_delegatesNotChanged() external;
     function invariant_sumOfShares() external;
+    function invariant_votingDelegation() external;
 }
 
 contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
@@ -289,9 +290,21 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
+
+            address delegatee = shadowDelegates[actor];
+            if (delegatee != address(0)) {
+                prank(actor);
+                fu.delegate(address(0));
+            }
+
             uint256 shares = getShares(actor) * oldRatio / newRatio;
             total += shares;
             setShares(actor, shares);
+
+            if (delegatee != address(0)) {
+                prank(actor);
+                fu.delegate(delegatee);
+            }
         }
         setTotalShares(total);
 
@@ -507,6 +520,40 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
         assertEq(total, getTotalShares(), "sum(shares) mismatch with totalShares");
     }
+
+    function invariant_votingDelegation() external override {
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            address delegatee = shadowDelegates[actor];
+            if (delegatee == address(0)) {
+                continue;
+            }
+            uint256 shares = getShares(actor);
+            uint256 votes = shares / Settings.SHARES_TO_VOTES_DIVISOR;
+            assembly ("memory-safe") {
+                delegatee := and(0xffffffffffffffffffffffffffffffffffffffff, delegatee)
+                tstore(delegatee, add(votes, tload(delegatee)))
+            }
+        }
+        {
+            uint256 power;
+            assembly ("memory-safe") {
+                power := tload(DEAD)
+                tstore(DEAD, 0x00)
+            }
+            assertEq(fu.getVotes(DEAD), power, string.concat("voting power for ", DEAD.toChecksumAddress()));
+        }
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            uint256 power;
+            assembly ("memory-safe") {
+                actor := and(0xffffffffffffffffffffffffffffffffffffffff, actor)
+                power := tload(actor)
+                tstore(actor, 0x00)
+            }
+            assertEq(fu.getVotes(actor), power, string.concat("voting power for ", actor.toChecksumAddress()));
+        }
+    }
 }
 
 contract FUInvariants is StdInvariant, Common, ListOfInvariants {
@@ -633,5 +680,9 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
 
     function invariant_sumOfShares() public virtual override {
         return guide.invariant_sumOfShares();
+    }
+
+    function invariant_votingDelegation() public virtual override {
+        return guide.invariant_votingDelegation();
     }
 }
