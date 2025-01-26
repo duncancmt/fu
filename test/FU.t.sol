@@ -333,6 +333,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeTotalShares = getTotalShares();
 
         prank(actor);
+        // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
 
         // TODO: handle failure and assert that we fail iff the reason is expected
@@ -343,6 +344,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         saveActor(actor);
         saveActor(to);
+
+        // TODO: check for "rebase queue" events
 
         bool toIsWhale = lastBalance[to] == fu.whaleLimit(to);
         uint256 afterCirculating = getCirculatingTokens();
@@ -372,6 +375,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         maybeCreateActor(delegatee);
 
         prank(actor);
+        // TODO: expect events
         fu.delegate(delegatee); // ERC5805 requires that this function return nothing or revert
 
         saveActor(actor);
@@ -397,6 +401,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeShares = getShares(actor);
 
         prank(actor);
+        // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
 
         // TODO: handle failure and assert that we fail iff the reason is expected
@@ -406,6 +411,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
 
         saveActor(actor);
+
+        // TODO: check for "rebase queue" events
 
         uint256 afterBalance = lastBalance[actor];
         uint256 afterSupply = fu.totalSupply();
@@ -456,6 +463,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeTotalShares = getTotalShares();
 
         prank(actor);
+        // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
 
         // TODO: handle failure and assert that we fail iff the reason is expected
@@ -465,6 +473,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
 
         saveActor(actor);
+
+        // TODO: check for "rebase queue" events
 
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
