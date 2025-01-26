@@ -12,6 +12,7 @@ import {alloc, tmp} from "src/lib/512Math.sol";
 
 import {QuickSort} from "script/QuickSort.sol";
 import {ItoA} from "script/ItoA.sol";
+import {Hexlify} from "script/Hexlify.sol";
 
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
 import {StdInvariant} from "@forge-std/StdInvariant.sol";
@@ -574,6 +575,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
 contract FUInvariants is StdInvariant, Common, ListOfInvariants {
     using QuickSort for address[];
+    using Hexlify for bytes32;
 
     bool public constant IS_TEST = true;
     FUGuide internal guide;
@@ -657,8 +659,6 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
             type(FU).creationCode,
             abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)
         );
-        console.log("FU mock inithash");
-        console.logBytes32(keccak256(initcode));
         deal(address(this), 5 ether);
         deal(fuTxOrigin, 5 ether);
         setBaseFee(6 wei); // causes the `isSimulation` check to pass; Medusa is unable to prank `tx.origin`
@@ -666,7 +666,7 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
         (bool success, bytes memory returndata) = deterministicDeployerFactory.call{value: 5 ether}(
             bytes.concat(bytes32(0x000000000000000000000000000000000000000000000000000000027b1e675f), initcode)
         );
-        require(success);
+        require(success, string.concat("You need to recompute the salt for inithash: ", keccak256(initcode).hexlify()));
         fu = IFU(payable(address(uint160(bytes20(returndata)))));
         label(address(fu), "FU");
         excludeContract(address(fu));
