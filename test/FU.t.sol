@@ -197,7 +197,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     function getShares(address account) internal view returns (uint256) {
         uint256 value = uint256(load(address(fu), _sharesSlot(account)));
-        assertEq(value & 0xffffffffff00000000000000000000000000000000000000000000ffffffffff, 0, string.concat("dirty shares slot: ", value.itoa()));
+        assertEq(
+            value & 0xffffffffff00000000000000000000000000000000000000000000ffffffffff,
+            0,
+            string.concat("dirty shares slot: ", value.itoa())
+        );
         return value >> 40;
     }
 
@@ -263,7 +267,14 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     function setSharesRatio(uint32 newRatio) external {
         uint32 oldRatio = shareRatio;
         uint256 fudge = 10; // TODO: decrease
-        newRatio = uint32(bound(newRatio, oldRatio, Settings.INITIAL_SHARES_RATIO / (Settings.MIN_SHARES_RATIO * fudge), "shares divisor"));
+        newRatio = uint32(
+            bound(
+                newRatio,
+                oldRatio,
+                Settings.INITIAL_SHARES_RATIO / (Settings.MIN_SHARES_RATIO * fudge),
+                "shares divisor"
+            )
+        );
         if (newRatio == oldRatio) {
             return;
         }
@@ -325,7 +336,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             assertEq(afterCirculating, beforeCirculating);
             */
         } else {
-            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio increased");
+            assertTrue(
+                alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
+                "shares to tokens ratio increased"
+            );
         }
     }
 
@@ -377,7 +391,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterVotingPower = fu.getVotes(delegatee);
         uint256 afterShares = getShares(actor);
 
-        assertTrue(alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio increased");
+        assertTrue(
+            alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating),
+            "shares to tokens ratio increased"
+        );
 
         // TODO: tighten bounds; this is compensating for rounding error in the "CrazyBalance" calculation
         assertLe(beforeBalance - afterBalance, amount, "balance delta upper");
@@ -387,7 +404,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             assertEq(amount, 0, "efficient address edge case");
             return;
         }
-        assertLe(beforeSupply - afterSupply, (amount + 1) * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta higher"); // TODO: tighten to assertLt
+        assertLe(
+            beforeSupply - afterSupply, (amount + 1) * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta higher"
+        ); // TODO: tighten to assertLt
         assertGe(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta lower");
         /*
         if (delegatee != address(0)) {
@@ -429,7 +448,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             assertEq(afterCirculating, beforeCirculating);
             */
         } else {
-            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio increased");
+            assertTrue(
+                alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
+                "shares to tokens ratio increased"
+            );
         }
     }
 

@@ -197,7 +197,11 @@ contract FU is ERC20Base, TransientStorageLayout {
         return true;
     }
 
-    function _whaleLimit(Shares shares, Shares totalShares_) private pure returns (Shares limit, Shares newTotalShares) {
+    function _whaleLimit(Shares shares, Shares totalShares_)
+        private
+        pure
+        returns (Shares limit, Shares newTotalShares)
+    {
         Shares uninvolved = totalShares_ - shares;
         limit = uninvolved.div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
         newTotalShares = uninvolved + limit;
