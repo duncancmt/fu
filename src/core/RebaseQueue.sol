@@ -137,7 +137,7 @@ library LibRebaseQueue {
         uint256 i;
         assembly ("memory-safe") {
             mstore(0x00, gas())
-            i := and(0x07, keccak256(0x00, 0x20))
+            i := shr(0xfd, keccak256(0x00, 0x20))
         }
         for (;; i = i.unsafeDec()) {
             Shares shares = sharesOf[cursor].load();
