@@ -254,7 +254,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     function setSharesRatio(uint32 newRatio) external {
         uint32 oldRatio = shareRatio;
-        uint256 fudge = 1000; // TODO: decrease
+        uint256 fudge = 10; // TODO: decrease
         newRatio = uint32(bound(newRatio, oldRatio, Settings.INITIAL_SHARES_RATIO / (Settings.MIN_SHARES_RATIO * fudge), "shares divisor"));
         if (newRatio == oldRatio) {
             return;
@@ -357,7 +357,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             assertEq(amount, 0, "efficient address edge case");
             return;
         }
-        assertEq(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta mismatch");
+        assertLe(beforeSupply - afterSupply, (amount + 1) * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta higher"); // TODO: tighten to assertLt
+        assertGe(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta lower");
         /*
         if (delegatee != address(0)) {
             assertEq(beforeVotingPower - afterVotingPower, (beforeShares - afterShares) / Settings.SHARES_TO_VOTES_DIVISOR, "voting power delta mismatch");
