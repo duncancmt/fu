@@ -311,6 +311,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
         maybeCreateActor(to);
 
+        uint256 beforeBalance = lastBalance[actor];
+        bool actorIsWhale = beforeBalance == fu.whaleLimit(actor);
+        uint256 beforeShares = getShares(actor);
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
 
@@ -326,15 +329,20 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         saveActor(actor);
         saveActor(to);
 
+        bool toIsWhale = lastBalance[to] == fu.whaleLimit(to);
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
 
         if (amount == 0) {
-            // TODO: This doesn't correctly handle the whale limit case, so it's commented-out
-            /*
-            assertEq(beforeTotalShares, afterTotalShares);
             assertEq(afterCirculating, beforeCirculating);
-            */
+            if (actorIsWhale || toIsWhale) {
+                assertLe(beforeTotalShares, afterTotalShares, "shares delta (whale)");
+            } else if (beforeBalance == 0) {
+                assertGe(beforeTotalShares, afterTotalShares, "shares delta upper (dust)");
+                assertLe(beforeTotalShares - beforeShares, afterTotalShares, "shares delta lower (dust)");
+            } else {
+                assertEq(beforeTotalShares, afterTotalShares, "shares delta (no-op)");
+            }
         } else {
             assertTrue(
                 alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
@@ -384,7 +392,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         saveActor(actor);
 
-        uint256 afterBalance = fu.balanceOf(actor);
+        uint256 afterBalance = lastBalance[actor];
         uint256 afterSupply = fu.totalSupply();
         uint256 afterTotalShares = getTotalShares();
         uint256 afterCirculating = getCirculatingTokens();
@@ -424,6 +432,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
         assume(actor != fu.pair() || amount == 0);
 
+        uint256 beforeBalance = lastBalance[actor];
+        bool actorIsWhale = beforeBalance == fu.whaleLimit(actor);
+        uint256 beforeShares = getShares(actor);
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
 
@@ -442,11 +453,14 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterTotalShares = getTotalShares();
 
         if (amount == 0) {
-            // TODO: This doesn't correctly handle the whale limit case, so it's commented-out
-            /*
-            assertEq(beforeTotalShares, afterTotalShares);
             assertEq(afterCirculating, beforeCirculating);
-            */
+            if (actorIsWhale) {
+                assertLe(beforeTotalShares, afterTotalShares, "shares delta (whale)");
+            } else if (beforeBalance == 0) {
+                assertEq(beforeTotalShares - beforeShares, afterTotalShares, "shares delta (dust)");
+            } else {
+                assertEq(beforeTotalShares, afterTotalShares, "shares delta (no-op)");
+            }
         } else {
             assertTrue(
                 alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
