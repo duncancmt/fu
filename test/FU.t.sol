@@ -558,6 +558,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 power := tload(DEAD)
                 tstore(DEAD, 0x00)
             }
+            total -= power;
             assertEq(fu.getVotes(DEAD), power, string.concat("voting power for ", DEAD.toChecksumAddress()));
         }
         for (uint256 i; i < actors.length; i++) {
@@ -568,8 +569,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 power := tload(actor)
                 tstore(actor, 0x00)
             }
+            total -= power;
             assertEq(fu.getVotes(actor), power, string.concat("voting power for ", actor.toChecksumAddress()));
         }
+        assertEq(total, 0);
     }
 }
 
