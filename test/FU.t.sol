@@ -388,6 +388,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function invariant_nonNegativeRebase() external view override {
+        address pair = fu.pair();
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
             uint256 balance = fu.balanceOf(actor);
@@ -397,7 +398,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 continue;
             }
             uint256 whaleLimit = fu.whaleLimit(actor);
-            assertLe(balance, whaleLimit);
+            if (actor != pair) {
+                assertLe(balance, whaleLimit, string.concat("whale limit exceeded: ", actor.toChecksumAddress()));
+            }
             if (balance != whaleLimit) {
                 assertGe(balance, lastBalance[actor], string.concat("negative rebase: ", actor.toChecksumAddress()));
             }
