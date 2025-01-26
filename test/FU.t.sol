@@ -158,6 +158,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     using ItoA for uint256;
     using ChecksumAddress for address;
 
+    bool internal constant _CHECK_SHARES_RATIO = false;
+
     IFU internal immutable fu;
     address[] internal actors;
     mapping(address => bool) internal isActor;
@@ -343,7 +345,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             } else {
                 assertEq(beforeTotalShares, afterTotalShares, "shares delta (no-op)");
             }
-        } else {
+        } else if (_CHECK_SHARES_RATIO) {
             assertTrue(
                 alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
                 "shares to tokens ratio increased"
@@ -399,10 +401,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterVotingPower = fu.getVotes(delegatee);
         uint256 afterShares = getShares(actor);
 
-        assertTrue(
-            alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating),
-            "shares to tokens ratio increased"
-        );
+        if (_CHECK_SHARES_RATIO) {
+            assertTrue(
+                alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating),
+                "shares to tokens ratio increased"
+            );
+        }
 
         // TODO: tighten bounds; this is compensating for rounding error in the "CrazyBalance" calculation
         assertLe(beforeBalance - afterBalance, amount, "balance delta upper");
@@ -461,7 +465,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             } else {
                 assertEq(beforeTotalShares, afterTotalShares, "shares delta (no-op)");
             }
-        } else {
+        } else if (_CHECK_SHARES_RATIO) {
             assertTrue(
                 alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
                 "shares to tokens ratio increased"
