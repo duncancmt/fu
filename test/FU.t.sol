@@ -7,8 +7,6 @@ import {Settings} from "src/core/Settings.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory} from "src/interfaces/IUniswapV2Factory.sol";
 
-import {tmp} from "src/lib/512Math.sol";
-
 import {QuickSort} from "script/QuickSort.sol";
 import {ItoA} from "script/ItoA.sol";
 
@@ -252,23 +250,35 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         warp(getBlockTimestamp() + incr);
     }
 
-    /*
-    function setSharesRatio(uint32 divisor) external {
+    function setSharesRatio(uint32 newRatio) external {
         uint32 oldRatio = shareRatio;
-        divisor = uint32(bound(divisor, 1, 858993459 / oldRatio, "shares divisor"));
-        uint32 newRatio = divisor * oldRatio;
+        uint256 fudge = 10; // TODO: decrease
+        newRatio = uint32(bound(newRatio, oldRatio, Settings.INITIAL_SHARES_RATIO / (Settings.MIN_SHARES_RATIO * fudge), "shares divisor"));
+        if (newRatio == oldRatio) {
+            return;
+        }
+
         uint256 total;
+        {
+            uint256 shares = getShares(DEAD) * oldRatio / newRatio;
+            total = shares;
+            setShares(DEAD, shares);
+        }
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
-            uint256 shares = getShares(actor);
-            shares = tmp().omul(shares, oldRatio).div(newRatio);
+            uint256 shares = getShares(actor) * oldRatio / newRatio;
             total += shares;
             setShares(actor, shares);
         }
         setTotalShares(total);
+
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            lastBalance[actor] = fu.balanceOf(actor);
+        }
+
         shareRatio = newRatio;
     }
-    */
 
     function transfer(uint256 actorIndex, address to, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
