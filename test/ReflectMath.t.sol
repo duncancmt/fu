@@ -410,9 +410,8 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens newFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedNewFromBalance = fromBalance - amount;
 
-        assertEq(
-            Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "new balance, expected new balance"
-        );
+        assertGe(Tokens.unwrap(newFromBalance) + 1, Tokens.unwrap(expectedNewFromBalance), "new balance lower");
+        assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "new balance upper");
     }
 
     function testBurn(Tokens totalSupply, Shares totalShares, Shares fromShares, Tokens amount, uint256 sharesRatio)

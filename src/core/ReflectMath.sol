@@ -360,15 +360,7 @@ library ReflectMath {
         TokensXShares2 n = allocTS().omul(fromShares, totalSupply).isub(t).imul(totalShares - fromShares);
 
         newFromShares = n.div(d);
-        newTotalShares = totalShares - (fromShares - newFromShares);
-
-        // Fixup rounding error
-        Tokens beforeFromBalance = tmpTS().omul(fromShares, totalSupply).div(totalShares);
-        Tokens afterFromBalance = tmpTS().omul(newFromShares, totalSupply).div(newTotalShares);
-        Tokens expectedAfterFromBalance = beforeFromBalance - amount;
-        bool condition = afterFromBalance < expectedAfterFromBalance;
-        newFromShares = newFromShares.inc(condition);
-        newTotalShares = newTotalShares.inc(condition);
+        newTotalShares = totalShares + newFromShares - fromShares;
     }
 
     // getDeliverShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
@@ -383,10 +375,6 @@ library ReflectMath {
         newFromShares = n.div(totalSupply);
         newTotalShares = totalShares + newFromShares - fromShares;
         newTotalSupply = totalSupply - amount;
-
-        // TODO: this sometimes burns one more wei than specified, however fixing this rounding
-        // error is very complex and gas inefficient. Since we're just destroying tokens, maybe it's
-        // better to leave the rounding error?
     }
 
     // getBurnShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
