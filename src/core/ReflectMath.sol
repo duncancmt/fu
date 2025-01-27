@@ -400,27 +400,30 @@ library ReflectMath {
             Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
             console.log("incr", Shares.unwrap(incr));
 
-            newFromShares = newFromShares + incr;
-            console.log("newFromShares", Shares.unwrap(newFromShares));
+            Shares newFromSharesWithIncr = newFromShares + incr;
+            console.log("newFromShares", Shares.unwrap(newFromSharesWithIncr));
 
-            newTotalShares = newTotalShares + incr;
-            console.log("newTotalShares", Shares.unwrap(newTotalShares));
+            Shares newTotalSharesWithIncr = newTotalShares + incr;
+            console.log("newTotalShares", Shares.unwrap(newTotalSharesWithIncr));
+
+            Tokens newTotalSupply2ElectricBoogaloo = newTotalSupply - amount;
+            console.log("newTotalSupply2ElectricBoogaloo", Tokens.unwrap(newTotalSupply2ElectricBoogaloo));
 
             //this does equal expectedAfterFromBalance
-            Tokens afterFromBalance2ElectricBoogaloo = newFromShares.toTokens(newTotalSupply, newTotalShares);
+            Tokens afterFromBalance2ElectricBoogaloo = newFromSharesWithIncr.toTokens(newTotalSupply2ElectricBoogaloo, newTotalSharesWithIncr);
             console.log("afterFromBalance2ElectricBoogaloo", Tokens.unwrap(afterFromBalance2ElectricBoogaloo));
 
             //this does equal newTotalShares that's been incremented
-            Shares newTotalShares2ElectricBoogaloo = totalShares + newFromShares - fromShares;
+            Shares newTotalShares2ElectricBoogaloo = newTotalShares + newFromSharesWithIncr - newFromShares;
             console.log("newTotalShares2ElectricBoogaloo", Shares.unwrap(newTotalShares2ElectricBoogaloo));
 
             //does not compute expected value equal to newFromShares that's been incremented
-            TokensXShares n2ElectricBoogaloo = allocTS().omul(newFromShares, newTotalSupply).isub(tmpTS().omul(newTotalShares, amount));
+            TokensXShares n2ElectricBoogaloo = allocTS().omul(newFromSharesWithIncr, newTotalSupply2ElectricBoogaloo).isub(tmpTS().omul(newTotalSharesWithIncr, amount));
             Shares newFromShares2ElectricBoogaloo = n.div(newTotalSupply);
+
             console.log("newFromShares2ElectricBoogaloo", Shares.unwrap(newFromShares2ElectricBoogaloo));
         }
     }
 
     // getBurnShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
 }
-
