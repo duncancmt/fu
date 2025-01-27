@@ -16,6 +16,7 @@ import {SharesXBasisPoints, scale, cast} from "../types/SharesXBasisPoints.sol";
 import {Shares2XBasisPoints, alloc as allocS2Bp} from "../types/Shares2XBasisPoints.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
+import {console} from "@forge-std/console.sol";
 
 /*
 
@@ -381,20 +382,45 @@ library ReflectMath {
     {
         TokensXShares n = allocTS().omul(fromShares, totalSupply).isub(tmpTS().omul(totalShares, amount));
         newFromShares = n.div(totalSupply);
+        console.log("newFromShares", Shares.unwrap(newFromShares));
         newTotalShares = totalShares + newFromShares - fromShares;
+        console.log("newTotalShares", Shares.unwrap(newTotalShares));
         newTotalSupply = totalSupply - amount;
+        console.log("newTotalSupply", Tokens.unwrap(newTotalSupply));
 
         // Fixup rounding error
         Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
+        console.log("beforeFromBalance", Tokens.unwrap(beforeFromBalance));
         Tokens afterFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
+        console.log("afterFromBalance", Tokens.unwrap(afterFromBalance));
         Tokens expectedAfterFromBalance = beforeFromBalance - amount;
+        console.log("expectedAfterFromBalance", Tokens.unwrap(expectedAfterFromBalance));
 
         if (afterFromBalance < expectedAfterFromBalance) {
             Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
+            console.log("incr", Shares.unwrap(incr));
+
             newFromShares = newFromShares + incr;
+            console.log("newFromShares", Shares.unwrap(newFromShares));
+
             newTotalShares = newTotalShares + incr;
+            console.log("newTotalShares", Shares.unwrap(newTotalShares));
+
+            //this does equal expectedAfterFromBalance
+            Tokens afterFromBalance2ElectricBoogaloo = newFromShares.toTokens(newTotalSupply, newTotalShares);
+            console.log("afterFromBalance2ElectricBoogaloo", Tokens.unwrap(afterFromBalance2ElectricBoogaloo));
+
+            //this does equal newTotalShares that's been incremented
+            Shares newTotalShares2ElectricBoogaloo = totalShares + newFromShares - fromShares;
+            console.log("newTotalShares2ElectricBoogaloo", Shares.unwrap(newTotalShares2ElectricBoogaloo));
+
+            //does not compute expected value equal to newFromShares that's been incremented
+            TokensXShares n2ElectricBoogaloo = allocTS().omul(newFromShares, newTotalSupply).isub(tmpTS().omul(newTotalShares, amount));
+            Shares newFromShares2ElectricBoogaloo = n.div(newTotalSupply);
+            console.log("newFromShares2ElectricBoogaloo", Shares.unwrap(newFromShares2ElectricBoogaloo));
         }
     }
 
     // getBurnShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
 }
+

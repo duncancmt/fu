@@ -15,6 +15,8 @@ import {UnsafeMath} from "src/lib/UnsafeMath.sol";
 import {Test} from "@forge-std/Test.sol";
 import {Boilerplate} from "./Boilerplate.sol";
 
+import {console} from "@forge-std/console.sol";
+
 contract ReflectMathTest is Boilerplate, Test {
     using UnsafeMath for uint256;
     using SharesToTokens for Shares;
@@ -27,16 +29,20 @@ contract ReflectMathTest is Boilerplate, Test {
         totalSupply = Tokens.wrap(
             bound(Tokens.unwrap(totalSupply), 10 ** Settings.DECIMALS + 1 wei, Tokens.unwrap(Settings.INITIAL_SUPPLY))
         );
+        console.log("totalSupply", Tokens.unwrap(totalSupply));
         sharesRatio = bound(sharesRatio, Settings.MIN_SHARES_RATIO, Settings.INITIAL_SHARES_RATIO);
+        console.log("sharesRatio", sharesRatio);
         Shares maxShares = Shares.wrap(Tokens.unwrap(totalSupply) * (sharesRatio + 1) - 1 wei);
         maxShares = maxShares > Settings.INITIAL_SHARES ? Settings.INITIAL_SHARES : maxShares;
         totalShares = Shares.wrap(
             bound(Shares.unwrap(totalShares), Tokens.unwrap(totalSupply) * sharesRatio, Shares.unwrap(maxShares))
         );
+        console.log("totalShares", Shares.unwrap(totalShares));
 
         fromShares = Shares.wrap(
             bound(Shares.unwrap(fromShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE))
         );
+        console.log("fromShares", Shares.unwrap(fromShares));
 
         Tokens fromBalance = fromShares.toTokens(totalSupply, totalShares);
         return (totalSupply, totalShares, fromShares, fromBalance);
@@ -51,6 +57,7 @@ contract ReflectMathTest is Boilerplate, Test {
         (totalSupply, totalShares, fromShares, fromBalance) =
             _boundCommon(totalSupply, totalShares, fromShares, sharesRatio);
         amount = Tokens.wrap(bound(Tokens.unwrap(amount), 0, Tokens.unwrap(fromBalance)));
+        console.log("amount", Tokens.unwrap(amount));
         // If `amount == fromBalance`, then we would've executed the `amount`-less version instead,
         // the version with `All`
         assume(amount != fromBalance);
@@ -423,14 +430,15 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens fromBalance;
         (totalSupply, totalShares, fromShares, fromBalance, amount) =
             _boundCommon(totalSupply, totalShares, fromShares, amount, sharesRatio);
-
+    
         (Shares newFromShares, Shares newTotalShares, Tokens newTotalSupply) =
             ReflectMath.getBurnShares(amount, totalSupply, totalShares, fromShares);
 
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
+        assertLe(Tokens.unwrap(newTotalSupply), Tokens.unwrap(totalSupply), "total supply increased");
         assertEq(Shares.unwrap(totalShares - newTotalShares), Shares.unwrap(fromShares - newFromShares), "shares delta");
-
+        
         assertTrue(alloc().omul(totalShares, newTotalSupply) >= tmp().omul(newTotalShares, totalSupply), "shares ratio increased");
 
         Tokens newFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
@@ -441,3 +449,4 @@ contract ReflectMathTest is Boilerplate, Test {
         );
     }
 }
+
