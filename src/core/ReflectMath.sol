@@ -401,10 +401,10 @@ library ReflectMath {
             console.log("incr", Shares.unwrap(incr));
 
             Shares newFromSharesWithIncr = newFromShares + incr;
-            console.log("newFromShares", Shares.unwrap(newFromSharesWithIncr));
+            console.log("newFromSharesIncr", Shares.unwrap(newFromSharesWithIncr));
 
             Shares newTotalSharesWithIncr = newTotalShares + incr;
-            console.log("newTotalShares", Shares.unwrap(newTotalSharesWithIncr));
+            console.log("newTotalSharesIncr", Shares.unwrap(newTotalSharesWithIncr));
 
             Tokens newTotalSupply2ElectricBoogaloo = newTotalSupply - amount;
             console.log("newTotalSupply2ElectricBoogaloo", Tokens.unwrap(newTotalSupply2ElectricBoogaloo));
@@ -419,10 +419,10 @@ library ReflectMath {
 
             //this now passes shares ratio check, test still failing final balance check (off by one)
             TokensXShares n2ElectricBoogaloo = allocTS().omul(newFromSharesWithIncr, newTotalSupply2ElectricBoogaloo).isub(tmpTS().omul(newTotalSharesWithIncr, amount));
-            Shares newFromShares2ElectricBoogaloo = n.div(newTotalSupply);
+            Shares newFromShares2ElectricBoogaloo = n.div(newTotalSupply2ElectricBoogaloo);
             console.log("newFromShares2ElectricBoogaloo", Shares.unwrap(newFromShares2ElectricBoogaloo));
         }
     }
-
+    
     // getBurnShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
 }

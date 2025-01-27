@@ -414,7 +414,7 @@ contract ReflectMathTest is Boilerplate, Test {
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         assertEq(Shares.unwrap(totalShares - newTotalShares), Shares.unwrap(fromShares - newFromShares), "shares delta");
 
-        Tokens newFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
+        Tokens newFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedNewFromBalance = fromBalance - amount;
 
         assertEq(
@@ -441,6 +441,7 @@ contract ReflectMathTest is Boilerplate, Test {
         
         assertTrue(alloc().omul(totalShares, newTotalSupply) >= tmp().omul(newTotalShares, totalSupply), "shares ratio increased");
 
+        console.log("newTotalSupply", Tokens.unwrap(newTotalSupply));
         Tokens newFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
         Tokens expectedNewFromBalance = fromBalance - amount;
 
