@@ -417,10 +417,9 @@ library ReflectMath {
             Shares newTotalShares2ElectricBoogaloo = newTotalShares + newFromSharesWithIncr - newFromShares;
             console.log("newTotalShares2ElectricBoogaloo", Shares.unwrap(newTotalShares2ElectricBoogaloo));
 
-            //does not compute expected value equal to newFromShares that's been incremented
+            //this now passes shares ratio check, test still failing final balance check (off by one)
             TokensXShares n2ElectricBoogaloo = allocTS().omul(newFromSharesWithIncr, newTotalSupply2ElectricBoogaloo).isub(tmpTS().omul(newTotalSharesWithIncr, amount));
             Shares newFromShares2ElectricBoogaloo = n.div(newTotalSupply);
-
             console.log("newFromShares2ElectricBoogaloo", Shares.unwrap(newFromShares2ElectricBoogaloo));
         }
     }
