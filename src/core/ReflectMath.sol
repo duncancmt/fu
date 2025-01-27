@@ -409,11 +409,11 @@ library ReflectMath {
             Tokens newTotalSupply2ElectricBoogaloo = newTotalSupply - amount;
             console.log("newTotalSupply2ElectricBoogaloo", Tokens.unwrap(newTotalSupply2ElectricBoogaloo));
 
-            //this does equal expectedAfterFromBalance
+            // != expectedAfterFromBalance
             Tokens afterFromBalance2ElectricBoogaloo = newFromSharesWithIncr.toTokens(newTotalSupply2ElectricBoogaloo, newTotalSharesWithIncr);
             console.log("afterFromBalance2ElectricBoogaloo", Tokens.unwrap(afterFromBalance2ElectricBoogaloo));
 
-            //this does equal newTotalShares that's been incremented
+            //this does equal newTotalSharesIncr 
             Shares newTotalShares2ElectricBoogaloo = newTotalShares + newFromSharesWithIncr - newFromShares;
             console.log("newTotalShares2ElectricBoogaloo", Shares.unwrap(newTotalShares2ElectricBoogaloo));
 
@@ -423,6 +423,6 @@ library ReflectMath {
             console.log("newFromShares2ElectricBoogaloo", Shares.unwrap(newFromShares2ElectricBoogaloo));
         }
     }
-    
+
     // getBurnShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
 }
