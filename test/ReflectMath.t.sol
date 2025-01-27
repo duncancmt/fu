@@ -414,7 +414,7 @@ contract ReflectMathTest is Boilerplate, Test {
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         assertEq(Shares.unwrap(totalShares - newTotalShares), Shares.unwrap(fromShares - newFromShares), "shares delta");
 
-        Tokens newFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
+        Tokens newFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
         Tokens expectedNewFromBalance = fromBalance - amount;
 
         assertEq(
