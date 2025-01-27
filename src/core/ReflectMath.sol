@@ -293,17 +293,6 @@ library ReflectMath {
         newToShares = n.div(d);
         newTotalShares = totalShares + newToShares - toShares;
         newTotalSupply = totalSupply + amount;
-
-        // Fixup rounding error
-        Tokens beforeToBalance = toShares.toTokens(totalSupply, totalShares);
-        Tokens afterToBalance = newToShares.toTokens(newTotalSupply, newTotalShares);
-        Tokens expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
-
-        if (afterToBalance < expectedAfterToBalanceLo) {
-            Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
-            newToShares = newToShares + incr;
-            newTotalShares = newTotalShares + incr;
-        }
     }
 
     function getTransferSharesToPair(
