@@ -497,6 +497,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
     }
 
+    // TODO: permit
+    // TODO: delegateBySig
+    // TODO: allowance logic (transferFrom, deliverFrom, burnFrom)
+    // TODO: checkpointing logic
+
     function invariant_nonNegativeRebase() external view override {
         if (!_CHECK_SHARES_RATIO) {
             return;
