@@ -384,16 +384,9 @@ library ReflectMath {
         newTotalShares = totalShares + newFromShares - fromShares;
         newTotalSupply = totalSupply - amount;
 
-        // Fixup rounding error
-        Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
-        Tokens afterFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
-        Tokens expectedAfterFromBalance = beforeFromBalance - amount;
-
-        if (afterFromBalance < expectedAfterFromBalance) {
-            Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
-            newFromShares = newFromShares + incr;
-            newTotalShares = newTotalShares + incr;
-        }
+        // TODO: this sometimes burns one more wei than specified, however fixing this rounding
+        // error is very complex and gas inefficient. Since we're just destroying tokens, maybe it's
+        // better to leave the rounding error?
     }
 
     // getBurnShares(Tokens,Shares,Shares) is not provided because it's extremely straightforward
