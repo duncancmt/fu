@@ -332,13 +332,31 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
 
+        vm.recordLogs();
+        vm.startStateDiffRecording();
         prank(actor);
         // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
 
+        Vm.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+
         // TODO: handle failure and assert that we fail iff the reason is expected
         if (!success) {
-            // TODO: assert that there are no state modifications
+            assertEq(logs.length, 0, "emitted event on failure");
+            for (uint256 i; i < accountAccesses.length; i++) {
+                Vm.AccountAccess memory accountAccess = accountAccesses[i];
+                assertNotEq(uint8(accountAccess.kind), uint8(Vm.AccountAccessKind.CallCode), "CALLCODE");
+                assertNotEq(uint8(accountAccess.kind), uint8(Vm.AccountAccessKind.Create), "CREATE");
+                assertNotEq(uint8(accountAccess.kind), uint8(Vm.AccountAccessKind.SelfDestruct), "SELFDESTRUCT");
+                assertEq(accountAccess.oldBalance, accountAccess.newBalance, "modified balance");
+                assertEq(accountAccess.value, 0, "sent ETH");
+                Vm.StorageAccess[] memory storageAccesses = accountAccess.storageAccesses;
+                for (uint256 j; j < storageAccesses.length; i++) {
+                    Vm.StorageAccess memory storageAccess = storageAccesses[j];
+                    assertFalse(storageAccess.isWrite, "wrote storage");
+                }
+            }
             return;
         }
 
