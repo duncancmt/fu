@@ -356,7 +356,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         if (amount == 0) {
             assertEq(afterCirculating, beforeCirculating);
             if (actorIsWhale || toIsWhale) {
-                assertLe(beforeTotalShares, afterTotalShares, "shares delta (whale)");
+                assertGe(beforeTotalShares, afterTotalShares, "shares delta (whale)");
             } else if (beforeBalance == 0) {
                 assertGe(beforeTotalShares, afterTotalShares, "shares delta upper (dust)");
                 assertLe(beforeTotalShares - beforeShares, afterTotalShares, "shares delta lower (dust)");
@@ -501,7 +501,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         if (amount == 0) {
             assertEq(afterCirculating, beforeCirculating);
             if (actorIsWhale) {
-                assertLe(beforeTotalShares, afterTotalShares, "shares delta (whale)");
+                assertGe(beforeTotalShares, afterTotalShares, "shares delta (whale)");
             } else if (beforeBalance == 0) {
                 assertEq(beforeTotalShares - beforeShares, afterTotalShares, "shares delta (dust)");
             } else {
