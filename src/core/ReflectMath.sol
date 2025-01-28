@@ -229,9 +229,20 @@ library ReflectMath {
         ).div(scale(totalSupply, BASIS));
 
         // Fixup rounding error
+        {
+            bool condition = newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+            newTotalShares = newTotalShares.dec(condition);
+            newToShares = newToShares.dec(condition);
+        }
+
         Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
         Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedAfterFromBalance = beforeFromBalance - amount;
+        {
+            bool condition = afterFromBalance > expectedAfterFromBalance;
+            newFromShares = newFromShares.dec(condition);
+            newTotalShares = newTotalShares.dec(condition);
+        }
         {
             bool condition = afterFromBalance < expectedAfterFromBalance;
             newFromShares = newFromShares.inc(condition);
