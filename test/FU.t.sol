@@ -160,8 +160,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     using ItoA for uint256;
     using ChecksumAddress for address;
 
-    bool internal constant _CHECK_SHARES_RATIO = false;
-
     IFU internal immutable fu;
     address[] internal actors;
     mapping(address => bool) internal isActor;
@@ -363,7 +361,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             } else {
                 assertEq(beforeTotalShares, afterTotalShares, "shares delta (no-op)");
             }
-        } else if (_CHECK_SHARES_RATIO) {
+        } else {
             assertTrue(
                 alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
                 "shares to tokens ratio increased"
@@ -500,7 +498,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             } else {
                 assertEq(beforeTotalShares, afterTotalShares, "shares delta (no-op)");
             }
-        } else if (_CHECK_SHARES_RATIO) {
+        } else {
             assertTrue(
                 alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
                 "shares to tokens ratio increased"
@@ -514,9 +512,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     // TODO: checkpointing logic
 
     function invariant_nonNegativeRebase() external view override {
-        if (!_CHECK_SHARES_RATIO) {
-            return;
-        }
         address pair = fu.pair();
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
