@@ -437,12 +437,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterVotingPower = fu.getVotes(delegatee);
         uint256 afterShares = getShares(actor);
 
-        if (_CHECK_SHARES_RATIO) {
-            assertTrue(
-                alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating),
-                "shares to tokens ratio increased"
-            );
-        }
+        assertTrue(
+            alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating),
+            "shares to tokens ratio increased"
+        );
 
         // TODO: tighten bounds; this is compensating for rounding error in the "CrazyBalance" calculation
         assertLe(beforeBalance - afterBalance, amount + 2, "balance delta upper");
