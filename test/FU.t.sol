@@ -328,6 +328,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeBalance = lastBalance[actor];
         bool actorIsWhale = beforeBalance == fu.whaleLimit(actor);
         uint256 beforeShares = getShares(actor);
+        uint256 beforeSharesTo = getShares(to);
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
 
@@ -348,6 +349,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         bool toIsWhale = lastBalance[to] == fu.whaleLimit(to);
         uint256 afterShares = getShares(actor);
+        uint256 afterSharesTo = getShares(to);
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
 
@@ -364,7 +366,17 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         } else {
             assertTrue(
                 alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
-                "shares to tokens ratio increased"
+                string.concat("shares to tokens ratio increased"
+                              "\n\tbefore total shares:", beforeTotalShares.itoa(),
+                              "\n\tafter total shares: ", afterTotalShares.itoa(),
+                              "\n\tbefore circulating: ", beforeCirculating.itoa(),
+                              "\n\tafter circulating:  ", afterCirculating.itoa(),
+                              "\n\tbefore shares from: ", beforeShares.itoa(),
+                              "\n\tafter shares from:  ", afterShares.itoa(),
+                              "\n\tbefore shares to:   ", beforeSharesTo.itoa(),
+                              "\n\tafter shares to:    ", afterSharesTo.itoa(),
+                              "\n\ttax (basis points): ", fu.tax().itoa()
+                             )
             );
         }
 
@@ -373,14 +385,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             (afterTotalShares - afterShares) / Settings.ANTI_WHALE_DIVISOR_MINUS_ONE - 1,
             "from over whale limit"
         );
-        {
-            uint256 afterSharesTo = getShares(to);
-            assertLe(
-                afterSharesTo,
-                (afterTotalShares - afterSharesTo) / Settings.ANTI_WHALE_DIVISOR_MINUS_ONE - 1,
-                "to over whale limit"
-            );
-        }
+        assertLe(
+            afterSharesTo,
+            (afterTotalShares - afterSharesTo) / Settings.ANTI_WHALE_DIVISOR_MINUS_ONE - 1,
+            "to over whale limit"
+        );
     }
 
     function delegate(uint256 actorIndex, address delegatee) external {
