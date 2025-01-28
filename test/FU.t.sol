@@ -456,13 +456,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             beforeSupply - afterSupply, (amount + 1) * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta higher"
         ); // TODO: tighten to assertLt
         assertGe(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta lower");
-        /*
         if (delegatee != address(0)) {
-            assertEq(beforeVotingPower - afterVotingPower, (beforeShares - afterShares) / Settings.SHARES_TO_VOTES_DIVISOR, "voting power delta mismatch");
+            assertEq(beforeVotingPower - afterVotingPower, beforeShares / Settings.SHARES_TO_VOTES_DIVISOR - afterShares / Settings.SHARES_TO_VOTES_DIVISOR, "voting power delta mismatch");
         } else {
             assertEq(beforeVotingPower, afterVotingPower, "no delegation, but voting power changed");
         }
-        */
     }
 
     function deliver(uint256 actorIndex, uint256 amount, bool boundAmount) external {
