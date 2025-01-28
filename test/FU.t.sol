@@ -349,6 +349,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         // TODO: check for "rebase queue" events
 
         bool toIsWhale = lastBalance[to] == fu.whaleLimit(to);
+        uint256 afterShares = getShares(actor);
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
 
@@ -367,6 +368,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
                 "shares to tokens ratio increased"
             );
+        }
+
+        assertLe(afterShares, (afterTotalShares - afterShares) / Settings.ANTI_WHALE_DIVISOR_MINUS_ONE - 1, "from over whale limit");
+        {
+            uint256 afterSharesTo = getShares(to);
+            assertLe(afterSharesTo, (afterTotalShares - afterSharesTo) / Settings.ANTI_WHALE_DIVISOR_MINUS_ONE - 1, "to over whale limit");
         }
     }
 
