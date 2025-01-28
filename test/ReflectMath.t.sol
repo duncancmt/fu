@@ -343,7 +343,10 @@ contract ReflectMathTest is Boilerplate, Test {
         // This case is handled in the token by simply applying the whale limit
         assume(newToShares <= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE);
 
-        assertTrue(alloc().omul(totalShares, newTotalSupply) >= tmp().omul(newTotalShares, totalSupply), "shares ratio increased");
+        assertTrue(
+            alloc().omul(totalShares, newTotalSupply) >= tmp().omul(newTotalShares, totalSupply),
+            "shares ratio increased"
+        );
 
         Tokens newToBalance = newToShares.toTokens(newTotalSupply, newTotalShares);
 
@@ -382,7 +385,10 @@ contract ReflectMathTest is Boilerplate, Test {
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         assertEq(Shares.unwrap(totalShares - newTotalShares), Shares.unwrap(fromShares - newFromShares), "shares delta");
 
-        assertTrue(alloc().omul(totalShares, newTotalSupply) >= tmp().omul(newTotalShares, totalSupply), "shares ratio increased");
+        assertTrue(
+            alloc().omul(totalShares, newTotalSupply) >= tmp().omul(newTotalShares, totalSupply),
+            "shares ratio increased"
+        );
 
         Tokens newFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
 
@@ -429,7 +435,10 @@ contract ReflectMathTest is Boilerplate, Test {
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         assertEq(Shares.unwrap(totalShares - newTotalShares), Shares.unwrap(fromShares - newFromShares), "shares delta");
 
-        assertTrue(alloc().omul(totalShares, newTotalSupply) >= tmp().omul(newTotalShares, totalSupply), "shares ratio increased");
+        assertTrue(
+            alloc().omul(totalShares, newTotalSupply) >= tmp().omul(newTotalShares, totalSupply),
+            "shares ratio increased"
+        );
 
         Tokens newFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
         Tokens expectedNewFromBalance = fromBalance - amount;

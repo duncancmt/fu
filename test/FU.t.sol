@@ -370,10 +370,18 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             );
         }
 
-        assertLe(afterShares, (afterTotalShares - afterShares) / Settings.ANTI_WHALE_DIVISOR_MINUS_ONE - 1, "from over whale limit");
+        assertLe(
+            afterShares,
+            (afterTotalShares - afterShares) / Settings.ANTI_WHALE_DIVISOR_MINUS_ONE - 1,
+            "from over whale limit"
+        );
         {
             uint256 afterSharesTo = getShares(to);
-            assertLe(afterSharesTo, (afterTotalShares - afterSharesTo) / Settings.ANTI_WHALE_DIVISOR_MINUS_ONE - 1, "to over whale limit");
+            assertLe(
+                afterSharesTo,
+                (afterTotalShares - afterSharesTo) / Settings.ANTI_WHALE_DIVISOR_MINUS_ONE - 1,
+                "to over whale limit"
+            );
         }
     }
 
