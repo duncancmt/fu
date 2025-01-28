@@ -409,7 +409,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         address delegatee = shadowDelegates[actor];
 
-        uint256 beforeBalance = fu.balanceOf(actor);
+        uint256 beforeBalance = lastBalance[actor];
         uint256 beforeSupply = fu.totalSupply();
         uint256 beforeTotalShares = getTotalShares();
         uint256 beforeCirculating = getCirculatingTokens();
@@ -445,8 +445,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
 
         // TODO: tighten bounds; this is compensating for rounding error in the "CrazyBalance" calculation
-        assertLe(beforeBalance - afterBalance, amount, "balance delta upper");
-        assertGe(beforeBalance - afterBalance + 1, amount, "balance delta lower");
+        assertLe(beforeBalance - afterBalance, amount + 2, "balance delta upper");
+        assertGe(beforeBalance - afterBalance, amount, "balance delta lower");
         uint256 divisor = (uint256(uint160(actor)) / Settings.ADDRESS_DIVISOR);
         if (divisor == 0) {
             assertEq(amount, 0, "efficient address edge case");
