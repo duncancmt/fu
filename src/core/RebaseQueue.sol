@@ -5,16 +5,16 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
 import {Settings} from "./Settings.sol";
 
-import {CrazyBalance, ZERO as ZERO_BALANCE, CrazyBalanceArithmetic} from "../types/CrazyBalance.sol";
+import {Tokens, ZERO as ZERO_TOKENS} from "../types/Tokens.sol";
 import {Shares, SharesStorage, ONE as ONE_SHARE, ternary} from "../types/Shares.sol";
+import {SharesToTokens} from "../types/TokensXShares.sol";
 import {Tokens} from "../types/Tokens.sol";
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
 struct RebaseQueueElem {
     address prev;
     address next;
-    // TODO: introduce a new type that represents minted tokens (or balance relative to max address)
-    CrazyBalance lastTokens;
+    Tokens lastTokens;
 }
 
 struct RebaseQueue {
@@ -25,9 +25,9 @@ struct RebaseQueue {
 library LibRebaseQueue {
     using UnsafeMath for uint256;
     using {ternary} for bool;
-    using CrazyBalanceArithmetic for Shares;
+    using SharesToTokens for Shares;
 
-    function initialize(RebaseQueue storage self, address account, CrazyBalance tokens) internal {
+    function initialize(RebaseQueue storage self, address account, Tokens tokens) internal {
         self.head = account;
         RebaseQueueElem storage elem = self.queue[account];
         elem.prev = account;
@@ -35,7 +35,7 @@ library LibRebaseQueue {
         elem.lastTokens = tokens;
     }
 
-    function enqueue(RebaseQueue storage self, address account, CrazyBalance balance) internal {
+    function enqueue(RebaseQueue storage self, address account, Tokens balance) internal {
         RebaseQueueElem storage elem = self.queue[account];
         address head = self.head;
         RebaseQueueElem storage headElem = self.queue[head];
@@ -52,12 +52,12 @@ library LibRebaseQueue {
     function enqueue(RebaseQueue storage self, address account, Shares shares, Tokens totalSupply, Shares totalShares)
         internal
     {
-        return enqueue(self, account, shares.toCrazyBalance(totalSupply, totalShares));
+        return enqueue(self, account, shares.toTokens(totalSupply, totalShares));
     }
 
     function dequeue(RebaseQueue storage self, address account) internal {
         RebaseQueueElem storage elem = self.queue[account];
-        elem.lastTokens = ZERO_BALANCE;
+        elem.lastTokens = ZERO_TOKENS;
         address prev = elem.prev;
         address next = elem.next;
 
@@ -94,7 +94,7 @@ library LibRebaseQueue {
 
         elem.prev = tail;
         elem.next = head;
-        elem.lastTokens = shares.toCrazyBalance(totalSupply, totalShares);
+        elem.lastTokens = shares.toTokens(totalSupply, totalShares);
 
         self.queue[prev].next = next;
         self.queue[next].prev = prev;
@@ -109,9 +109,9 @@ library LibRebaseQueue {
         Shares shares,
         Tokens totalSupply,
         Shares totalShares
-    ) private returns (CrazyBalance newTokens) {
-        CrazyBalance oldTokens = elem.lastTokens;
-        newTokens = shares.toCrazyBalance(totalSupply, totalShares);
+    ) private returns (Tokens newTokens) {
+        Tokens oldTokens = elem.lastTokens;
+        newTokens = shares.toTokens(totalSupply, totalShares);
         if (newTokens > oldTokens) {
             emit IERC20.Transfer(address(0), account, (newTokens - oldTokens).toExternal());
         } else {

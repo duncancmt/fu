@@ -22,11 +22,11 @@ library CrazyBalanceAccessors {
     }
 }
 
+using CrazyBalanceAccessors for CrazyBalance global;
+
 function toCrazyBalance(uint256 x) pure returns (CrazyBalance) {
     return CrazyBalance.wrap(x);
 }
-
-using CrazyBalanceAccessors for CrazyBalance global;
 
 CrazyBalance constant ZERO = CrazyBalance.wrap(0);
 CrazyBalance constant MAX = CrazyBalance.wrap(type(uint256).max);
@@ -100,16 +100,6 @@ library CrazyBalanceArithmetic {
                     * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS
             );
         }
-    }
-
-    function toCrazyBalance(Shares shares, Tokens totalSupply, Shares totalShares)
-        internal
-        pure
-        returns (CrazyBalance)
-    {
-        return CrazyBalance.wrap(
-            tmp().omul(Shares.unwrap(shares), Tokens.unwrap(totalSupply)).div(Shares.unwrap(totalShares))
-        );
     }
 
     function toCrazyBalance(Tokens tokens, address account) internal pure returns (CrazyBalance) {

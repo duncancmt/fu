@@ -70,7 +70,7 @@ contract FU is ERC20Base, TransientStorageLayout {
 
     function totalSupply() external view override returns (uint256) {
         Storage storage $ = _$();
-        return Tokens.unwrap($.totalSupply + $.pairTokens);
+        return ($.totalSupply + $.pairTokens).toExternal();
     }
 
     /// @custom:security non-reentrant
@@ -116,7 +116,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         Tokens pairTokens = Settings.INITIAL_SUPPLY.div(Settings.INITIAL_LIQUIDITY_DIVISOR);
         pairTokens = pairTokens - Tokens.wrap(Tokens.unwrap(pairTokens) % Settings.CRAZY_BALANCE_BASIS);
         $.pairTokens = pairTokens;
-        emit Transfer(address(0), pair, Tokens.unwrap(pairTokens));
+        emit Transfer(address(0), pair, pairTokens.toExternal());
 
         Tokens totalSupply_ = Settings.INITIAL_SUPPLY - pairTokens;
         $.totalSupply = totalSupply_;
@@ -127,9 +127,9 @@ contract FU is ERC20Base, TransientStorageLayout {
             // The queue is empty, so we have to special-case the first insertion. `DEAD` will
             // always hold a token balance, which makes many things simpler.
             $.sharesOf[DEAD] = Settings.oneTokenInShares().store();
-            CrazyBalance balance = $.sharesOf[DEAD].load().toCrazyBalance(totalSupply_, totalShares);
-            emit Transfer(address(0), DEAD, balance.toExternal());
-            $.rebaseQueue.initialize(DEAD, balance);
+            Tokens tokens = $.sharesOf[DEAD].load().toTokens(totalSupply_, totalShares);
+            emit Transfer(address(0), DEAD, tokens.toExternal());
+            $.rebaseQueue.initialize(DEAD, tokens);
         }
         {
             Shares toMint = totalShares - $.sharesOf[DEAD].load();
@@ -139,7 +139,7 @@ contract FU is ERC20Base, TransientStorageLayout {
             Shares sharesRest = toMint.div(length);
             {
                 Shares sharesFirst = toMint - sharesRest.mul(length - 1);
-                CrazyBalance amount = sharesFirst.toCrazyBalance(totalSupply_, totalShares);
+                Tokens amount = sharesFirst.toTokens(totalSupply_, totalShares);
 
                 require(prev != DEAD);
                 $.sharesOf[prev] = sharesFirst.store();
@@ -147,7 +147,7 @@ contract FU is ERC20Base, TransientStorageLayout {
                 $.rebaseQueue.enqueue(prev, amount);
             }
             {
-                CrazyBalance amount = sharesRest.toCrazyBalance(totalSupply_, totalShares);
+                Tokens amount = sharesRest.toTokens(totalSupply_, totalShares);
                 SharesStorage sharesRestStorage = sharesRest.store();
                 for (uint256 i = 1; i < length; i = i.unsafeInc()) {
                     address to = initialHolders.unsafeGet(i);

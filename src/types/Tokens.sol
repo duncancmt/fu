@@ -6,6 +6,14 @@ import {UnsafeMath} from "../lib/UnsafeMath.sol";
 /// This type is given as `uint256` for efficiency, but it is capped at `2 ** 145 - 1`.
 type Tokens is uint256;
 
+library TokensAccessors {
+    function toExternal(Tokens x) internal pure returns (uint256) {
+        return Tokens.unwrap(x);
+    }
+}
+
+using TokensAccessors for Tokens global;
+
 Tokens constant ZERO = Tokens.wrap(0);
 Tokens constant ONE = Tokens.wrap(1);
 
