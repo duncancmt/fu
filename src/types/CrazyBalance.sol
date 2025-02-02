@@ -110,11 +110,10 @@ library CrazyBalanceArithmetic {
         unchecked {
             // Checking for overflow in the multiplication is unnecessary. Checking for division by
             // zero is required.
-            uint256 n = CrazyBalance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS;
-            uint256 d = uint256(uint160(account)) / Settings.ADDRESS_DIVISOR;
-            uint256 r = n / d;
-            r = r.unsafeInc(r * d < n);
-            return Tokens.wrap(r);
+            return Tokens.wrap(
+                CrazyBalance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS
+                    / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)
+            );
         }
     }
 
