@@ -16,7 +16,7 @@ import {Hexlify} from "script/Hexlify.sol";
 
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
 import {StdInvariant} from "@forge-std/StdInvariant.sol";
-import {Vm} from "@forge-std/Vm.sol";
+import {VmSafe, Vm} from "@forge-std/Vm.sol";
 
 import "./EnvironmentConstants.sol";
 
@@ -157,6 +157,8 @@ interface ListOfInvariants {
 }
 
 contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
+    Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code"))))); // TODO: remove
+
     using ItoA for uint256;
     using ChecksumAddress for address;
 
@@ -338,22 +340,22 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
 
-        Vm.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
-        Vm.Log[] memory logs = vm.getRecordedLogs();
+        VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
+        VmSafe.Log[] memory logs = vm.getRecordedLogs();
 
         // TODO: handle failure and assert that we fail iff the reason is expected
         if (!success) {
             assertEq(logs.length, 0, "emitted event on failure");
             for (uint256 i; i < accountAccesses.length; i++) {
-                Vm.AccountAccess memory accountAccess = accountAccesses[i];
-                assertNotEq(uint8(accountAccess.kind), uint8(Vm.AccountAccessKind.CallCode), "CALLCODE");
-                assertNotEq(uint8(accountAccess.kind), uint8(Vm.AccountAccessKind.Create), "CREATE");
-                assertNotEq(uint8(accountAccess.kind), uint8(Vm.AccountAccessKind.SelfDestruct), "SELFDESTRUCT");
+                VmSafe.AccountAccess memory accountAccess = accountAccesses[i];
+                assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.CallCode), "CALLCODE");
+                assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.Create), "CREATE");
+                assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.SelfDestruct), "SELFDESTRUCT");
                 assertEq(accountAccess.oldBalance, accountAccess.newBalance, "modified balance");
                 assertEq(accountAccess.value, 0, "sent ETH");
-                Vm.StorageAccess[] memory storageAccesses = accountAccess.storageAccesses;
+                VmSafe.StorageAccess[] memory storageAccesses = accountAccess.storageAccesses;
                 for (uint256 j; j < storageAccesses.length; i++) {
-                    Vm.StorageAccess memory storageAccess = storageAccesses[j];
+                    VmSafe.StorageAccess memory storageAccess = storageAccesses[j];
                     assertFalse(storageAccess.isWrite, "wrote storage");
                 }
             }
@@ -481,7 +483,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         ); // TODO: tighten to assertLt
         assertGe(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta lower");
         if (delegatee != address(0)) {
-            assertEq(beforeVotingPower - afterVotingPower, beforeShares / Settings.SHARES_TO_VOTES_DIVISOR - afterShares / Settings.SHARES_TO_VOTES_DIVISOR, "voting power delta mismatch");
+            assertEq(
+                beforeVotingPower - afterVotingPower,
+                beforeShares / Settings.SHARES_TO_VOTES_DIVISOR - afterShares / Settings.SHARES_TO_VOTES_DIVISOR,
+                "voting power delta mismatch"
+            );
         } else {
             assertEq(beforeVotingPower, afterVotingPower, "no delegation, but voting power changed");
         }
