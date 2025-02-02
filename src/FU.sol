@@ -35,6 +35,7 @@ import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 import {IPFS} from "./lib/IPFS.sol";
 import {FastTransferLib} from "./lib/FastTransferLib.sol";
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
+import {FastLogic} from "./lib/FastLogic.sol";
 
 /// @custom:security non-reentrant
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
@@ -67,6 +68,7 @@ contract FU is ERC20Base, TransientStorageLayout {
     using FastUniswapV2PairLib for IUniswapV2Pair;
     using UnsafeArray for address[];
     using UnsafeMath for uint256;
+    using FastLogic for bool;
 
     function totalSupply() external view override returns (uint256) {
         Storage storage $ = _$();
@@ -521,7 +523,7 @@ contract FU is ERC20Base, TransientStorageLayout {
             return _transferToPair($, from, to, amount);
         }
 
-        if (to == DEAD || to == address(this) || uint160(to) < Settings.ADDRESS_DIVISOR) {
+        if ((to == DEAD).or(to == address(this)).or(uint256(uint160(to)) / Settings.ADDRESS_DIVISOR == 0)) {
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
             }

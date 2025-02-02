@@ -16,6 +16,7 @@ import {SharesXBasisPoints, scale, cast} from "../types/SharesXBasisPoints.sol";
 import {Shares2XBasisPoints, alloc as allocS2Bp} from "../types/Shares2XBasisPoints.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
+import {FastLogic} from "../lib/FastLogic.sol";
 
 /*
 
@@ -29,6 +30,7 @@ WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING
 
 library ReflectMath {
     using UnsafeMath for uint256;
+    using FastLogic for bool;
     using SharesToTokens for Shares;
 
     modifier freeMemory() {
@@ -171,7 +173,7 @@ library ReflectMath {
         Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, taxRate));
 
-        for (uint256 i; afterToBalance > expectedAfterToBalance && i < 3; i++) {
+        for (uint256 i; (afterToBalance > expectedAfterToBalance).and(i < 3); i++) {
             Shares decr;
             unchecked {
                 decr = Shares.wrap(
