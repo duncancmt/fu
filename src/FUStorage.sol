@@ -13,7 +13,6 @@ import {Checkpoints} from "./core/Checkpoints.sol";
 import {RebaseQueue} from "./core/RebaseQueue.sol";
 
 abstract contract FUStorage is IERC20, INonces, IERC5805 {
-    // @custom:storage-location erc7201:"Fuck You!"
     struct Storage {
         mapping(address account => SharesStorage shares) sharesOf;
         Tokens totalSupply;
@@ -42,13 +41,13 @@ abstract contract FUStorage is IERC20, INonces, IERC5805 {
         assembly ("memory-safe") {
             $int := $.slot
         }
-        assert($int == (uint256(keccak256(bytes(name))) - 1) & ~uint256(0xff));
+        assert($int == uint128(uint256(keccak256(bytes(name))) - 1) & ~uint256(0xff));
     }
 
     // slither-disable-next-line naming-convention
     function _$() internal pure returns (Storage storage $) {
         assembly ("memory-safe") {
-            $.slot := 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93600
+            $.slot := 0xe086ec3a639808bbda893d5b4ac93600
         }
     }
 }

@@ -187,7 +187,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         success = success && (returndata.length == 0 || abi.decode(returndata, (bool)));
     }
 
-    bytes32 private constant _BASE_SLOT = 0xb614ddaf8c6c224524c95dbfcb82a82be086ec3a639808bbda893d5b4ac93600;
+    bytes32 private constant _BASE_SLOT = 0x00000000000000000000000000000000e086ec3a639808bbda893d5b4ac93600;
 
     function _sharesSlot(address account) internal pure returns (bytes32 r) {
         assembly ("memory-safe") {
