@@ -125,7 +125,7 @@ abstract contract ERC20Base is IFU, FUStorage {
             revert ERC20InvalidApprover(address(0));
         }
         // slither-disable-next-line timestamp
-        if (block.timestamp > deadline) {
+        if (~deadline != 0 && block.timestamp > deadline) {
             revert ERC2612ExpiredSignature(deadline);
         }
 
@@ -171,7 +171,7 @@ abstract contract ERC20Base is IFU, FUStorage {
         override
     {
         // slither-disable-next-line timestamp
-        if (block.timestamp > expiry) {
+        if (~expiry != 0 && block.timestamp > expiry) {
             revert ERC5805ExpiredSignature(expiry);
         }
         bytes32 sep = DOMAIN_SEPARATOR();
