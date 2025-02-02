@@ -354,7 +354,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 assertEq(accountAccess.oldBalance, accountAccess.newBalance, "modified balance");
                 assertEq(accountAccess.value, 0, "sent ETH");
                 VmSafe.StorageAccess[] memory storageAccesses = accountAccess.storageAccesses;
-                for (uint256 j; j < storageAccesses.length; i++) {
+                for (uint256 j; j < storageAccesses.length; j++) {
                     VmSafe.StorageAccess memory storageAccess = storageAccesses[j];
                     assertFalse(storageAccess.isWrite, "wrote storage");
                 }
