@@ -470,9 +470,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             "shares to tokens ratio increased"
         );
 
-        // TODO: tighten bounds; this is compensating for rounding error in the "CrazyBalance" calculation
-        assertLe(beforeBalance - afterBalance, amount + 2, "balance delta upper");
-        assertGe(beforeBalance - afterBalance, amount, "balance delta lower");
+        assertLe(beforeBalance - afterBalance, amount + 1, "balance delta upper");
+        assertGe(beforeBalance - afterBalance + 1, amount, "balance delta lower");
         uint256 divisor = (uint256(uint160(actor)) / Settings.ADDRESS_DIVISOR);
         if (divisor == 0) {
             assertEq(amount, 0, "efficient address edge case");
@@ -480,7 +479,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
         assertLe(
             beforeSupply - afterSupply, (amount + 1) * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta higher"
-        ); // TODO: tighten to assertLt
+        ); // TODO: tighten to `assertLt`
         assertGe(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta lower");
         if (delegatee != address(0)) {
             assertEq(
