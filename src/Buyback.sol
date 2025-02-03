@@ -63,10 +63,24 @@ contract Buyback is TwoStepOwnable, Context {
     uint120 public kTarget;
     BasisPoints public ownerFee;
 
+    // TODO: revisit these constants
+    uint256 internal constant _TWAP_PERIOD = 1 days;
+    uint256 internal constant _TWAP_PERIOD_TOLERANCE = 1 hours;
+
+    uint256 internal priceCumulativeLast;
+    uint32 internal blockTimestampLast;
+
     event OwnerFee(BasisPoints oldFee, BasisPoints newFee);
+    event OracleConsultation(uint256 cumulativePrice);
 
     error FeeIncreased(BasisPoints oldFee, BasisPoints newFee);
     error FeeNotZero(BasisPoints ownerFee);
+
+    error PriceTooStale(uint256 elapsed);
+    error PriceTooFresh(uint256 elapsed);
+    error PriceTooLow(uint256 actualQ112, uint256 expectedQ112);
+
+    error TooMuchSlippage(uint256 actual, uint256 expected);
 
     constructor(bytes20 gitCommit, IFU token_, address initialOwner, BasisPoints ownerFee_) {
         require(_msgSender() == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
@@ -75,7 +89,7 @@ contract Buyback is TwoStepOwnable, Context {
 
         emit IFU.GitCommit(gitCommit);
 
-        _setPendingOwner(initialOwner);
+        _setOwner(initialOwner);
         token = token_;
         pair = pairFor(token, WETH);
         lastLpBalance = kTarget = uint120(IERC20(pair).fastBalanceOf(address(this)));
@@ -100,11 +114,22 @@ contract Buyback is TwoStepOwnable, Context {
         return super.renounceOwnership();
     }
 
-    function buyback() external returns (bool) {
-        // `buyback()` can't be called if `owner()` is unset
+    function consult() external returns (bool) {
+        unchecked {
+            if (blockTimestampLast + (_TWAP_PERIOD + _TWAP_PERIOD_TOLERANCE) > block.timestamp) {
+                revert PriceTooFresh(block.timestamp - blockTimestampLast);
+            }
+        }
+        // TODO: use `<` instead of `>` by reversing all calls to `maybeSwap` in `buyback()`
+        priceCumulativeLast = pair.fastPriceCumulativeLast(address(token) > address(WETH));
+        emit OracleConsultation(priceCumulativeLast);
+        // slither-disable-next-line unused-return
+        (,,blockTimestampLast) = pair.getReserves();
+    }
+
+    function buyback(uint256 minOwnerFee) external returns (bool) {
         address owner_ = owner();
         BasisPoints ownerFee_ = ownerFee;
-        require((owner_ != address(0)).or(ownerFee == ZERO_BP));
 
         // adjust `kTarget` to account for any extra LP tokens that may have been sent to the
         // `Buyback` contract since the last time `buyback()` was called
@@ -113,7 +138,6 @@ contract Buyback is TwoStepOwnable, Context {
         unchecked {
             kTarget_ = kTarget * lpBalance / lastLpBalance;
         }
-        kTarget = uint120(kTarget_);
 
         // compute the underlying liquidity
         uint256 liquidity;
@@ -134,18 +158,54 @@ contract Buyback is TwoStepOwnable, Context {
         }
         uint256 burnLp = (left - right) / liquidity;
 
+        // burn LP tokens and receive some of the underlying tokens
         pair.fastTransfer(address(pair), burnLp);
         (uint256 amountWeth, uint256 amountFu) = pair.fastBurn(address(this));
+
+        /// Now we have to compute the amount of WETH that is owable to `owner()`
+
+        // get the reserves again. we have to get them _again_ because there may be excess tokens in
+        // the pair before calling `burn`. calling `burn` implicitly synchronizes the pair with its
+        // balances.
         bool sortTokens = (address(token) < address(WETH));
         (amountWeth, amountFu) = sortTokens.maybeSwap(amountWeth, amountFu);
+        if ((owner_ == address(0)).or(ownerFee_ == ZERO_BP)) {
+            amountWeth = WETH.fastBalanceOf(address(this));
+        }
         uint256 feeWeth = scaleUp(amountWeth, ownerFee_);
         // slither-disable-next-line unused-return
         (uint256 reserveWeth, uint256 reserveFu,) = pair.fastGetReserves();
         (reserveWeth, reserveFu) = sortTokens.maybeSwap(reserveWeth, reserveFu);
+
+        // consult the oracle
+        if (_msgSender() != owner_) {
+            uint256 elapsed = block.timestamp - blockTimestampLast;
+            if (elapsed < _TWAP_PERIOD - _TWAP_PERIOD_TOLERANCE) {
+                revert PriceTooFresh(elapsed);
+            }
+            if (elapsed > _TWAP_PERIOD + _TWAP_PERIOD_TOLERANCE) {
+                revert PriceTooStale(elapsed);
+            }
+            // TODO: remove the following `!` by swapping every other call to `maybeSwap` in this function
+            uint256 oraclePrice;
+            unchecked {
+                oraclePrice = uint224((pair.fastPriceCumulativeLast(!sortTokens) - priceCumulativeLast) / elapsed);
+            }
+            uint256 currentPrice = (reserveWeth << 112) / reserveFu;
+            if (currentPrice < oraclePrice) {
+                revert PriceTooLow(currentPrice, oraclePrice);
+            }
+        }
+
+        // note that this calculation uses `amountFu`, which is the amount *SENT BY THE PAIR*, and
+        // not the amount actually received by this contract (i.e. it is the amount before fees are
+        // taken out)
         {
             uint256 feeFu = scaleUp(amountFu, ownerFee_);
             feeWeth += feeFu * reserveWeth / (reserveFu + feeFu);
         }
+
+        // swap the leftover WETH to FU
         uint256 swapWethIn = amountWeth - feeWeth; // underflow indicates price too low relative to `ownerFee`
         uint256 swapFuOut;
         unchecked {
@@ -160,9 +220,17 @@ contract Buyback is TwoStepOwnable, Context {
             pair.fastSwap(amount0, amount1, address(this));
         }
 
-        lastLpBalance = uint120(pair.fastBalanceOf(address(this)));
+        // the last step is to pay the WETH fee to the owner and to `deliver` the
         token.fastDeliver(token.fastBalanceOf(address(this)));
-        WETH.fastTransfer(owner_, WETH.fastBalanceOf(address(this)));
+        uint256 actualOwnerFee = WETH.fastBalanceOf(address(this));
+        if (actualOwnerFee < minOwnerFee) {
+            revert TooMuchSlippage(actualOwnerFee, minOwnerFee);
+        }
+        WETH.fastTransfer(owner_, actualOwnerFee);
+
+        // update state for next time, in case somebody sends LP tokens to this contract
+        (kTarget, lastLpBalance) = (uint120(kTarget_), uint120(pair.fastBalanceOf(address(this))));
+
         return true;
     }
 }

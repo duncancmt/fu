@@ -5,6 +5,8 @@ import {IERC2612} from "./IERC2612.sol";
 
 interface IUniswapV2Pair is IERC2612 {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+    function price0CumulativeLast() external view returns (uint256);
+    function price1CumulativeLast() external view returns (uint256);
 
     function mint(address to) external returns (uint256 liquidity);
     function burn(address to) external returns (uint256 amount0, uint256 amount1);
@@ -33,6 +35,20 @@ library FastUniswapV2PairLib {
             blockTimestampLast := mload(0x40)
 
             mstore(0x40, ptr)
+        }
+    }
+
+    function fastPriceCumulativeLast(IUniswapV2Pair pair, bool which) internal view returns (uint256 r) {
+        assembly ("memory-safe") {
+            // selector for `price0CumulativeLast()` if `which` is false, otherwise selector for `price1CumulativeLast()`
+            mstore(0x00, xor(0x5909c0d5, mul(0x03349446, which)))
+
+            if iszero(staticcall(gas(), pair, 0x1c, 0x04, 0x00, 0x20)) {
+                let ptr := mload(0x40)
+                returndatacopy(ptr, 0x00, returndatasize())
+                revert(ptr, returndatasize())
+            }
+            r := mload(0x00)
         }
     }
 
