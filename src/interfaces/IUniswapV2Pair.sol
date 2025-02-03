@@ -13,16 +13,16 @@ interface IUniswapV2Pair is IERC2612 {
 }
 
 library FastUniswapV2PairLib {
-    function fastGetReserves(IUniswapV2Pair) internal view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast) {
+    function fastGetReserves(IUniswapV2Pair pair) internal view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast) {
         assembly ("memory-safe") {
             let ptr := mload(0x40)
 
             mstore(0x00, 0x0902f1ac)
 
             if iszero(staticcall(gas(), pair, 0x1c, 0x04, 0x00, 0x60)) {
-                let ptr := mload(0x40)
-                returndatacopy(ptr, 0x00, returndatasize())
-                revert(ptr, returndatasize())
+                let ptr_ := mload(0x40)
+                returndatacopy(ptr_, 0x00, returndatasize())
+                revert(ptr_, returndatasize())
             }
 
             reserve0 := mload(0x00)
@@ -60,7 +60,7 @@ library FastUniswapV2PairLib {
         }
     }
 
-    function fastMint(IUniswapV2Pair pair, address to) internal returns (uint256 amount0, uint256 amount1) {
+    function fastBurn(IUniswapV2Pair pair, address to) internal returns (uint256 amount0, uint256 amount1) {
         assembly ("memory-safe") {
             mstore(0x14, to)
             mstore(0x00, 0x89afcb44000000000000000000000000) // selector for `burn(address)` with `to`'s padding
@@ -85,9 +85,9 @@ library FastUniswapV2PairLib {
             mstore(add(0xa0, ptr), 0x00)
 
             if iszero(call(gas(), pair, 0x00, add(0x1c, ptr), 0xa4, 0x00, 0x00)) {
-                let ptr := mload(0x40)
-                returndatacopy(ptr, 0x00, returndatasize())
-                revert(ptr, returndatasize())
+                let ptr_ := mload(0x40)
+                returndatacopy(ptr_, 0x00, returndatasize())
+                revert(ptr_, returndatasize())
             }
         }
     }
