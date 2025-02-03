@@ -14,6 +14,7 @@ import {stdJson} from "@forge-std/StdJson.sol";
 
 import {FU} from "src/FU.sol";
 import {Settings} from "src/core/Settings.sol";
+import {Buyback} from "src/Buyback.sol";
 
 import {Script} from "@forge-std/Script.sol";
 import {VmSafe} from "@forge-std/Vm.sol";
@@ -60,39 +61,56 @@ contract DeployFU is Script {
             gitCommit = bytes20(result.stdout);
         }
 
-        bytes memory initcode = bytes.concat(type(FU).creationCode, abi.encode(gitCommit, image, initialHolders));
+        bytes memory fuInitcode = bytes.concat(type(FU).creationCode, abi.encode(gitCommit, image, initialHolders));
         FU fu = FU(
-                address(
-                    uint160(
-                        uint256(keccak256(abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, salt, keccak256(initcode))))
-                    )
+            address(
+                uint160(
+                    uint256(keccak256(abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, salt, keccak256(fuInitcode))))
                 )
+            )
         );
         IUniswapV2Pair pair = pairFor(fu, _WETH);
+        bytes memory buybackInitcode = bytes.concat(
+            type(Buyback).creationCode, abi.encode(gitCommit, fu, 0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60, 5_000)
+        );
+        Buyback buyback = Buyback(
+            address(
+                uint160(
+                    uint256(
+                        keccak256(abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, bytes32(0), keccak256(buybackInitcode)))
+                    )
+                )
+            )
+        );
 
         if (uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR != 1 && salt == bytes32(0)) {
             console.log("Use the tool in `.../fu/mine` to compute the salt:");
             console.log(
                 string.concat(
-                    "\tcargo run --release ", keccak256(initcode).hexlify(), " ", Settings.PAIR_LEADING_ZEROES.itoa()
+                    "\tcargo run --release ", keccak256(fuInitcode).hexlify(), " ", Settings.PAIR_LEADING_ZEROES.itoa()
                 )
             );
             return;
         }
 
-        bytes memory mint = abi.encodeCall(pair.mint, (address(0)));
+        bytes memory mint = abi.encodeCall(pair.mint, (address(buyback)));
 
         bytes memory calls = abi.encodePacked(
             uint8(0),
             _DEPLOYER_PROXY,
             uint256(5 ether),
-            initcode.length + 32,
-            bytes.concat(salt, initcode),
+            fuInitcode.length + 32,
+            bytes.concat(salt, fuInitcode),
             uint8(0),
             pair,
             uint256(0),
             mint.length,
-            mint
+            mint,
+            uint8(0),
+            _DEPLOYER_PROXY,
+            uint256(0),
+            buybackInitcode.length + 32,
+            bytes.concat(bytes32(0), buybackInitcode)
         );
 
         vm.startBroadcast(_DEPLOYER_BROADCASTER);
@@ -102,7 +120,8 @@ contract DeployFU is Script {
         uint256 wethBalance = _WETH.balanceOf(address(pair));
         uint256 fuBalance = fu.balanceOf(address(pair));
         uint256 liquidity = Math.sqrt(fuBalance * wethBalance);
-        require(pair.balanceOf(address(0)) == liquidity);
+        require(pair.balanceOf(address(buyback)) == liquidity);
+        assert(address(buyback).code.length != 0);
 
         console.log("FU.image():", fu.image());
     }

@@ -64,6 +64,7 @@ contract Buyback is TwoStepOwnable, Context {
     BasisPoints public ownerFee;
 
     event OwnerFee(BasisPoints oldFee, BasisPoints newFee);
+
     error FeeIncreased(BasisPoints oldFee, BasisPoints newFee);
     error FeeNotZero(BasisPoints ownerFee);
 
@@ -117,7 +118,7 @@ contract Buyback is TwoStepOwnable, Context {
         // compute the underlying liquidity
         uint256 liquidity;
         unchecked {
-            (uint256 reserve0, uint256 reserve1, ) = pair.fastGetReserves();
+            (uint256 reserve0, uint256 reserve1,) = pair.fastGetReserves();
             liquidity = (reserve0 * reserve1).sqrt();
         }
 
@@ -136,7 +137,7 @@ contract Buyback is TwoStepOwnable, Context {
         bool sortTokens = (address(token) < address(WETH));
         (amountWeth, amountFu) = sortTokens.swap(amountWeth, amountFu);
         uint256 feeWeth = scaleUp(amountWeth, ownerFee_);
-        (uint256 reserveWeth, uint256 reserveFu, ) = pair.fastGetReserves();
+        (uint256 reserveWeth, uint256 reserveFu,) = pair.fastGetReserves();
         (reserveWeth, reserveFu) = sortTokens.swap(reserveWeth, reserveFu);
         {
             uint256 feeFu = scaleUp(amountFu, ownerFee_);

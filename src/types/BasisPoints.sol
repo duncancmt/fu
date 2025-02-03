@@ -58,9 +58,7 @@ function __ge(BasisPoints a, BasisPoints b) pure returns (bool) {
     return BasisPoints.unwrap(a) >= BasisPoints.unwrap(b);
 }
 
-using {
-    __eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __gt as >=
-} for BasisPoints global;
+using {__eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __gt as >=} for BasisPoints global;
 
 function scale(uint256 x, BasisPoints bp) pure returns (uint256) {
     unchecked {

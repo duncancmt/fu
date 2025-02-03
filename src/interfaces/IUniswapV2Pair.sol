@@ -12,7 +12,11 @@ interface IUniswapV2Pair is IERC2612 {
 }
 
 library FastUniswapV2PairLib {
-    function fastGetReserves(IUniswapV2Pair pair) internal view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast) {
+    function fastGetReserves(IUniswapV2Pair pair)
+        internal
+        view
+        returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)
+    {
         assembly ("memory-safe") {
             let ptr := mload(0x40)
 
