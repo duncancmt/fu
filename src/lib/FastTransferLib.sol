@@ -56,4 +56,22 @@ library FastTransferLib {
             mstore(0x34, 0x00) // Restore the part of the free memory pointer that was overwritten.
         }
     }
+
+    function fastTotalSupply(IERC20 token) internal view returns (uint256 r) {
+        assembly ("memory-safe") {
+            mstore(0x00, 0x18160ddd) // selector for `totalSupply()`
+
+            // Call and check for revert. Storing the misaligned selector in memory at 0 results in
+            // a start of calldata at offset 28. Calldata is 4 bytes long.
+            if iszero(staticcall(gas(), token, 0x1c, 0x04, 0x00, 0x20)) {
+                let ptr := mload(0x40)
+                returndatacopy(ptr, 0x00, returndatasize())
+                revert(ptr, returndatasize())
+            }
+            // We assume that `token`'s code exists and that it conforms to ERC20 (won't return
+            // short calldata). We do not bother to check for either of these conditions.
+
+            r := mload(0x00)
+        }
+    }
 }
