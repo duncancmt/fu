@@ -170,9 +170,9 @@ contract Buyback is TwoStepOwnable, Context {
             amountWeth = WETH.fastBalanceOf(address(this));
         }
 
-        /// begin to compute the amount of WETH owable to `owner()`. we must also compute the amount
-        /// of WETH owable to the owner as a result of converting the FU we withdrew, but that will
-        /// happen later.
+        // begin to compute the amount of WETH owable to `owner()`. we must also compute the amount
+        // of WETH owable to the owner as a result of converting the FU we withdrew, but that will
+        // happen later.
         uint256 feeWeth = scaleUp(amountWeth, ownerFee_);
         // slither-disable-next-line unused-return
         (uint256 reserveWeth, uint256 reserveFu,) = pair.fastGetReserves();
