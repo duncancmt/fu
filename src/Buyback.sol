@@ -137,11 +137,11 @@ contract Buyback is TwoStepOwnable, Context {
         pair.fastTransfer(address(pair), burnLp);
         (uint256 amountWeth, uint256 amountFu) = pair.fastBurn(address(this));
         bool sortTokens = (address(token) < address(WETH));
-        (amountWeth, amountFu) = sortTokens.swap(amountWeth, amountFu);
+        (amountWeth, amountFu) = sortTokens.maybeSwap(amountWeth, amountFu);
         uint256 feeWeth = scaleUp(amountWeth, ownerFee_);
         // slither-disable-next-line unused-return
         (uint256 reserveWeth, uint256 reserveFu,) = pair.fastGetReserves();
-        (reserveWeth, reserveFu) = sortTokens.swap(reserveWeth, reserveFu);
+        (reserveWeth, reserveFu) = sortTokens.maybeSwap(reserveWeth, reserveFu);
         {
             uint256 feeFu = scaleUp(amountFu, ownerFee_);
             feeWeth += feeFu * reserveWeth / (reserveFu + feeFu);
@@ -156,7 +156,7 @@ contract Buyback is TwoStepOwnable, Context {
         }
         WETH.fastTransfer(address(pair), swapWethIn);
         {
-            (uint256 amount0, uint256 amount1) = sortTokens.swap(0, swapFuOut);
+            (uint256 amount0, uint256 amount1) = sortTokens.maybeSwap(0, swapFuOut);
             pair.fastSwap(amount0, amount1, address(this));
         }
 
