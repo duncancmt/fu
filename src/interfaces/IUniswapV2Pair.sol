@@ -6,7 +6,6 @@ import {IERC2612} from "./IERC2612.sol";
 interface IUniswapV2Pair is IERC2612 {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
 
-    function sync() external;
     function mint(address to) external returns (uint256 liquidity);
     function burn(address to) external returns (uint256 amount0, uint256 amount1);
     function swap(uint256 amount0Out, uint256 amount1Out, address to, bytes calldata data) external;
@@ -30,33 +29,6 @@ library FastUniswapV2PairLib {
             blockTimestampLast := mload(0x40)
 
             mstore(0x40, ptr)
-        }
-    }
-
-    function fastSync(IUniswapV2Pair pair) internal {
-        assembly ("memory-safe") {
-            mstore(0x00, 0xfff6cae9) // Selector for `sync()`
-
-            if iszero(call(gas(), pair, 0x00, 0x1c, 0x04, 0x00, 0x00)) {
-                let ptr := mload(0x40)
-                returndatacopy(ptr, 0x00, returndatasize())
-                revert(ptr, returndatasize())
-            }
-            // We do not bother to check that `pair` has code (vacuous success). We assume that it
-            // does have code and that failure is signaled by reverting.
-        }
-    }
-
-    function fastMint(IUniswapV2Pair pair, address to) internal returns (uint256 liquidity) {
-        assembly ("memory-safe") {
-            mstore(0x14, to)
-            mstore(0x00, 0x6a627842000000000000000000000000) // selector for `mint(address)` with `to`'s padding
-            if iszero(call(gas(), pair, 0x00, 0x10, 0x24, 0x00, 0x20)) {
-                let ptr := mload(0x40)
-                returndatacopy(ptr, 0x00, returndatasize())
-                revert(ptr, returndatasize())
-            }
-            liquidity := mload(0x00)
         }
     }
 

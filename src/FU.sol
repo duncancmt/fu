@@ -6,7 +6,7 @@ import {Context} from "./utils/Context.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
-import {IUniswapV2Pair, FastUniswapV2PairLib} from "./interfaces/IUniswapV2Pair.sol";
+import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
 import {Settings} from "./core/Settings.sol";
@@ -66,7 +66,6 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     using IPFS for bytes32;
     using FastTransferLib for address payable;
     using FastTransferLib for IERC20;
-    using FastUniswapV2PairLib for IUniswapV2Pair;
     using UnsafeArray for address[];
     using UnsafeMath for uint256;
     using FastLogic for bool;
@@ -896,29 +895,5 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
         return true;
-    }
-
-    receive() external payable {
-        // Cache these for gas efficiency
-        Storage storage $ = _$();
-        IUniswapV2Pair pair_ = IUniswapV2Pair(pair);
-
-        // Deposit ETH to WETH and then figure out how much WETH we're going to send to the pair
-        payable(address(WETH)).fastSendEth(address(this).balance);
-        uint256 wethForMint = WETH.fastBalanceOf(address(this));
-
-        // Temporarily modify the pair balance so that when we send WETH to the pair, it will be a
-        // proportional deposit
-        unchecked {
-            uint256 pairWethBalance = WETH.fastBalanceOf(address(pair_));
-            Tokens cachedPairTokens = $.pairTokens;
-            $.pairTokens = cachedPairTokens.mul(pairWethBalance).div(wethForMint + pairWethBalance);
-            pair_.fastSync();
-            $.pairTokens = cachedPairTokens;
-        }
-
-        // Send WETH to the pair and mint it as liquidity (locked forever)
-        WETH.fastTransfer(address(pair_), wethForMint);
-        pair_.fastMint(address(0));
     }
 }

@@ -714,7 +714,7 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
             bytes.concat(bytes32(0x0000000000000000000000000000000000000000000000000000000326d8a0c9), initcode)
         );
         require(success, string.concat("You need to recompute the salt for inithash: ", keccak256(initcode).hexlify()));
-        fu = IFU(payable(address(uint160(bytes20(returndata)))));
+        fu = IFU(address(uint160(bytes20(returndata))));
         label(address(fu), "FU");
         excludeContract(address(fu));
 
