@@ -4,10 +4,11 @@ pragma solidity ^0.8.28;
 import {IFU} from "../interfaces/IFU.sol";
 
 import {FUStorage} from "../FUStorage.sol";
+import {AbstractContext} from "../utils/Context.sol";
 
 import {CrazyBalance, toCrazyBalance} from "../types/CrazyBalance.sol";
 
-abstract contract ERC20Base is IFU, FUStorage {
+abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
     using {toCrazyBalance} for uint256;
 
     constructor() {
@@ -54,11 +55,11 @@ abstract contract ERC20Base is IFU, FUStorage {
     function clock() public view virtual override returns (uint48);
 
     function transfer(address to, uint256 amount) external override returns (bool) {
-        return _transfer(_$(), msg.sender, to, amount.toCrazyBalance()) && _success();
+        return _transfer(_$(), _msgSender(), to, amount.toCrazyBalance()) && _success();
     }
 
     function approve(address spender, uint256 amount) external override returns (bool) {
-        return _approve(_$(), msg.sender, spender, amount.toCrazyBalance()) && _success();
+        return _approve(_$(), _msgSender(), spender, amount.toCrazyBalance()) && _success();
     }
 
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
@@ -163,7 +164,7 @@ abstract contract ERC20Base is IFU, FUStorage {
     bytes32 private constant _DELEGATION_TYPEHASH = 0xe48329057bfd03d55e49b547132e39cffd9c1820ad7b9d4c5307691425d15adf;
 
     function delegate(address delegatee) external override {
-        return _delegate(_$(), msg.sender, delegatee);
+        return _delegate(_$(), _msgSender(), delegatee);
     }
 
     function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)
@@ -208,11 +209,11 @@ abstract contract ERC20Base is IFU, FUStorage {
     }
 
     function burn(uint256 amount) external override returns (bool) {
-        return _burn(_$(), msg.sender, amount.toCrazyBalance()) && _success();
+        return _burn(_$(), _msgSender(), amount.toCrazyBalance()) && _success();
     }
 
     function deliver(uint256 amount) external override returns (bool) {
-        return _deliver(_$(), msg.sender, amount.toCrazyBalance()) && _success();
+        return _deliver(_$(), _msgSender(), amount.toCrazyBalance()) && _success();
     }
 
     function burnFrom(address from, uint256 amount) external override returns (bool) {

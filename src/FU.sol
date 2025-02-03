@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {ERC20Base} from "./core/ERC20Base.sol";
+import {Context} from "./utils/Context.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
@@ -51,7 +52,7 @@ library UnsafeArray {
 }
 
 /// @custom:security-contact security@fuckyou.finance
-contract FU is ERC20Base, TransientStorageLayout {
+contract FU is ERC20Base, TransientStorageLayout, Context {
     using ChecksumAddress for address;
     using {toCrazyBalance} for uint256;
     using SharesToTokens for Shares;
@@ -91,7 +92,7 @@ contract FU is ERC20Base, TransientStorageLayout {
                 > Settings.MIN_SHARES_RATIO * Tokens.unwrap(Settings.INITIAL_SUPPLY)
         );
 
-        require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
+        require(_msgSender() == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
         {
             bool isSimulation = block.basefee < 7 wei && block.gaslimit > 1_000_000_000 && block.number < 20_000_000;
             // slither-disable-next-line tx-origin
@@ -657,7 +658,7 @@ contract FU is ERC20Base, TransientStorageLayout {
         if (spender == PERMIT2) {
             return _success();
         }
-        _setTemporaryAllowance(msg.sender, spender, amount.toCrazyBalance());
+        _setTemporaryAllowance(_msgSender(), spender, amount.toCrazyBalance());
         return _success();
     }
 
@@ -686,23 +687,23 @@ contract FU is ERC20Base, TransientStorageLayout {
                 return (true, ZERO_BALANCE, ZERO_BALANCE);
             }
             if (_check()) {
-                revert ERC20InsufficientAllowance(msg.sender, 0, amount.toExternal());
+                revert ERC20InsufficientAllowance(_msgSender(), 0, amount.toExternal());
             }
             return (false, ZERO_BALANCE, ZERO_BALANCE);
         }
-        if (msg.sender == PERMIT2) {
+        if (_msgSender() == PERMIT2) {
             return (true, MAX_BALANCE, ZERO_BALANCE);
         }
-        CrazyBalance currentTempAllowance = _getTemporaryAllowance(owner, msg.sender);
+        CrazyBalance currentTempAllowance = _getTemporaryAllowance(owner, _msgSender());
         if (currentTempAllowance >= amount) {
             return (true, currentTempAllowance, ZERO_BALANCE);
         }
-        CrazyBalance currentAllowance = $.allowance[owner][msg.sender];
+        CrazyBalance currentAllowance = $.allowance[owner][_msgSender()];
         if (currentAllowance >= amount - currentTempAllowance) {
             return (true, currentTempAllowance, currentAllowance);
         }
         if (_check()) {
-            revert ERC20InsufficientAllowance(msg.sender, currentAllowance.toExternal(), amount.toExternal());
+            revert ERC20InsufficientAllowance(_msgSender(), currentAllowance.toExternal(), amount.toExternal());
         }
         return (false, ZERO_BALANCE, ZERO_BALANCE);
     }
@@ -715,17 +716,17 @@ contract FU is ERC20Base, TransientStorageLayout {
         CrazyBalance currentAllowance
     ) internal override returns (bool) {
         if (currentAllowance == ZERO_BALANCE) {
-            _setTemporaryAllowance(owner, msg.sender, currentTempAllowance - amount);
+            _setTemporaryAllowance(owner, _msgSender(), currentTempAllowance - amount);
             return true;
         }
         if (currentTempAllowance != ZERO_BALANCE) {
             amount = amount - currentTempAllowance;
-            _setTemporaryAllowance(owner, msg.sender, ZERO_BALANCE);
+            _setTemporaryAllowance(owner, _msgSender(), ZERO_BALANCE);
         }
         if (currentAllowance.isMax()) {
             return true;
         }
-        return _approve($, owner, msg.sender, currentAllowance - amount);
+        return _approve($, owner, _msgSender(), currentAllowance - amount);
     }
 
     function symbol() external view override returns (string memory r) {
@@ -738,7 +739,7 @@ contract FU is ERC20Base, TransientStorageLayout {
             mstore(0x40, add(0x0a, r))
         }
         // slither-disable-next-line unused-return
-        msg.sender.toChecksumAddress();
+        _msgSender().toChecksumAddress();
         assembly ("memory-safe") {
             mstore(add(0x0a, r), 0x4675636b20796f752c20)
             mstore(r, 0x35)
