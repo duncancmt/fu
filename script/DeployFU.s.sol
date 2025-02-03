@@ -6,7 +6,7 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 
-import {Math} from "./Math.sol";
+import {Math} from "src/lib/Math.sol";
 import {ItoA} from "./ItoA.sol";
 import {Hexlify} from "./Hexlify.sol";
 import {QuickSort} from "./QuickSort.sol";
