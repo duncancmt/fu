@@ -7,6 +7,7 @@ import {UnsafeMath} from "../lib/UnsafeMath.sol";
 /// (14 bits).
 type BasisPoints is uint256;
 
+BasisPoints constant ZERO = BasisPoints.wrap(0);
 BasisPoints constant BASIS = BasisPoints.wrap(10_000);
 
 library BasisPointsArithmetic {
@@ -32,3 +33,43 @@ function __sub(BasisPoints a, BasisPoints b) pure returns (BasisPoints) {
 }
 
 using {__sub as -} for BasisPoints global;
+
+function __eq(BasisPoints a, BasisPoints b) pure returns (bool) {
+    return BasisPoints.unwrap(a) == BasisPoints.unwrap(b);
+}
+
+function __lt(BasisPoints a, BasisPoints b) pure returns (bool) {
+    return BasisPoints.unwrap(a) < BasisPoints.unwrap(b);
+}
+
+function __gt(BasisPoints a, BasisPoints b) pure returns (bool) {
+    return BasisPoints.unwrap(a) > BasisPoints.unwrap(b);
+}
+
+function __ne(BasisPoints a, BasisPoints b) pure returns (bool) {
+    return BasisPoints.unwrap(a) != BasisPoints.unwrap(b);
+}
+
+function __le(BasisPoints a, BasisPoints b) pure returns (bool) {
+    return BasisPoints.unwrap(a) <= BasisPoints.unwrap(b);
+}
+
+function __ge(BasisPoints a, BasisPoints b) pure returns (bool) {
+    return BasisPoints.unwrap(a) >= BasisPoints.unwrap(b);
+}
+
+using {
+    __eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __gt as >=
+} for BasisPoints global;
+
+function scale(uint256 x, BasisPoints bp) pure returns (uint256) {
+    unchecked {
+        return x * BasisPoints.unwrap(bp) / BasisPoints.unwrap(BASIS);
+    }
+}
+
+function scaleUp(uint256 x, BasisPoints bp) pure returns (uint256) {
+    unchecked {
+        return UnsafeMath.unsafeDivUp(x * BasisPoints.unwrap(bp), BasisPoints.unwrap(BASIS));
+    }
+}
