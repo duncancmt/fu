@@ -128,9 +128,6 @@ contract Buyback is TwoStepOwnable, Context {
     }
 
     function buyback(uint256 minOwnerFee) external returns (bool) {
-        address owner_ = owner();
-        BasisPoints ownerFee_ = ownerFee;
-
         // adjust `kTarget` to account for any extra LP tokens that may have been sent to this
         // contract since the last time `buyback` was called
         uint256 lpBalance = pair.fastBalanceOf(address(this));
@@ -167,6 +164,8 @@ contract Buyback is TwoStepOwnable, Context {
         // balances.
         bool sortTokens = (address(token) < address(WETH));
         (amountWeth, amountFu) = sortTokens.maybeSwap(amountWeth, amountFu);
+        address owner_ = owner();
+        BasisPoints ownerFee_ = ownerFee;
         if ((owner_ == address(0)).or(ownerFee_ == ZERO_BP)) {
             amountWeth = WETH.fastBalanceOf(address(this));
         }
