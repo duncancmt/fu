@@ -77,7 +77,9 @@ contract DeployFU is Script {
             address(
                 uint160(
                     uint256(
-                        keccak256(abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, bytes32(0), keccak256(buybackInitcode)))
+                        keccak256(
+                            abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, bytes32(0), keccak256(buybackInitcode))
+                        )
                     )
                 )
             )

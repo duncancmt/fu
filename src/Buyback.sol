@@ -124,7 +124,7 @@ contract Buyback is TwoStepOwnable, Context {
         priceCumulativeLast = pair.fastPriceCumulativeLast(address(token) > address(WETH));
         emit OracleConsultation(priceCumulativeLast);
         // slither-disable-next-line unused-return
-        (,,blockTimestampLast) = pair.getReserves();
+        (,, blockTimestampLast) = pair.getReserves();
     }
 
     function buyback(uint256 minOwnerFee) external returns (bool) {
