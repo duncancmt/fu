@@ -118,6 +118,7 @@ contract Buyback is TwoStepOwnable, Context {
         // compute the underlying liquidity
         uint256 liquidity;
         unchecked {
+            // slither-disable-next-line unused-return
             (uint256 reserve0, uint256 reserve1,) = pair.fastGetReserves();
             liquidity = (reserve0 * reserve1).sqrt();
         }
@@ -128,6 +129,7 @@ contract Buyback is TwoStepOwnable, Context {
         uint256 right;
         unchecked {
             left = lpBalance * liquidity;
+            // slither-disable-next-line divide-before-multiply
             right = pair.fastTotalSupply() * kTarget_;
         }
         uint256 burnLp = (left - right) / liquidity;
@@ -137,6 +139,7 @@ contract Buyback is TwoStepOwnable, Context {
         bool sortTokens = (address(token) < address(WETH));
         (amountWeth, amountFu) = sortTokens.swap(amountWeth, amountFu);
         uint256 feeWeth = scaleUp(amountWeth, ownerFee_);
+        // slither-disable-next-line unused-return
         (uint256 reserveWeth, uint256 reserveFu,) = pair.fastGetReserves();
         (reserveWeth, reserveFu) = sortTokens.swap(reserveWeth, reserveFu);
         {
