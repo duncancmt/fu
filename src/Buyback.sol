@@ -64,8 +64,8 @@ contract Buyback is TwoStepOwnable, Context {
     BasisPoints public ownerFee;
 
     // TODO: revisit these constants
-    uint256 internal constant _TWAP_PERIOD = 1 days;
-    uint256 internal constant _TWAP_PERIOD_TOLERANCE = 1 hours;
+    uint256 public constant TWAP_PERIOD = 1 days;
+    uint256 public constant TWAP_PERIOD_TOLERANCE = 1 hours;
 
     uint256 internal priceCumulativeLast;
     uint256 internal timestampLast;
@@ -196,10 +196,10 @@ contract Buyback is TwoStepOwnable, Context {
         // consult the oracle. this is required to avoid MEV because `buyback` is permissionless
         if (_msgSender() != owner_) {
             uint256 elapsed = block.timestamp - timestampLast;
-            if (elapsed < _TWAP_PERIOD - _TWAP_PERIOD_TOLERANCE) {
+            if (elapsed < TWAP_PERIOD - TWAP_PERIOD_TOLERANCE) {
                 revert PriceTooFresh(elapsed);
             }
-            if (elapsed > _TWAP_PERIOD + _TWAP_PERIOD_TOLERANCE) {
+            if (elapsed > TWAP_PERIOD + TWAP_PERIOD_TOLERANCE) {
                 revert PriceTooStale(elapsed);
             }
             uint256 oraclePrice;
