@@ -393,6 +393,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             assertLe(afterWhaleLimitTo, saturatingAdd(beforeWhaleLimitTo, 1), "to whale limit upper");
         }
 
+        assertEq(beforeBalance - afterBalance, amount, "from amount");
+
         if (amount == 0) {
             assertEq(afterCirculating, beforeCirculating);
             if (actorIsWhale || toIsWhale) {
