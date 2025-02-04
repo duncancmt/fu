@@ -71,7 +71,8 @@ contract Buyback is TwoStepOwnable, Context {
     uint32 internal blockTimestampLast;
 
     event OwnerFee(BasisPoints oldFee, BasisPoints newFee);
-    event OracleConsultation(uint256 cumulativePrice);
+    event OracleConsultation(address indexed keeper, uint256 cumulativePrice);
+    event Buyback(address indexed caller, uint256 kTarget);
 
     error FeeIncreased(BasisPoints oldFee, BasisPoints newFee);
     error FeeNotZero(BasisPoints ownerFee);
@@ -93,6 +94,7 @@ contract Buyback is TwoStepOwnable, Context {
         token = token_;
         pair = pairFor(token, WETH);
         lastLpBalance = kTarget = uint120(IERC20(pair).fastBalanceOf(address(this)));
+        emit Buyback(_msgSender(), kTarget);
         ownerFee = ownerFee_;
         emit OwnerFee(BASIS, ownerFee);
     }
@@ -121,7 +123,7 @@ contract Buyback is TwoStepOwnable, Context {
             }
         }
         priceCumulativeLast = pair.fastPriceCumulativeLast(address(token) > address(WETH));
-        emit OracleConsultation(priceCumulativeLast);
+        emit OracleConsultation(_msgSender(), priceCumulativeLast);
         // slither-disable-next-line unused-return
         (,, blockTimestampLast) = pair.getReserves();
         return true;
@@ -242,6 +244,8 @@ contract Buyback is TwoStepOwnable, Context {
         // requires finding a root of a degree-4 polynomial, which is absolutely awful to attempt to
         // compute on-chain. so we accept this inaccuracy as a concession to the limits of
         // complexity and gas.
+
+        emit Buyback(_msgSender(), kTarget);
 
         return true;
     }
