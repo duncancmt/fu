@@ -149,6 +149,13 @@ abstract contract Bound {
     }
 }
 
+function saturatingAdd(uint256 x, uint256 y) pure returns (uint256 r) {
+    assembly ("memory-safe") {
+        r := add(x, y)
+        r := or(r, sub(0x00, lt(r, y)))
+    }
+}
+
 interface ListOfInvariants {
     function invariant_nonNegativeRebase() external;
     function invariant_delegatesNotChanged() external;
@@ -328,7 +335,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         maybeCreateActor(to);
 
         uint256 beforeBalance = lastBalance[actor];
-        bool actorIsWhale = beforeBalance == fu.whaleLimit(actor);
+        uint256 beforeWhaleLimit = fu.whaleLimit(actor);
+        uint256 beforeWhaleLimitTo = fu.whaleLimit(to);
+        bool actorIsWhale = beforeBalance == beforeWhaleLimit;
         uint256 beforeShares = getShares(actor);
         uint256 beforeSharesTo = getShares(to);
         uint256 beforeCirculating = getCirculatingTokens();
@@ -367,11 +376,19 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         // TODO: check for "rebase queue" events
 
-        bool toIsWhale = lastBalance[to] == fu.whaleLimit(to);
+        uint256 afterBalance = lastBalance[actor];
+        uint256 afterWhaleLimit = fu.whaleLimit(actor);
+        uint256 afterWhaleLimitTo = fu.whaleLimit(to);
+        bool toIsWhale = lastBalance[to] == afterWhaleLimitTo;
         uint256 afterShares = getShares(actor);
         uint256 afterSharesTo = getShares(to);
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
+
+        assertGe(saturatingAdd(afterWhaleLimit, 1), beforeWhaleLimit, "actor whale limit lower");
+        assertLe(afterWhaleLimit, saturatingAdd(beforeWhaleLimit, 1), "actor whale limit upper");
+        assertGe(saturatingAdd(afterWhaleLimitTo, 1), beforeWhaleLimitTo, "to whale limit lower");
+        assertLe(afterWhaleLimitTo, saturatingAdd(beforeWhaleLimitTo, 1), "to whale limit upper");
 
         if (amount == 0) {
             assertEq(afterCirculating, beforeCirculating);
@@ -502,7 +519,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         assume(actor != fu.pair() || amount == 0);
 
         uint256 beforeBalance = lastBalance[actor];
-        bool actorIsWhale = beforeBalance == fu.whaleLimit(actor);
+        uint256 beforeWhaleLimit = fu.whaleLimit(actor);
+        bool actorIsWhale = beforeBalance == beforeWhaleLimit;
         uint256 beforeShares = getShares(actor);
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
@@ -521,8 +539,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         // TODO: check for "rebase queue" events
 
+        uint256 afterWhaleLimit = fu.whaleLimit(actor);
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
+
+        assertGe(saturatingAdd(afterWhaleLimit, 1), beforeWhaleLimit, "whale limit lower");
+        assertLe(afterWhaleLimit, saturatingAdd(beforeWhaleLimit, 1), "whale limit upper");
 
         if (amount == 0) {
             assertEq(afterCirculating, beforeCirculating);
