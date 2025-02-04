@@ -67,6 +67,9 @@ contract Buyback is TwoStepOwnable, Context {
     uint256 public constant TWAP_PERIOD = 1 days;
     uint256 public constant TWAP_PERIOD_TOLERANCE = 1 hours;
 
+    // TODO: store both cumulatives (fu/weth and weth/fu; right now we're just storing the fu/weth
+    // price). swap fu for weth for owner's fee at the fu/weth price. assert that the current price
+    // is above the weth/fu price for swapping weth for fu (to deliver)
     uint256 internal priceCumulativeLast;
     uint256 internal timestampLast;
 
