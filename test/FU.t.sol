@@ -325,6 +325,23 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         shareRatio = newRatio;
     }
 
+    function _assertNoMutation(VmSafe.AccountAccess[] memory accountAccesses, VmSafe.Log[] memory logs) internal view {
+        assertEq(logs.length, 0, "emitted event on failure");
+        for (uint256 i; i < accountAccesses.length; i++) {
+            VmSafe.AccountAccess memory accountAccess = accountAccesses[i];
+            assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.CallCode), "CALLCODE");
+            assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.Create), "CREATE");
+            assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.SelfDestruct), "SELFDESTRUCT");
+            assertEq(accountAccess.oldBalance, accountAccess.newBalance, "modified balance");
+            assertEq(accountAccess.value, 0, "sent ETH");
+            VmSafe.StorageAccess[] memory storageAccesses = accountAccess.storageAccesses;
+            for (uint256 j; j < storageAccesses.length; j++) {
+                VmSafe.StorageAccess memory storageAccess = storageAccesses[j];
+                assertFalse(storageAccess.isWrite, "wrote storage");
+            }
+        }
+    }
+
     function transfer(uint256 actorIndex, address to, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
         if (boundAmount) {
@@ -355,20 +372,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         // TODO: handle failure and assert that we fail iff the reason is expected
         if (!success) {
-            assertEq(logs.length, 0, "emitted event on failure");
-            for (uint256 i; i < accountAccesses.length; i++) {
-                VmSafe.AccountAccess memory accountAccess = accountAccesses[i];
-                assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.CallCode), "CALLCODE");
-                assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.Create), "CREATE");
-                assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.SelfDestruct), "SELFDESTRUCT");
-                assertEq(accountAccess.oldBalance, accountAccess.newBalance, "modified balance");
-                assertEq(accountAccess.value, 0, "sent ETH");
-                VmSafe.StorageAccess[] memory storageAccesses = accountAccess.storageAccesses;
-                for (uint256 j; j < storageAccesses.length; j++) {
-                    VmSafe.StorageAccess memory storageAccess = storageAccesses[j];
-                    assertFalse(storageAccess.isWrite, "wrote storage");
-                }
-            }
+            _assertNoMutation(accountAccesses, logs);
             return;
         }
 
@@ -466,13 +470,18 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeVotingPower = fu.getVotes(delegatee);
         uint256 beforeShares = getShares(actor);
 
+        vm.recordLogs();
+        vm.startStateDiffRecording();
         prank(actor);
         // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
 
+        VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
+        VmSafe.Log[] memory logs = vm.getRecordedLogs();
+
         // TODO: handle failure and assert that we fail iff the reason is expected
         if (!success) {
-            // TODO: assert that there are no state modifications
+            _assertNoMutation(accountAccesses, logs);
             return;
         }
 
@@ -530,13 +539,18 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
 
+        vm.recordLogs();
+        vm.startStateDiffRecording();
         prank(actor);
         // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
 
+        VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
+        VmSafe.Log[] memory logs = vm.getRecordedLogs();
+
         // TODO: handle failure and assert that we fail iff the reason is expected
         if (!success) {
-            // TODO: assert that there are no state modifications
+            _assertNoMutation(accountAccesses, logs);
             return;
         }
 
