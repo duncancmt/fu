@@ -470,17 +470,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             "shares to tokens ratio increased"
         );
 
-        assertLe(beforeBalance - afterBalance, amount + 1, "balance delta upper");
-        assertGe(beforeBalance - afterBalance + 1, amount, "balance delta lower");
-        uint256 divisor = (uint256(uint160(actor)) / Settings.ADDRESS_DIVISOR);
-        if (divisor == 0) {
-            assertEq(amount, 0, "efficient address edge case");
-            return;
-        }
-        assertLe(
-            beforeSupply - afterSupply, (amount + 1) * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta higher"
-        ); // TODO: tighten to `assertLt`
-        assertGe(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta lower");
         if (delegatee != address(0)) {
             assertEq(
                 beforeVotingPower - afterVotingPower,
@@ -490,6 +479,19 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         } else {
             assertEq(beforeVotingPower, afterVotingPower, "no delegation, but voting power changed");
         }
+
+        assertLe(beforeBalance - afterBalance, amount + 1, "balance delta upper");
+        assertGe(beforeBalance - afterBalance + 1, amount, "balance delta lower");
+        uint256 divisor = (uint256(uint160(actor)) / Settings.ADDRESS_DIVISOR);
+        if (divisor == 0) {
+            assertEq(amount, 0, "efficient address edge case");
+            assertEq(beforeSupply, afterSupply, "efficient address edge case supply");
+            return;
+        }
+        assertLe(
+            beforeSupply - afterSupply, (amount + 1) * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta higher"
+        ); // TODO: tighten to `assertLt`
+        assertGe(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta lower");
     }
 
     function deliver(uint256 actorIndex, uint256 amount, bool boundAmount) external {
