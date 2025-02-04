@@ -68,7 +68,7 @@ contract Buyback is TwoStepOwnable, Context {
     uint256 internal constant _TWAP_PERIOD_TOLERANCE = 1 hours;
 
     uint256 internal priceCumulativeLast;
-    uint32 internal blockTimestampLast;
+    uint256 internal timestampLast;
 
     event OwnerFee(BasisPoints oldFee, BasisPoints newFee);
     event OracleConsultation(address indexed keeper, uint256 cumulativePrice);
@@ -118,14 +118,27 @@ contract Buyback is TwoStepOwnable, Context {
 
     function consult() external returns (bool) {
         unchecked {
-            if (blockTimestampLast + (_TWAP_PERIOD + _TWAP_PERIOD_TOLERANCE) > block.timestamp) {
-                revert PriceTooFresh(block.timestamp - blockTimestampLast);
+            if (timestampLast + (TWAP_PERIOD + TWAP_PERIOD_TOLERANCE) > block.timestamp) {
+                revert PriceTooFresh(block.timestamp - timestampLast);
             }
         }
-        priceCumulativeLast = pair.fastPriceCumulativeLast(address(token) > address(WETH));
-        emit OracleConsultation(_msgSender(), priceCumulativeLast);
-        // slither-disable-next-line unused-return
-        (,, blockTimestampLast) = pair.getReserves();
+
+        bool sortTokens = address(token) > address(WETH);
+        uint256 cumulativeLast = pair.fastPriceCumulativeLast(sortTokens);
+        (uint256 reserveFu, uint256 reserveWeth, uint32 timestampLast_) = pair.fastGetReserves();
+        (reserveFu, reserveWeth) = sortTokens.maybeSwap(reserveFu, reserveWeth);
+
+        // counterfactual cumulative calculation
+        uint256 cumulativeCurrent;
+        unchecked {
+            uint32 elapsed = uint32(block.timestamp) - timestampLast_; // masking and underflow is desired
+            cumulativeCurrent = cumulativeLast + (reserveWeth << 112) / reserveFu * elapsed;
+        }
+
+        priceCumulativeLast = cumulativeCurrent;
+        timestampLast = block.timestamp;
+        emit OracleConsultation(_msgSender(), cumulativeCurrent);
+
         return true;
     }
 
@@ -182,7 +195,7 @@ contract Buyback is TwoStepOwnable, Context {
 
         // consult the oracle. this is required to avoid MEV because `buyback` is permissionless
         if (_msgSender() != owner_) {
-            uint256 elapsed = block.timestamp - blockTimestampLast;
+            uint256 elapsed = block.timestamp - timestampLast;
             if (elapsed < _TWAP_PERIOD - _TWAP_PERIOD_TOLERANCE) {
                 revert PriceTooFresh(elapsed);
             }
