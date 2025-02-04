@@ -753,7 +753,7 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
         setBaseFee(6 wei); // causes the `isSimulation` check to pass; Medusa is unable to prank `tx.origin`
         prank(fuTxOrigin);
         (bool success, bytes memory returndata) = deterministicDeployerFactory.call{value: 5 ether}(
-            bytes.concat(bytes32(0x00000000000000000000000000000000000000000000000000000002134cfa58), initcode)
+            bytes.concat(bytes32(0x00000000000000000000000000000000000000000000000000000002466b4485), initcode)
         );
         require(success, string.concat("You need to recompute the salt for inithash: ", keccak256(initcode).hexlify()));
         fu = IFU(address(uint160(bytes20(returndata))));
