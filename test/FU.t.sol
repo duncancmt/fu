@@ -772,4 +772,6 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
     function invariant_votingDelegation() public virtual override {
         return guide.invariant_votingDelegation();
     }
+
+    function invariant_vacuous() external pure {}
 }
