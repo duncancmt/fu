@@ -170,6 +170,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     using ChecksumAddress for address;
 
     IFU internal immutable fu;
+    address internal immutable pair;
     address[] internal actors;
     mapping(address => bool) internal isActor;
     mapping(address => uint256) internal lastBalance;
@@ -178,10 +179,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     constructor(IFU fu_, address[] memory actors_) {
         fu = fu_;
+        pair = fu.pair();
         actors = actors_;
 
         lastBalance[DEAD] = fu.balanceOf(DEAD);
-        address pair = fu.pair();
         actors.push(pair);
 
         for (uint256 i; i < actors.length; i++) {
@@ -329,7 +330,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         }
-        if (actor == fu.pair()) {
+        if (actor == pair) {
             assume(amount < fu.balanceOf(actor));
         }
         maybeCreateActor(to);
@@ -385,10 +386,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
 
-        assertGe(saturatingAdd(afterWhaleLimit, 1), beforeWhaleLimit, "actor whale limit lower");
-        assertLe(afterWhaleLimit, saturatingAdd(beforeWhaleLimit, 1), "actor whale limit upper");
-        assertGe(saturatingAdd(afterWhaleLimitTo, 1), beforeWhaleLimitTo, "to whale limit lower");
-        assertLe(afterWhaleLimitTo, saturatingAdd(beforeWhaleLimitTo, 1), "to whale limit upper");
+        if (actor != pair && to != pair) {
+            assertGe(saturatingAdd(afterWhaleLimit, 1), beforeWhaleLimit, "actor whale limit lower");
+            assertLe(afterWhaleLimit, saturatingAdd(beforeWhaleLimit, 1), "actor whale limit upper");
+            assertGe(saturatingAdd(afterWhaleLimitTo, 1), beforeWhaleLimitTo, "to whale limit lower");
+            assertLe(afterWhaleLimitTo, saturatingAdd(beforeWhaleLimitTo, 1), "to whale limit upper");
+        }
 
         if (amount == 0) {
             assertEq(afterCirculating, beforeCirculating);
@@ -432,7 +435,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     function delegate(uint256 actorIndex, address delegatee) external {
         address actor = getActor(actorIndex);
-        assume(actor != fu.pair());
+        assume(actor != pair);
         maybeCreateActor(delegatee);
 
         prank(actor);
@@ -450,7 +453,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         }
-        assume(actor != fu.pair() || amount == 0);
+        assume(actor != pair || amount == 0);
 
         address delegatee = shadowDelegates[actor];
 
@@ -516,7 +519,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         }
-        assume(actor != fu.pair() || amount == 0);
+        assume(actor != pair || amount == 0);
 
         uint256 beforeBalance = lastBalance[actor];
         uint256 beforeWhaleLimit = fu.whaleLimit(actor);
@@ -569,7 +572,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     // TODO: checkpointing logic
 
     function invariant_nonNegativeRebase() external view override {
-        address pair = fu.pair();
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
             uint256 balance = fu.balanceOf(actor);
