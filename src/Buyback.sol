@@ -120,11 +120,11 @@ contract Buyback is TwoStepOwnable, Context {
                 revert PriceTooFresh(block.timestamp - blockTimestampLast);
             }
         }
-        // TODO: use `<` instead of `>` by reversing all calls to `maybeSwap` in `buyback()`
         priceCumulativeLast = pair.fastPriceCumulativeLast(address(token) > address(WETH));
         emit OracleConsultation(priceCumulativeLast);
         // slither-disable-next-line unused-return
         (,, blockTimestampLast) = pair.getReserves();
+        return true;
     }
 
     function buyback(uint256 minOwnerFee) external returns (bool) {
@@ -157,13 +157,13 @@ contract Buyback is TwoStepOwnable, Context {
 
         // burn LP tokens and receive some of the underlying tokens
         pair.fastTransfer(address(pair), burnLp);
-        (uint256 amountWeth, uint256 amountFu) = pair.fastBurn(address(this));
+        (uint256 amountFu, uint256 amountWeth) = pair.fastBurn(address(this));
 
         // get the reserves again. we have to get them _again_ because there may be excess tokens in
         // the pair before calling `burn`. calling `burn` implicitly synchronizes the pair with its
         // balances.
-        bool sortTokens = (address(token) < address(WETH));
-        (amountWeth, amountFu) = sortTokens.maybeSwap(amountWeth, amountFu);
+        bool sortTokens = (address(token) > address(WETH));
+        (amountFu, amountWeth) = sortTokens.maybeSwap(amountFu, amountWeth);
         address owner_ = owner();
         BasisPoints ownerFee_ = ownerFee;
         if ((owner_ == address(0)).or(ownerFee_ == ZERO_BP)) {
@@ -171,12 +171,12 @@ contract Buyback is TwoStepOwnable, Context {
         }
 
         // begin to compute the amount of WETH owable to `owner()`. we must also compute the amount
-        // of WETH owable to the owner as a result of converting the FU we withdrew, but that will
-        // happen later.
+        // of WETH owable to the owner as a result of converting (some of) the FU we withdrew, but
+        // that will happen later.
         uint256 feeWeth = scaleUp(amountWeth, ownerFee_);
         // slither-disable-next-line unused-return
-        (uint256 reserveWeth, uint256 reserveFu,) = pair.fastGetReserves();
-        (reserveWeth, reserveFu) = sortTokens.maybeSwap(reserveWeth, reserveFu);
+        (uint256 reserveFu, uint256 reserveWeth,) = pair.fastGetReserves();
+        (reserveFu, reserveWeth) = sortTokens.maybeSwap(reserveFu, reserveWeth);
 
         // consult the oracle. this is required to avoid MEV because `buyback` is permissionless
         if (_msgSender() != owner_) {
@@ -187,12 +187,11 @@ contract Buyback is TwoStepOwnable, Context {
             if (elapsed > _TWAP_PERIOD + _TWAP_PERIOD_TOLERANCE) {
                 revert PriceTooStale(elapsed);
             }
-            // TODO: remove the following `!` by swapping every other call to `maybeSwap` in this function
             uint256 oraclePrice;
             unchecked {
                 // the call to `burn` above ensures that `pair.price?CumulativeLast()` is
                 // up-to-date. we don't need to handle any counterfactual values.
-                oraclePrice = uint224((pair.fastPriceCumulativeLast(!sortTokens) - priceCumulativeLast) / elapsed);
+                oraclePrice = uint224((pair.fastPriceCumulativeLast(sortTokens) - priceCumulativeLast) / elapsed);
             }
             uint256 currentPrice = (reserveWeth << 112) / reserveFu;
             if (currentPrice < oraclePrice) {
@@ -200,11 +199,11 @@ contract Buyback is TwoStepOwnable, Context {
             }
         }
 
-        // convert the amount of FU that we withdrew from the pair into WETH using the
-        // constant-product formula. this formula is fee-less because this is only a hypothetical
-        // swap. note that this calculation uses `amountFu`, which is the amount *SENT BY THE PAIR*,
-        // and not the amount actually received by this contract (i.e. it is the amount before fees
-        // are taken out)
+        // convert the fee-scaled amount of FU that we withdrew from the pair into WETH using the
+        // constant-product formula. this formula does not apply the 30bp UniV2 swap fee because
+        // this is only a hypothetical swap. note that this calculation uses `amountFu`, which is
+        // the amount *SENT BY THE PAIR*, and not the amount actually received by this contract
+        // (i.e. it is the amount before FU transfer fees are taken out)
         {
             uint256 feeFu = scaleUp(amountFu, ownerFee_);
             feeWeth += feeFu * reserveWeth / (reserveFu + feeFu);
@@ -221,7 +220,7 @@ contract Buyback is TwoStepOwnable, Context {
         }
         WETH.fastTransfer(address(pair), swapWethIn);
         {
-            (uint256 amount0, uint256 amount1) = sortTokens.maybeSwap(0, swapFuOut);
+            (uint256 amount0, uint256 amount1) = sortTokens.maybeSwap(swapFuOut, 0);
             pair.fastSwap(amount0, amount1, address(this));
         }
 
