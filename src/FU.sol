@@ -324,6 +324,9 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     }
 
     function whaleLimit(address potentialWhale) external view override returns (uint256) {
+        if ((potentialWhale == pair).or(potentialWhale == DEAD)) {
+            return type(uint256).max;
+        }
         // This looks gas-wasteful and baroque, but loading all this additional state is required for
         // exact correctness in the face of rounding error. This exactly replicates the rounding
         // behavior applied when calling `balanceOf(potentialWhale)`.
