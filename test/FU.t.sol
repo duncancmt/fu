@@ -738,7 +738,7 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
         return deployFuDependenciesFoundry();
     }
 
-    function deployFu() internal returns (IFU fu, address[] memory initialHolders) {
+    function deployFu() internal returns (IFU fu, Buyback buyback, address[] memory initialHolders) {
         initialHolders = new address[](Settings.ANTI_WHALE_DIVISOR * 2);
         for (uint256 i; i < initialHolders.length; i++) {
             // Generate unique addresses
@@ -803,7 +803,7 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
         );
         require(success);
         require(address(uint160(bytes20(returndata))) == buybackPrediction);
-        Buyback buyback = Buyback(buybackPrediction);
+        buyback = Buyback(buybackPrediction);
 
         excludeContract(address(fu));
         excludeContract(address(pair));
@@ -813,7 +813,7 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
     }
 
     function setUp() external {
-        (IFU fu, address[] memory actors) = deployFu();
+        (IFU fu,, address[] memory actors) = deployFu();
         guide = new FUGuide(fu, actors);
         warp(EPOCH);
     }
