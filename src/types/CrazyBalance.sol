@@ -96,8 +96,10 @@ library CrazyBalanceArithmetic {
         unchecked {
             // slither-disable-next-line divide-before-multiply
             return CrazyBalance.wrap(
-                tmp().omul(Shares.unwrap(shares), Tokens.unwrap(totalSupply)).div(Shares.unwrap(totalShares))
-                    * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS
+                tmp().omul(
+                    Shares.unwrap(shares),
+                    Tokens.unwrap(totalSupply) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)
+                ).div(Shares.unwrap(totalShares) * Settings.CRAZY_BALANCE_BASIS)
             );
         }
     }
