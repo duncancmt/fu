@@ -328,7 +328,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         shareRatio = newRatio;
     }
 
-    function _assertNoMutation(VmSafe.AccountAccess[] memory accountAccesses, VmSafe.Log[] memory logs) internal view {
+    function _assertNoMutation(VmSafe.AccountAccess[] memory accountAccesses, VmSafe.Log[] memory logs) internal pure {
         assertEq(logs.length, 0, "emitted event on failure");
         for (uint256 i; i < accountAccesses.length; i++) {
             VmSafe.AccountAccess memory accountAccess = accountAccesses[i];
