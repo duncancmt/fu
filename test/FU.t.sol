@@ -401,6 +401,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
 
         assertEq(beforeBalance - afterBalance, amount, "from amount");
+        // TODO: test the balance increase of `to`
 
         if (amount == 0) {
             assertEq(afterCirculating, beforeCirculating);
