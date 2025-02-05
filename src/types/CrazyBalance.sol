@@ -94,8 +94,15 @@ library CrazyBalanceArithmetic {
         pure
         returns (CrazyBalance)
     {
-        // slither-disable-next-line divide-before-multiply
-        return toCrazyBalance(shares.toTokens(totalSupply, totalShares), account);
+        unchecked {
+            // slither-disable-next-line divide-before-multiply
+            return CrazyBalance.wrap(
+                tmp().omul(
+                    Shares.unwrap(shares),
+                    Tokens.unwrap(totalSupply) * (uint160(account) / Settings.ADDRESS_DIVISOR)
+                ).div(Shares.unwrap(totalShares) * Settings.CRAZY_BALANCE_BASIS)
+            );
+        }
     }
 
     function toCrazyBalance(Tokens tokens, address account) internal pure returns (CrazyBalance) {
