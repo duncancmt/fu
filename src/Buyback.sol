@@ -11,9 +11,11 @@ import {IUniswapV2Pair, FastUniswapV2PairLib} from "./interfaces/IUniswapV2Pair.
 import {pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
 import {BasisPoints, ZERO as ZERO_BP, BASIS, scaleUp} from "./types/BasisPoints.sol";
+import {Settings} from "./core/Settings.sol";
 
 import {FastTransferLib} from "./lib/FastTransferLib.sol";
-import {tmp, alloc} from "./lib/512Math.sol";
+import {uint512, tmp, alloc} from "./lib/512Math.sol";
+import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {Math} from "./lib/Math.sol";
 import {FastLogic} from "./lib/FastLogic.sol";
 import {Ternary} from "./lib/Ternary.sol";
@@ -51,6 +53,7 @@ contract Buyback is TwoStepOwnable, Context {
     using FastFu for IFU;
     using FastUniswapV2PairLib for IUniswapV2Pair;
     using Math for uint256;
+    using UnsafeMath for uint256;
     using FastLogic for bool;
     using Ternary for bool;
 
@@ -58,6 +61,7 @@ contract Buyback is TwoStepOwnable, Context {
     IFU public immutable token;
     /// @custom:security non-reentrant
     IUniswapV2Pair public immutable pair;
+    bool internal immutable _sortTokens;
 
     uint120 public lastLpBalance;
     uint120 public kTarget;
@@ -67,14 +71,12 @@ contract Buyback is TwoStepOwnable, Context {
     uint256 public constant TWAP_PERIOD = 1 days;
     uint256 public constant TWAP_PERIOD_TOLERANCE = 1 hours;
 
-    // TODO: store both cumulatives (fu/weth and weth/fu; right now we're just storing the fu/weth
-    // price). swap fu for weth for owner's fee at the fu/weth price. assert that the current price
-    // is above the weth/fu price for swapping weth for fu (to deliver)
-    uint256 internal priceCumulativeLast;
+    uint256 internal priceFuWethCumulativeLast;
+    uint256 internal priceWethFuCumulativeLast;
     uint256 internal timestampLast;
 
     event OwnerFee(BasisPoints oldFee, BasisPoints newFee);
-    event OracleConsultation(address indexed keeper, uint256 cumulativePrice);
+    event OracleConsultation(address indexed keeper, uint256 cumulativeFuWeth, uint256 cumulativeWethFu);
     event Buyback(address indexed caller, uint256 kTarget);
 
     error FeeIncreased(BasisPoints oldFee, BasisPoints newFee);
@@ -83,8 +85,6 @@ contract Buyback is TwoStepOwnable, Context {
     error PriceTooStale(uint256 elapsed);
     error PriceTooFresh(uint256 elapsed);
     error PriceTooLow(uint256 actualQ112, uint256 expectedQ112);
-
-    error TooMuchSlippage(uint256 actual, uint256 expected);
 
     constructor(bytes20 gitCommit, IFU token_, address initialOwner, BasisPoints ownerFee_) {
         require(_msgSender() == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
@@ -96,6 +96,7 @@ contract Buyback is TwoStepOwnable, Context {
         _setOwner(initialOwner);
         token = token_;
         pair = pairFor(token, WETH);
+        _sortTokens = address(token) > address(WETH);
         lastLpBalance = kTarget = uint120(IERC20(pair).fastBalanceOf(address(this)));
         emit Buyback(_msgSender(), kTarget);
         ownerFee = ownerFee_;
@@ -126,26 +127,62 @@ contract Buyback is TwoStepOwnable, Context {
             }
         }
 
-        bool sortTokens = address(token) > address(WETH);
-        uint256 cumulativeLast = pair.fastPriceCumulativeLast(sortTokens);
+        // this is the standard formula for taking the counterfactual cumulative of the pair at the
+        // current price _without_ doing an expensive call to `pair.sync()`
         (uint256 reserveFu, uint256 reserveWeth, uint32 timestampLast_) = pair.fastGetReserves();
-        (reserveFu, reserveWeth) = sortTokens.maybeSwap(reserveFu, reserveWeth);
-
-        // counterfactual cumulative calculation
-        uint256 cumulativeCurrent;
+        (reserveFu, reserveWeth) = _sortTokens.maybeSwap(reserveFu, reserveWeth);
         unchecked {
-            uint32 elapsed = uint32(block.timestamp) - timestampLast_; // masking and underflow is desired
-            cumulativeCurrent = cumulativeLast + (reserveWeth << 112) / reserveFu * elapsed;
+            uint256 elapsed = uint32(block.timestamp) - timestampLast_; // masking and underflow is desired
+            priceFuWethCumulativeLast =
+                pair.fastPriceCumulativeLast(_sortTokens) + (reserveWeth << 112) / reserveFu * elapsed;
+            priceWethFuCumulativeLast =
+                pair.fastPriceCumulativeLast(!_sortTokens) + (reserveFu << 112) / reserveWeth * elapsed;
         }
 
-        priceCumulativeLast = cumulativeCurrent;
         timestampLast = block.timestamp;
-        emit OracleConsultation(_msgSender(), cumulativeCurrent);
+        emit OracleConsultation(_msgSender(), priceFuWethCumulativeLast, priceWethFuCumulativeLast);
 
         return true;
     }
 
-    function buyback(uint256 minOwnerFee) external returns (bool) {
+    function _checkWethFuOraclePrice(uint256 reserveFu, uint256 reserveWeth) internal view returns (uint256 elapsed) {
+        unchecked {
+            elapsed = block.timestamp - timestampLast;
+            if (elapsed < TWAP_PERIOD - TWAP_PERIOD_TOLERANCE) {
+                revert PriceTooFresh(elapsed);
+            }
+            if (elapsed > TWAP_PERIOD + TWAP_PERIOD_TOLERANCE) {
+                revert PriceTooStale(elapsed);
+            }
+            // the call to `burn` that happens before this ensures that
+            // `pair.price?CumulativeLast()` is up-to-date. we don't need to handle any
+            // counterfactual values.
+            uint256 oraclePrice =
+                uint224((pair.fastPriceCumulativeLast(!_sortTokens) - priceWethFuCumulativeLast) / elapsed);
+            uint256 currentPrice = (reserveFu << 112) / reserveWeth;
+            if (currentPrice < oraclePrice) {
+                revert PriceTooLow(currentPrice, oraclePrice);
+            }
+        }
+    }
+
+    function _hypotheticalConstantProductSwap(
+        uint256 amountFu,
+        uint256 fuWethPriceQ112,
+        uint256 reserve0,
+        uint256 reserve1
+    ) internal pure returns (uint256) {
+        unchecked {
+            uint256 liquiditySquared = reserve0 * reserve1;
+            uint256 reserveFu = tmp().omul(liquiditySquared, 1 << 112).div(fuWethPriceQ112).sqrt();
+            uint512 n = alloc().omul(liquiditySquared, amountFu);
+            uint256 d = reserveFu * (reserveFu + amountFu);
+            uint256 q = n.div(d);
+            return q.unsafeInc(tmp().omul(q, d) < n);
+        }
+    }
+
+    function buyback() external returns (bool) {
         // adjust `kTarget` to account for any extra LP tokens that may have been sent to this
         // contract since the last time `buyback` was called
         uint256 lpBalance = pair.fastBalanceOf(address(this));
@@ -163,7 +200,8 @@ contract Buyback is TwoStepOwnable, Context {
         }
 
         // compute the amount of LP to be burned to (approximately) bring `k` back to the target
-        // amount
+        // amount. the 30bp swap fee applied by the pair results in a slight underestimation of the
+        // amount of LP required to burn.
         uint256 left;
         uint256 right;
         unchecked {
@@ -180,8 +218,7 @@ contract Buyback is TwoStepOwnable, Context {
         // get the reserves again. we have to get them _again_ because there may be excess tokens in
         // the pair before calling `burn`. calling `burn` implicitly synchronizes the pair with its
         // balances.
-        bool sortTokens = (address(token) > address(WETH));
-        (amountFu, amountWeth) = sortTokens.maybeSwap(amountFu, amountWeth);
+        (amountFu, amountWeth) = _sortTokens.maybeSwap(amountFu, amountWeth);
         address owner_ = owner();
         BasisPoints ownerFee_ = ownerFee;
         if ((owner_ == address(0)).or(ownerFee_ == ZERO_BP)) {
@@ -194,37 +231,24 @@ contract Buyback is TwoStepOwnable, Context {
         uint256 feeWeth = scaleUp(amountWeth, ownerFee_);
         // slither-disable-next-line unused-return
         (uint256 reserveFu, uint256 reserveWeth,) = pair.fastGetReserves();
-        (reserveFu, reserveWeth) = sortTokens.maybeSwap(reserveFu, reserveWeth);
+        (reserveFu, reserveWeth) = _sortTokens.maybeSwap(reserveFu, reserveWeth);
 
         // consult the oracle. this is required to avoid MEV because `buyback` is permissionless
-        if (_msgSender() != owner_) {
-            uint256 elapsed = block.timestamp - timestampLast;
-            if (elapsed < TWAP_PERIOD - TWAP_PERIOD_TOLERANCE) {
-                revert PriceTooFresh(elapsed);
-            }
-            if (elapsed > TWAP_PERIOD + TWAP_PERIOD_TOLERANCE) {
-                revert PriceTooStale(elapsed);
-            }
-            uint256 oraclePrice;
-            unchecked {
-                // the call to `burn` above ensures that `pair.price?CumulativeLast()` is
-                // up-to-date. we don't need to handle any counterfactual values.
-                oraclePrice = uint224((pair.fastPriceCumulativeLast(sortTokens) - priceCumulativeLast) / elapsed);
-            }
-            uint256 currentPrice = (reserveWeth << 112) / reserveFu;
-            if (currentPrice < oraclePrice) {
-                revert PriceTooLow(currentPrice, oraclePrice);
-            }
-        }
+        uint256 elapsed = _checkWethFuOraclePrice(reserveFu, reserveWeth);
 
         // convert the fee-scaled amount of FU that we withdrew from the pair into WETH using the
         // constant-product formula. this formula does not apply the 30bp UniV2 swap fee because
-        // this is only a hypothetical swap. note that this calculation uses `amountFu`, which is
-        // the amount *SENT BY THE PAIR*, and not the amount actually received by this contract
-        // (i.e. it is the amount before FU transfer fees are taken out)
-        {
-            uint256 feeFu = scaleUp(amountFu, ownerFee_);
-            feeWeth += feeFu * reserveWeth / (reserveFu + feeFu);
+        // this is only a hypothetical swap. this formula also uses the TWAP price directly, rather
+        // than the current spot price. note that this calculation uses `amountFu`, which is the
+        // amount *SENT BY THE PAIR*, and not the amount actually received by this contract (i.e. it
+        // is the amount before FU transfer fees are taken out)
+        unchecked {
+            feeWeth += _hypotheticalConstantProductSwap(
+                scaleUp(amountFu, ownerFee_),
+                uint224((pair.fastPriceCumulativeLast(_sortTokens) - priceFuWethCumulativeLast) / elapsed),
+                reserveFu,
+                reserveWeth
+            );
         }
 
         // swap the leftover WETH to FU. this is the actual buyback step
@@ -238,7 +262,7 @@ contract Buyback is TwoStepOwnable, Context {
         }
         WETH.fastTransfer(address(pair), swapWethIn);
         {
-            (uint256 amount0, uint256 amount1) = sortTokens.maybeSwap(swapFuOut, 0);
+            (uint256 amount0, uint256 amount1) = _sortTokens.maybeSwap(swapFuOut, 0);
             pair.fastSwap(amount0, amount1, address(this));
         }
 
@@ -246,11 +270,7 @@ contract Buyback is TwoStepOwnable, Context {
         // contract to the other tokenholders (increasing not only the price of their holdings, but
         // the actual number of tokens)
         token.fastDeliver(token.fastBalanceOf(address(this)));
-        uint256 actualOwnerFee = WETH.fastBalanceOf(address(this));
-        if (actualOwnerFee < minOwnerFee) {
-            revert TooMuchSlippage(actualOwnerFee, minOwnerFee);
-        }
-        WETH.fastTransfer(owner_, actualOwnerFee);
+        WETH.fastTransfer(owner_, WETH.fastBalanceOf(address(this)));
 
         // update state for next time, in case somebody sends LP tokens to this contract
         (kTarget, lastLpBalance) = (uint120(kTarget_), uint120(pair.fastBalanceOf(address(this))));
