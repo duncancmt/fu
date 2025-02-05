@@ -71,7 +71,7 @@ contract DeployFU is Script {
         );
         IUniswapV2Pair pair = pairFor(fu, _WETH);
         bytes memory buybackInitcode = bytes.concat(
-            type(Buyback).creationCode, abi.encode(gitCommit, fu, 0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60, 5_000)
+            type(Buyback).creationCode, abi.encode(gitCommit, 0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60, 5_000, fu)
         );
         Buyback buyback = Buyback(
             address(
@@ -85,13 +85,18 @@ contract DeployFU is Script {
             )
         );
 
-        if (uint256(uint160(address(pair))) / Settings.ADDRESS_DIVISOR != 1 && salt == bytes32(0)) {
+        if (uint160(address(pair)) / Settings.ADDRESS_DIVISOR != 1 && uint160(address(buyback)) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS && salt == bytes32(0)) {
             console.log("Use the tool in `.../fu/mine` to compute the salt:");
             console.log(
                 string.concat(
-                    "\tcargo run --release ", keccak256(fuInitcode).hexlify(), " ", Settings.PAIR_LEADING_ZEROES.itoa()
+                    "\tcargo run --release ", keccak256(fuInitcode).hexlify(), " <BUYBACK_INITCODE_PREFIX> ", Settings.PAIR_LEADING_ZEROES.itoa()
                 )
             );
+            console.log("\tBuyback initcode prefix:");
+            assembly ("memory-safe") {
+                mstore(buybackInitcode, sub(mload(buybackInitcode), 0x20))
+            }
+            console.logBytes(buybackInitcode);
             return;
         }
 

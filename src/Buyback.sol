@@ -86,10 +86,12 @@ contract Buyback is TwoStepOwnable, Context {
     error PriceTooFresh(uint256 elapsed);
     error PriceTooLow(uint256 actualQ112, uint256 expectedQ112);
 
-    constructor(bytes20 gitCommit, IFU token_, address initialOwner, BasisPoints ownerFee_) {
+    constructor(bytes20 gitCommit, address initialOwner, BasisPoints ownerFee_, IFU token_) {
         require(_msgSender() == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
         require(initialOwner != address(0));
         require(ownerFee_ < BASIS);
+
+        assert(uint160(address(this)) / Settings.ADDRESS_DIVISOR == Settings.CRAZY_BALANCE_BASIS);
 
         emit IFU.GitCommit(gitCommit);
 

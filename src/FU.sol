@@ -102,7 +102,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         require(length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
         pair = address(pairFor(WETH, this));
-        require(uint256(uint160(pair)) / Settings.ADDRESS_DIVISOR == 1);
+        require(uint160(pair) / Settings.ADDRESS_DIVISOR == 1);
 
         assembly ("memory-safe") {
             log0(add(0x20, image_), mload(image_))
@@ -526,7 +526,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             return _transferToPair($, from, to, amount);
         }
 
-        if ((to == DEAD).or(to == address(this)).or(uint256(uint160(to)) / Settings.ADDRESS_DIVISOR == 0)) {
+        if ((to == DEAD).or(to == address(this)).or(uint160(to) / Settings.ADDRESS_DIVISOR == 0)) {
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
             }
