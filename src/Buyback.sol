@@ -96,6 +96,7 @@ contract Buyback is TwoStepOwnable, Context {
         _setOwner(initialOwner);
         token = token_;
         pair = pairFor(token, WETH);
+        assert(token.pair() == address(pair));
         _sortTokens = address(token) > address(WETH);
         lastLpBalance = kTarget = uint120(IERC20(pair).fastBalanceOf(address(this)));
         emit Buyback(_msgSender(), kTarget);
