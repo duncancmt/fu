@@ -500,10 +500,18 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterVotingPower = fu.getVotes(delegatee);
         uint256 afterShares = getShares(actor);
 
-        assertTrue(
-            alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating),
-            "shares to tokens ratio increased"
-        );
+        if (beforeShares == 0) {
+            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) == tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio (no shares)");
+        } else if (beforeBalance == 0) {
+            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio (dust)");
+        } else if (amount == 0) {
+            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) == tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio (zero)");
+        } else {
+            assertTrue(
+                alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating),
+                "shares to tokens ratio increased (base case)"
+            );
+        }
 
         if (delegatee != address(0)) {
             assertEq(
