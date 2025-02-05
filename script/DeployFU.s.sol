@@ -41,6 +41,7 @@ contract DeployFU is Script {
     IMulticall internal constant _MULTICALL = IMulticall(0x40A2aCCbd92BCA938b02010E17A5b8929b49130D);
     address internal constant _DEPLOYER_BROADCASTER = 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6;
     IERC20 internal constant _WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+    uint256 internal constant _MINIMUM_LIQUIDITY = 1000;
 
     function run(bytes32 salt) external {
         address[] memory initialHolders =
@@ -126,8 +127,9 @@ contract DeployFU is Script {
 
         uint256 wethBalance = _WETH.balanceOf(address(pair));
         uint256 fuBalance = fu.balanceOf(address(pair));
-        uint256 liquidity = Math.sqrt(fuBalance * wethBalance);
+        uint256 liquidity = Math.sqrt(fuBalance * wethBalance) - _MINIMUM_LIQUIDITY;
         require(pair.balanceOf(address(buyback)) == liquidity);
+        require(pair.balanceOf(address(0)) == _MINIMUM_LIQUIDITY);
         assert(address(buyback).code.length != 0);
 
         console.log("FU.image():", fu.image());
