@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "src/interfaces/IFU.sol";
 import {FU} from "src/FU.sol";
+import {Buyback} from "src/Buyback.sol";
 import {Settings} from "src/core/Settings.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
-import {IUniswapV2Factory} from "src/interfaces/IUniswapV2Factory.sol";
+import {IUniswapV2Factory, pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 import {ChecksumAddress} from "src/lib/ChecksumAddress.sol";
 
 import {alloc, tmp} from "src/lib/512Math.sol";
@@ -22,6 +24,7 @@ import "./EnvironmentConstants.sol";
 
 import {console} from "@forge-std/console.sol";
 
+IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 uint256 constant EPOCH = 1740721485;
 
@@ -743,28 +746,59 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
 
         deployFuDependencies();
 
-        // Deploy FU
-        bytes memory initcode = bytes.concat(
+        bytes32 fuSalt = 0x00000000000000000000000000000000000000000000000000000002466b4485;
+        bytes32 buybackSalt = 0x0000000000000000000000000000000000000000000000000000000000000000;
+        bytes memory fuInitcode = bytes.concat(
             type(FU).creationCode,
             abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)
         );
+        address fuPrediction = address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deterministicDeployerFactory, fuSalt, keccak256(fuInitcode))))));
+        bytes memory buybackInitcode = bytes.concat(
+            type(Buyback).creationCode,
+            abi.encode(bytes20(keccak256("git commit")), 0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60, 5_000, fuPrediction)
+        );
+        address buybackPrediction = address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deterministicDeployerFactory, buybackSalt, keccak256(buybackInitcode))))));
+        if (uint160(address(pairFor(IERC20(fuPrediction), WETH))) / Settings.ADDRESS_DIVISOR != 1 || uint160(buybackPrediction) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS) {
+            console.log("You need to recompute the salt");
+            console.log("Use the tool in `.../fu/mine`:");
+            console.log(string.concat("The FU inithash is ", keccak256(fuInitcode).hexlify()));
+            console.log("The truncated initcode for Buyback is:");
+            assembly ("memory-safe") {
+                mstore(buybackInitcode, sub(mload(buybackInitcode), 0x20))
+            }
+            console.logBytes(buybackInitcode);
+            revert();
+        }
+
+        // Deploy FU
         deal(address(this), 5 ether);
         deal(fuTxOrigin, 5 ether);
         setBaseFee(6 wei); // causes the `isSimulation` check to pass; Medusa is unable to prank `tx.origin`
         prank(fuTxOrigin);
         (bool success, bytes memory returndata) = deterministicDeployerFactory.call{value: 5 ether}(
-            bytes.concat(bytes32(0x00000000000000000000000000000000000000000000000000000002466b4485), initcode)
+            bytes.concat(fuSalt, fuInitcode)
         );
-        require(success, string.concat("You need to recompute the salt for inithash: ", keccak256(initcode).hexlify()));
-        fu = IFU(address(uint160(bytes20(returndata))));
+        require(success);
+        require(address(uint160(bytes20(returndata))) == fuPrediction);
+        fu = IFU(fuPrediction);
         label(address(fu), "FU");
-        excludeContract(address(fu));
 
         // Lock initial liquidity
         IUniswapV2Pair pair = IUniswapV2Pair(fu.pair());
         label(address(pair), "FU/WETH UniV2 Pair");
-        pair.mint(address(0));
+        pair.mint(buybackPrediction);
+
+        // Deploy buyback
+        (success, returndata) = deterministicDeployerFactory.call(
+            bytes.concat(buybackSalt, buybackInitcode)
+        );
+        require(success);
+        require(address(uint160(bytes20(returndata))) == buybackPrediction);
+        Buyback buyback = Buyback(buybackPrediction);
+
+        excludeContract(address(fu));
         excludeContract(address(pair));
+        excludeContract(address(buyback));
 
         label(DEAD, "Super dead");
     }
