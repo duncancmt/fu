@@ -755,8 +755,8 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
 
         deployFuDependencies();
 
-        bytes32 fuSalt = 0x0000000000000000000000000000000000000000000000000000000066fe09e2;
-        bytes32 buybackSalt = 0x00000000000000000000000000000000000000000000000000000001c09e3b84;
+        bytes32 fuSalt = 0x0000000000000000000000000000000000000000000000000000000102624b3e;
+        bytes32 buybackSalt = 0x0000000000000000000000000000000000000000000000000000000278d0b859;
         bytes memory fuInitcode = bytes.concat(
             type(FU).creationCode,
             abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)
@@ -764,7 +764,7 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
         address fuPrediction = address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deterministicDeployerFactory, fuSalt, keccak256(fuInitcode))))));
         bytes memory buybackInitcode = bytes.concat(
             type(Buyback).creationCode,
-            abi.encode(bytes20(keccak256("git commit")), 0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60, 5_000, fuPrediction)
+            abi.encode(bytes20(keccak256("git commit")), address(uint160(uint256(keccak256("Buyback owner")))), 5_000, fuPrediction)
         );
         address buybackPrediction = address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deterministicDeployerFactory, buybackSalt, keccak256(buybackInitcode))))));
         if (uint160(address(pairFor(IERC20(fuPrediction), WETH))) / Settings.ADDRESS_DIVISOR != 1 || uint160(buybackPrediction) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS) {

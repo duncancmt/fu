@@ -88,10 +88,15 @@ contract Buyback is TwoStepOwnable, Context {
 
     constructor(bytes20 gitCommit, address initialOwner, BasisPoints ownerFee_, IFU token_) {
         require(_msgSender() == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
+        {
+            bool isSimulation = block.basefee < 7 wei && block.gaslimit > 1_000_000_000 && block.number < 20_000_000;
+            // slither-disable-next-line tx-origin
+            require(tx.origin == 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6 || isSimulation);
+        }
         require(initialOwner != address(0));
         require(ownerFee_ < BASIS);
 
-        assert(uint160(address(this)) / Settings.ADDRESS_DIVISOR == Settings.CRAZY_BALANCE_BASIS);
+        require(uint160(address(this)) / Settings.ADDRESS_DIVISOR == Settings.CRAZY_BALANCE_BASIS);
 
         emit IFU.GitCommit(gitCommit);
 
