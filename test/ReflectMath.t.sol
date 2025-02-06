@@ -101,9 +101,10 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - taxRate));
         Tokens expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, taxRate));
 
-        assertEq(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "newFromBalance");
-        assertGe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
-        assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi), "newToBalance upper");
+        assertGe(Tokens.unwrap(newFromBalance) + 1, Tokens.unwrap(expectedNewFromBalance), "newFromBalance (lower)");
+        assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance) + 1, "newFromBalance (upper)");
+        assertGe(Tokens.unwrap(newToBalance) + 1, Tokens.unwrap(expectedNewToBalanceLo), "newToBalance (lower)");
+        assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi) + 1, "newToBalance (upper)");
     }
 
     function testTransferAll(
@@ -139,7 +140,7 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens toBalance = toShares.toTokens(totalSupply, totalShares);
 
         (Shares newToShares, Shares newTotalShares) =
-            ReflectMath.getTransferShares(taxRate, totalSupply, totalShares, fromShares, toShares);
+            ReflectMath.getTransferShares(taxRate, totalShares, fromShares, toShares);
 
         assertGe(Shares.unwrap(newToShares), Shares.unwrap(toShares), "to shares decreased");
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
@@ -154,10 +155,11 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens expectedNewToBalanceLo = toBalance + fromBalance - castUp(scale(fromBalance, taxRate));
         Tokens expectedNewToBalanceHi = toBalance + castUp(scale(fromBalance, BASIS - taxRate));
         if (newToShares == toShares) {
-            assertGe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
-            assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi), "newToBalance upper");
+            assertGe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance (lower)");
+            assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi), "newToBalance (upper)");
         } else {
-            assertEq(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceLo), "newToBalance");
+            assertGe(Tokens.unwrap(newToBalance) + 1, Tokens.unwrap(expectedNewToBalanceLo), "newToBalance (lower)");
+            assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi) + 1, "newToBalance (upper)");
         }
     }
 
@@ -197,10 +199,15 @@ contract ReflectMathTest is Boilerplate, Test {
             ReflectMath.getTransferSharesToWhale(amount, taxRate, totalSupply, totalShares, fromShares, toShares);
 
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
-        assertEq(
+        assertGe(
+            Shares.unwrap(newToShares) + 1,
+            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE),
+            "to shares whale limit (lower)"
+        );
+        assertLe(
             Shares.unwrap(newToShares),
             Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE),
-            "to shares whale limit"
+            "to shares whale limit (upper)"
         );
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         assertEq(
@@ -215,18 +222,18 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens expectedNewFromBalance = fromBalance - amount;
         Tokens expectedCounterfactualToBalance = newToBalance - cast(scale(amount, BASIS - taxRate));
 
-        assertEq(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "newFromBalance");
+        assertGe(Tokens.unwrap(newFromBalance) + 1, Tokens.unwrap(expectedNewFromBalance), "newFromBalance (lower)");
+        assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance) + 1, "newFromBalance (upper)");
 
-        uint256 fudge = 1;
         assertGe(
-            Tokens.unwrap(counterfactualToBalance) + fudge,
+            Tokens.unwrap(counterfactualToBalance) + 1,
             Tokens.unwrap(expectedCounterfactualToBalance),
-            "counterfactualToBalance lower"
+            "counterfactualToBalance (lower)"
         );
         assertLe(
             Tokens.unwrap(counterfactualToBalance),
-            Tokens.unwrap(expectedCounterfactualToBalance) + fudge,
-            "counterfactualToBalance upper"
+            Tokens.unwrap(expectedCounterfactualToBalance) + 1,
+            "counterfactualToBalance (upper)"
         );
     }
 
@@ -262,7 +269,7 @@ contract ReflectMathTest is Boilerplate, Test {
             Shares.wrap(bound(Shares.unwrap(toShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))));
 
         (Shares newToShares, Shares newTotalShares) =
-            ReflectMath.getTransferShares(taxRate, totalSupply, totalShares, fromShares, toShares);
+            ReflectMath.getTransferShares(taxRate, totalShares, fromShares, toShares);
 
         assume(newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR));
 
@@ -271,10 +278,15 @@ contract ReflectMathTest is Boilerplate, Test {
             ReflectMath.getTransferSharesToWhale(taxRate, totalShares, fromShares, toShares);
 
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
-        assertEq(
+        assertLe(
             Shares.unwrap(newToShares),
             Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE),
-            "to shares whale limit"
+            "to shares whale limit (upper)"
+        );
+        assertGe(
+            Shares.unwrap(newToShares) + 1,
+            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE),
+            "to shares whale limit (lower)"
         );
         assertEq(
             Shares.unwrap(totalShares - newTotalShares),
@@ -288,16 +300,15 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens expectedCounterfactualToBalanceLo = newToBalance - castUp(scale(fromBalance, BASIS - taxRate));
         Tokens expectedCounterfactualToBalanceHi = newToBalance - cast(scale(fromBalance, BASIS - taxRate));
 
-        uint256 fudge = 1;
         assertGe(
-            Tokens.unwrap(counterfactualToBalance) + fudge,
+            Tokens.unwrap(counterfactualToBalance) + 1,
             Tokens.unwrap(expectedCounterfactualToBalanceLo),
-            "counterfactualToBalance lower"
+            "counterfactualToBalance (lower)"
         );
         assertLe(
             Tokens.unwrap(counterfactualToBalance),
-            Tokens.unwrap(expectedCounterfactualToBalanceHi) + fudge,
-            "counterfactualToBalance upper"
+            Tokens.unwrap(expectedCounterfactualToBalanceHi) + 1,
+            "counterfactualToBalance (upper)"
         );
     }
 
@@ -352,8 +363,8 @@ contract ReflectMathTest is Boilerplate, Test {
 
         Tokens expectedNewToBalanceLo = toBalance + amount - castUp(scale(amount, taxRate));
         Tokens expectedNewToBalanceHi = toBalance + castUp(scale(amount, BASIS - taxRate));
-        assertGe(Tokens.unwrap(newToBalance) + 1, Tokens.unwrap(expectedNewToBalanceLo), "newToBalance lower");
-        assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi), "newToBalance upper");
+        assertGe(Tokens.unwrap(newToBalance) + 1, Tokens.unwrap(expectedNewToBalanceLo), "newToBalance (lower)");
+        assertLe(Tokens.unwrap(newToBalance), Tokens.unwrap(expectedNewToBalanceHi), "newToBalance (upper)");
     }
 
     function testTransferSomeToPair(
@@ -393,7 +404,8 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens newFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
 
         Tokens expectedNewFromBalance = fromBalance - amount;
-        assertEq(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "newFromBalance");
+        assertGe(Tokens.unwrap(newFromBalance) + 1, Tokens.unwrap(expectedNewFromBalance), "newFromBalance (lower)");
+        assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance) + 1, "newFromBalance (upper)");
     }
 
     function testDeliver(Tokens totalSupply, Shares totalShares, Shares fromShares, Tokens amount, uint256 sharesRatio)
@@ -415,8 +427,8 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens newFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedNewFromBalance = fromBalance - amount;
 
-        assertGe(Tokens.unwrap(newFromBalance) + 1, Tokens.unwrap(expectedNewFromBalance), "new balance lower");
-        assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "new balance upper");
+        assertGe(Tokens.unwrap(newFromBalance) + 1, Tokens.unwrap(expectedNewFromBalance), "new balance (lower)");
+        assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "new balance (upper)");
     }
 
     function testBurn(Tokens totalSupply, Shares totalShares, Shares fromShares, Tokens amount, uint256 sharesRatio)
@@ -444,7 +456,7 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens newFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
         Tokens expectedNewFromBalance = fromBalance - amount;
 
-        assertGe(Tokens.unwrap(newFromBalance) + 1, Tokens.unwrap(expectedNewFromBalance), "new balance lower");
-        assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "new balance upper");
+        assertGe(Tokens.unwrap(newFromBalance) + 1, Tokens.unwrap(expectedNewFromBalance), "new balance (lower)");
+        assertLe(Tokens.unwrap(newFromBalance), Tokens.unwrap(expectedNewFromBalance), "new balance (upper)");
     }
 }

@@ -571,7 +571,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         Shares newTotalShares;
         if (amount == fromBalance) {
             (newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                taxRate, cachedTotalShares, cachedFromShares, cachedToShares
             );
             newFromShares = ZERO_SHARES;
         } else {
