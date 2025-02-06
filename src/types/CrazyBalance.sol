@@ -6,9 +6,9 @@ import {Settings} from "../core/Settings.sol";
 import {BasisPoints, BASIS} from "./BasisPoints.sol";
 import {Shares} from "./Shares.sol";
 import {Tokens} from "./Tokens.sol";
+import {tmp, alloc, SharesToTokens} from "./TokensXShares.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
-import {tmp} from "../lib/512Math.sol";
 
 type CrazyBalance is uint256;
 
@@ -80,6 +80,7 @@ using {
 
 library CrazyBalanceArithmetic {
     using UnsafeMath for uint256;
+    using SharesToTokens for Shares;
 
     function saturatingAdd(CrazyBalance x, CrazyBalance y) internal pure returns (CrazyBalance r) {
         assembly ("memory-safe") {
@@ -96,16 +97,22 @@ library CrazyBalanceArithmetic {
         unchecked {
             // slither-disable-next-line divide-before-multiply
             return CrazyBalance.wrap(
-                tmp().omul(
-                    Shares.unwrap(shares),
-                    Tokens.unwrap(totalSupply) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)
-                ).div(Shares.unwrap(totalShares) * Settings.CRAZY_BALANCE_BASIS)
+                Tokens.unwrap(
+                    tmp().omul(
+                        shares,
+                        totalSupply.mul(uint160(account) / Settings.ADDRESS_DIVISOR)
+                    ).div(totalShares.mul(Settings.CRAZY_BALANCE_BASIS))
+                )
             );
         }
     }
 
     function toCrazyBalance(Tokens tokens, address account) internal pure returns (CrazyBalance) {
-        return CrazyBalance.wrap(Tokens.unwrap(tokens) / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR));
+        unchecked {
+            return CrazyBalance.wrap(
+                Tokens.unwrap(tokens) * (uint160(account) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS
+            );
+        }
     }
 
     function toTokens(CrazyBalance balance, address account) internal pure returns (Tokens) {
@@ -114,7 +121,7 @@ library CrazyBalanceArithmetic {
             // zero is required.
             return Tokens.wrap(
                 CrazyBalance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS
-                    / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)
+                    / (uint160(account) / Settings.ADDRESS_DIVISOR)
             );
         }
     }
@@ -128,16 +135,37 @@ library CrazyBalanceArithmetic {
         pure
         returns (CrazyBalance)
     {
-        return CrazyBalance.wrap(
-            tmp().omul(Shares.unwrap(shares), Tokens.unwrap(totalSupply)).div(Shares.unwrap(totalShares))
-                / Settings.CRAZY_BALANCE_BASIS
-        );
+        return
+            CrazyBalance.wrap(Tokens.unwrap(shares.toTokens(totalSupply, totalShares)) / Settings.CRAZY_BALANCE_BASIS);
     }
 
     function toPairTokens(CrazyBalance balance) internal pure returns (Tokens) {
         unchecked {
             return Tokens.wrap(CrazyBalance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS);
         }
+    }
+
+    modifier freeMemory() {
+        uint256 freePtr;
+        assembly ("memory-safe") {
+            freePtr := mload(0x40)
+        }
+        _;
+        assembly ("memory-safe") {
+            mstore(0x40, freePtr)
+        }
+    }
+
+    function getDust(CrazyBalance balance, address account, Shares shares, Tokens totalSupply, Shares totalShares)
+        internal
+        pure
+        freeMemory
+        returns (Tokens r)
+    {
+        uint256 crazyBalanceFactor = uint160(account) / Settings.ADDRESS_DIVISOR;
+        return alloc().omul(shares, totalSupply.mul(crazyBalanceFactor)).isub(
+            tmp().omul(balance.toPairTokens(), totalShares)
+        ).div(totalShares.mul(crazyBalanceFactor));
     }
 }
 
