@@ -471,8 +471,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             newShares = ZERO_SHARES;
             newTotalShares = cachedTotalShares - cachedShares;
         } else {
-            Tokens dust = cachedShares.toTokens(cachedTotalSupply, cachedTotalShares) - balance.toTokens(from);
-            Tokens amountTokens = amount.toTokens(from) + dust;
+            Tokens amountTokens = amount.toTokens(from) + balance.getDust(from, cachedShares, cachedTotalSupply, cachedTotalShares);
             (newShares, newTotalShares, transferTokens, newTotalSupply) = ReflectMath.getTransferSharesToPair(
                 taxRate, cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
             );
@@ -577,10 +576,11 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             newFromShares = ZERO_SHARES;
         } else {
             // TODO: reorganize these `if` statements so that we can avoid duplicating this computation
-            Tokens dust = cachedFromShares.toTokens(cachedTotalSupply, cachedTotalShares) - fromBalance.toTokens(from);
+            Tokens dust = fromBalance.getDust(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
             Tokens amountTokens = amount.toTokens(from) + dust;
             console.log("amount specified", Tokens.unwrap(amount.toTokens(from)));
             console.log("amount with dust", Tokens.unwrap(amountTokens));
+            console.log("dust", Tokens.unwrap(dust));
             console.log("amount (crazy) specified", CrazyBalance.unwrap(amount));
             console.log("amount (crazy) with dust", CrazyBalance.unwrap(amountTokens.toCrazyBalance(from)));
             (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
@@ -595,15 +595,10 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
                 newFromShares = ZERO_SHARES;
             } else {
                 // TODO: see above TODO
-                Tokens dust = cachedFromShares.toTokens(cachedTotalSupply, cachedTotalShares) - fromBalance.toTokens(from);
+                Tokens dust = fromBalance.getDust(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
                 Tokens amountTokens = amount.toTokens(from) + dust;
                 (newFromShares, cachedToShares, newToShares, newTotalShares) = ReflectMath.getTransferSharesToWhale(
-                    amountTokens,
-                    taxRate,
-                    cachedTotalSupply,
-                    cachedTotalShares,
-                    cachedFromShares,
-                    cachedToShares
+                    amountTokens, taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
                 );
             }
             // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
