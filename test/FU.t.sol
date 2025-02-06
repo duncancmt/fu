@@ -501,11 +501,20 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterShares = getShares(actor);
 
         if (beforeShares == 0) {
-            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) == tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio (no shares)");
+            assertTrue(
+                alloc().omul(beforeTotalShares, afterCirculating) == tmp().omul(afterTotalShares, beforeCirculating),
+                "shares to tokens ratio (no shares)"
+            );
         } else if (beforeBalance == 0) {
-            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio (dust)");
+            assertTrue(
+                alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
+                "shares to tokens ratio (dust)"
+            );
         } else if (amount == 0) {
-            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) == tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio (zero)");
+            assertTrue(
+                alloc().omul(beforeTotalShares, afterCirculating) == tmp().omul(afterTotalShares, beforeCirculating),
+                "shares to tokens ratio (zero)"
+            );
         } else {
             assertTrue(
                 alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating),
@@ -761,12 +770,35 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
             type(FU).creationCode,
             abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)
         );
-        address fuPrediction = address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deterministicDeployerFactory, fuSalt, keccak256(fuInitcode))))));
+        address fuPrediction = address(
+            uint160(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(bytes1(0xff), deterministicDeployerFactory, fuSalt, keccak256(fuInitcode))
+                    )
+                )
+            )
+        );
         bytes memory buybackInitcode = bytes.concat(
             type(Buyback).creationCode,
-            abi.encode(bytes20(keccak256("git commit")), address(uint160(uint256(keccak256("Buyback owner")))), 5_000, fuPrediction)
+            abi.encode(
+                bytes20(keccak256("git commit")),
+                address(uint160(uint256(keccak256("Buyback owner")))),
+                5_000,
+                fuPrediction
+            )
         );
-        address buybackPrediction = address(uint160(uint256(keccak256(abi.encodePacked(bytes1(0xff), deterministicDeployerFactory, buybackSalt, keccak256(buybackInitcode))))));
+        address buybackPrediction = address(
+            uint160(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            bytes1(0xff), deterministicDeployerFactory, buybackSalt, keccak256(buybackInitcode)
+                        )
+                    )
+                )
+            )
+        );
         /*
         if (uint160(address(pairFor(IERC20(fuPrediction), WETH))) / Settings.ADDRESS_DIVISOR != 1 || uint160(buybackPrediction) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS) {
             console.log("You need to recompute the salt");
@@ -787,9 +819,8 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
         deal(fuTxOrigin, 5 ether);
         setBaseFee(6 wei); // causes the `isSimulation` check to pass; Medusa is unable to prank `tx.origin`
         prank(fuTxOrigin);
-        (bool success, bytes memory returndata) = deterministicDeployerFactory.call{value: 5 ether}(
-            bytes.concat(fuSalt, fuInitcode)
-        );
+        (bool success, bytes memory returndata) =
+            deterministicDeployerFactory.call{value: 5 ether}(bytes.concat(fuSalt, fuInitcode));
         require(success);
         require(address(uint160(bytes20(returndata))) == fuPrediction);
         fu = IFU(fuPrediction);
@@ -801,9 +832,7 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
         pair.mint(buybackPrediction);
 
         // Deploy buyback
-        (success, returndata) = deterministicDeployerFactory.call(
-            bytes.concat(buybackSalt, buybackInitcode)
-        );
+        (success, returndata) = deterministicDeployerFactory.call(bytes.concat(buybackSalt, buybackInitcode));
         require(success);
         require(address(uint160(bytes20(returndata))) == buybackPrediction);
         buyback = Buyback(buybackPrediction);

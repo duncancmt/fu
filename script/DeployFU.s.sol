@@ -86,11 +86,18 @@ contract DeployFU is Script {
             )
         );
 
-        if (uint160(address(pair)) / Settings.ADDRESS_DIVISOR != 1 && uint160(address(buyback)) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS && salt == bytes32(0)) {
+        if (
+            uint160(address(pair)) / Settings.ADDRESS_DIVISOR != 1
+                && uint160(address(buyback)) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS
+                && salt == bytes32(0)
+        ) {
             console.log("Use the tool in `.../fu/mine` to compute the salt:");
             console.log(
                 string.concat(
-                    "\tcargo run --release ", keccak256(fuInitcode).hexlify(), " <BUYBACK_INITCODE_PREFIX> ", Settings.PAIR_LEADING_ZEROES.itoa()
+                    "\tcargo run --release ",
+                    keccak256(fuInitcode).hexlify(),
+                    " <BUYBACK_INITCODE_PREFIX> ",
+                    Settings.PAIR_LEADING_ZEROES.itoa()
                 )
             );
             console.log("\tBuyback initcode prefix:");
