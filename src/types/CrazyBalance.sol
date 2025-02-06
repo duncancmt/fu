@@ -6,9 +6,9 @@ import {Settings} from "../core/Settings.sol";
 import {BasisPoints, BASIS} from "./BasisPoints.sol";
 import {Shares} from "./Shares.sol";
 import {Tokens} from "./Tokens.sol";
+import {SharesToTokens} from "./TokensXShares.sol";
 
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
-import {tmp} from "../lib/512Math.sol";
 
 type CrazyBalance is uint256;
 
@@ -80,6 +80,7 @@ using {
 
 library CrazyBalanceArithmetic {
     using UnsafeMath for uint256;
+    using SharesToTokens for Shares;
 
     function saturatingAdd(CrazyBalance x, CrazyBalance y) internal pure returns (CrazyBalance r) {
         assembly ("memory-safe") {
@@ -93,19 +94,14 @@ library CrazyBalanceArithmetic {
         pure
         returns (CrazyBalance)
     {
-        unchecked {
-            // slither-disable-next-line divide-before-multiply
-            return CrazyBalance.wrap(
-                tmp().omul(
-                    Shares.unwrap(shares),
-                    Tokens.unwrap(totalSupply) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR)
-                ).div(Shares.unwrap(totalShares) * Settings.CRAZY_BALANCE_BASIS)
-            );
-        }
+        // slither-disable-next-line divide-before-multiply
+        return toCrazyBalance(shares.toTokens(totalSupply, totalShares), account);
     }
 
     function toCrazyBalance(Tokens tokens, address account) internal pure returns (CrazyBalance) {
-        return CrazyBalance.wrap(Tokens.unwrap(tokens) / (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR));
+        unchecked {
+            return CrazyBalance.wrap(Tokens.unwrap(tokens) * (uint256(uint160(account)) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS);
+        }
     }
 
     function toTokens(CrazyBalance balance, address account) internal pure returns (Tokens) {
@@ -129,7 +125,7 @@ library CrazyBalanceArithmetic {
         returns (CrazyBalance)
     {
         return CrazyBalance.wrap(
-            tmp().omul(Shares.unwrap(shares), Tokens.unwrap(totalSupply)).div(Shares.unwrap(totalShares))
+                                 Tokens.unwrap(shares.toTokens(totalSupply, totalShares))
                 / Settings.CRAZY_BALANCE_BASIS
         );
     }
