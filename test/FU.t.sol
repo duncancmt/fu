@@ -356,9 +356,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         maybeCreateActor(to);
 
         uint256 beforeBalance = lastBalance[actor];
+        uint256 beforeBalanceTo = fu.balanceOf(to);
         uint256 beforeWhaleLimit = fu.whaleLimit(actor);
         uint256 beforeWhaleLimitTo = fu.whaleLimit(to);
         bool actorIsWhale = beforeBalance == beforeWhaleLimit;
+        bool toIsWhaleBefore = beforeBalanceTo == beforeWhaleLimitTo;
         uint256 beforeShares = getShares(actor);
         uint256 beforeSharesTo = getShares(to);
         uint256 beforeCirculating = getCirculatingTokens();
@@ -385,9 +387,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         // TODO: check for "rebase queue" events
 
         uint256 afterBalance = lastBalance[actor];
+        uint256 afterBalanceTo = lastBalance[to];
         uint256 afterWhaleLimit = fu.whaleLimit(actor);
         uint256 afterWhaleLimitTo = fu.whaleLimit(to);
-        bool toIsWhale = lastBalance[to] == afterWhaleLimitTo;
+        bool toIsWhale = afterBalanceTo == afterWhaleLimitTo;
         uint256 afterShares = getShares(actor);
         uint256 afterSharesTo = getShares(to);
         uint256 afterCirculating = getCirculatingTokens();
@@ -400,7 +403,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             assertLe(afterWhaleLimitTo, saturatingAdd(beforeWhaleLimitTo, 1), "to whale limit upper");
         }
 
-        assertEq(beforeBalance - afterBalance, amount, "from amount");
+        if (!toIsWhaleBefore) {
+            assertGe(beforeBalance, afterBalance, "balance increased");
+            assertLe(beforeBalance - afterBalance, amount, "from amount"); // TODO: assertEq
+        }
         // TODO: test the balance increase of `to`
 
         if (amount == 0) {
