@@ -66,6 +66,7 @@ library ReflectMath {
         (newFromShares, newToShares) = n0.divMulti(n1, d);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
 
+        /*
         (Tokens beforeFromBalance, Tokens beforeToBalance) =
             fromShares.toTokensMulti(toShares, totalSupply, totalShares);
 
@@ -150,11 +151,11 @@ library ReflectMath {
             newFromShares = newFromShares - decrFrom;
             newToShares = newToShares - decrTo;
         }
+        */
     }
 
     function getTransferShares(
         BasisPoints taxRate,
-        Tokens totalSupply,
         Shares totalShares,
         Shares fromShares,
         Shares toShares
@@ -167,6 +168,7 @@ library ReflectMath {
         newTotalShares = n.div(d);
         newToShares = toShares + fromShares - (totalShares - newTotalShares);
 
+        /*
         // Fixup rounding error
         (Tokens beforeFromBalance, Tokens beforeToBalance) =
             fromShares.toTokensMulti(toShares, totalSupply, totalShares);
@@ -197,6 +199,7 @@ library ReflectMath {
             newToShares = newToShares.inc(condition);
             newTotalShares = newTotalShares.inc(condition);
         }
+        */
     }
 
     function getTransferSharesToWhale(
@@ -231,12 +234,12 @@ library ReflectMath {
         ).div(scale(totalSupply, BASIS));
 
         // Fixup rounding error
-        {
-            bool condition = newToShares > (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
-            newTotalShares = newTotalShares.dec(condition);
-            newToShares = newToShares.dec(condition);
-        }
+        bool condition = newToShares > (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
+        assert(!condition);
+        newTotalShares = newTotalShares.dec(condition);
+        newToShares = newToShares.dec(condition);
 
+        /*
         Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
         Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
         Tokens expectedAfterFromBalance = beforeFromBalance - amount;
@@ -256,6 +259,7 @@ library ReflectMath {
             newTotalShares = newTotalShares.dec(condition);
             newToShares = newToShares.dec(condition);
         }
+        */
     }
 
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
@@ -272,6 +276,7 @@ library ReflectMath {
 
         // Fixup rounding error
         bool condition = newToShares > (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+        assert(!condition);
         newTotalShares = newTotalShares.dec(condition);
         newToShares = newToShares.dec(condition);
     }
@@ -322,6 +327,7 @@ library ReflectMath {
         transferTokens = cast(scale(amount, BASIS - taxRate));
         newTotalSupply = totalSupply - transferTokens;
 
+        /*
         // Fixup rounding error
         Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
         Tokens afterFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
@@ -336,6 +342,7 @@ library ReflectMath {
             newFromShares = newFromShares - decr;
             newTotalShares = newTotalShares - decr;
         }
+        */
     }
 
     function getDeliverShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
