@@ -404,8 +404,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
 
         if (!toIsWhaleBefore) {
-            assertGe(beforeBalance, afterBalance, "balance increased");
-            assertLe(beforeBalance - afterBalance, amount, "from amount"); // TODO: assertEq
+            assertGe(beforeBalance - afterBalance + 1, amount, "from amount lower");
+            assertLe(beforeBalance - afterBalance, amount + 1, "from amount upper");
         }
         // TODO: test the balance increase of `to`
 
