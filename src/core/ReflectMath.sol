@@ -232,7 +232,7 @@ library ReflectMath {
 
         // Fixup rounding error
         {
-            bool condition = newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+            bool condition = newToShares > (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
             newTotalShares = newTotalShares.dec(condition);
             newToShares = newToShares.dec(condition);
         }
@@ -271,7 +271,7 @@ library ReflectMath {
         newTotalShares = totalShares + newToShares - fromShares - toShares;
 
         // Fixup rounding error
-        bool condition = newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
+        bool condition = newToShares > (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newTotalShares = newTotalShares.dec(condition);
         newToShares = newToShares.dec(condition);
     }
