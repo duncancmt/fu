@@ -164,6 +164,7 @@ interface ListOfInvariants {
     function invariant_delegatesNotChanged() external;
     function invariant_sumOfShares() external;
     function invariant_votingDelegation() external;
+    function invariant_delegateeZero() external;
 }
 
 contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
@@ -687,6 +688,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
         assertEq(total, 0);
     }
+
+    function invariant_delegateeZero() external view override {
+        assertEq(fu.getVotes(address(0)), 0, "zero cannot have voting power");
+    }
 }
 
 contract FUInvariants is StdInvariant, Common, ListOfInvariants {
@@ -870,6 +875,10 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
 
     function invariant_votingDelegation() public virtual override {
         return guide.invariant_votingDelegation();
+    }
+
+    function invariant_delegateeZero() public virtual override {
+        return guide.invariant_delegateeZero();
     }
 
     function invariant_vacuous() external pure {}
