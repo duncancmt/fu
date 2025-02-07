@@ -234,7 +234,7 @@ library ReflectMath {
         ).div(scale(totalSupply, BASIS));
 
         // Fixup rounding error
-        bool condition = newToShares > (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
+        bool condition = newToShares >= (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE);
         assert(!condition);
         newTotalShares = newTotalShares.dec(condition);
         newToShares = newToShares.dec(condition);
@@ -275,7 +275,7 @@ library ReflectMath {
         newTotalShares = totalShares + newToShares - fromShares - toShares;
 
         // Fixup rounding error
-        bool condition = newToShares > (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
+        bool condition = newToShares >= (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE);
         assert(!condition);
         newTotalShares = newTotalShares.dec(condition);
         newToShares = newToShares.dec(condition);
