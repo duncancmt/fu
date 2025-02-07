@@ -405,8 +405,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
 
         if (!toIsWhaleBefore) {
-            assertGe(beforeBalance - afterBalance + 1, amount, "from amount lower");
-            assertLe(beforeBalance - afterBalance, amount + 1, "from amount upper");
+            if (actor == pair || amount == beforeBalance) {
+                assertEq(beforeBalance - afterBalance, amount, "from amount");
+            } else {
+                assertGe(beforeBalance - afterBalance + 1, amount, "from amount lower");
+                assertLe(beforeBalance - afterBalance, amount + 1, "from amount upper");
+            }
         }
         // TODO: test the balance increase of `to`
 
