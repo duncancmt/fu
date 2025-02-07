@@ -421,7 +421,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             }
         } else {
             assertTrue(
-                alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating),
+                alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
                 string.concat(
                     "shares to tokens ratio increased"
                     "\n\tbefore total shares:", beforeTotalShares.itoa(),
