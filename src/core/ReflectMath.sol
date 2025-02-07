@@ -65,93 +65,6 @@ library ReflectMath {
 
         (newFromShares, newToShares) = n0.divMulti(n1, d);
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
-
-        /*
-        (Tokens beforeFromBalance, Tokens beforeToBalance) =
-            fromShares.toTokensMulti(toShares, totalSupply, totalShares);
-
-        Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
-        Tokens expectedAfterToBalanceLo = beforeToBalance + amount - castUp(scale(amount, taxRate));
-
-        if (afterToBalance < expectedAfterToBalanceLo) {
-            {
-                // TODO: DRY this pattern that computes `incr`
-                Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(totalSupply)));
-                newToShares = newToShares + incr;
-                newTotalShares = newTotalShares + incr;
-            }
-            Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
-            Tokens expectedAfterFromBalance = beforeFromBalance - amount;
-            if (afterFromBalance < expectedAfterFromBalance) {
-                Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(totalSupply)));
-                newFromShares = newFromShares + incr;
-                newTotalShares = newTotalShares + incr;
-            }
-        }
-        // TODO: previously the block below was an `else` block. This is more accurate, but it is *MUCH* less gas efficient
-        {
-            Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
-            Tokens expectedAfterFromBalance = beforeFromBalance - amount;
-            {
-                bool condition = afterFromBalance > expectedAfterFromBalance;
-                newFromShares = newFromShares.dec(condition);
-                newTotalShares = newTotalShares.dec(condition);
-            }
-            {
-                bool condition = afterFromBalance < expectedAfterFromBalance;
-                newFromShares = newFromShares.inc(condition);
-                newTotalShares = newTotalShares.inc(condition);
-            }
-
-            afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
-            {
-                bool condition = afterToBalance > expectedAfterToBalanceLo;
-                newToShares = newToShares.dec(condition);
-                newTotalShares = newTotalShares.dec(condition);
-            }
-            {
-                bool condition = afterToBalance < expectedAfterToBalanceLo;
-                newToShares = newToShares.inc(condition);
-                newTotalShares = newTotalShares.inc(condition);
-            }
-
-            afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
-            {
-                bool condition = afterFromBalance > expectedAfterFromBalance;
-                newFromShares = newFromShares.dec(condition);
-                newTotalShares = newTotalShares.dec(condition);
-            }
-            {
-                bool condition = afterFromBalance < expectedAfterFromBalance;
-                newFromShares = newFromShares.inc(condition);
-                newTotalShares = newTotalShares.inc(condition);
-            }
-        }
-
-        if (newTotalShares > totalShares) {
-            Shares decrTotal = newTotalShares - totalShares;
-            Shares decrFrom;
-            Shares decrTo;
-            unchecked {
-                if (newFromShares > newToShares) {
-                    decrFrom = Shares.wrap(
-                        Shares.unwrap(decrTotal) * Shares.unwrap(newFromShares)
-                            / Shares.unwrap(newFromShares + newToShares)
-                    );
-                    decrTo = decrTotal - decrFrom;
-                } else {
-                    decrTo = Shares.wrap(
-                        Shares.unwrap(decrTotal) * Shares.unwrap(newToShares)
-                            / Shares.unwrap(newFromShares + newToShares)
-                    );
-                    decrFrom = decrTotal - decrTo;
-                }
-            }
-            newTotalShares = totalShares;
-            newFromShares = newFromShares - decrFrom;
-            newToShares = newToShares - decrTo;
-        }
-        */
     }
 
     function getTransferShares(
@@ -167,39 +80,6 @@ library ReflectMath {
 
         newTotalShares = n.div(d);
         newToShares = toShares + fromShares - (totalShares - newTotalShares);
-
-        /*
-        // Fixup rounding error
-        (Tokens beforeFromBalance, Tokens beforeToBalance) =
-            fromShares.toTokensMulti(toShares, totalSupply, totalShares);
-        Tokens afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
-        Tokens expectedAfterToBalance = beforeToBalance + beforeFromBalance - castUp(scale(beforeFromBalance, taxRate));
-
-        for (uint256 i; (afterToBalance > expectedAfterToBalance).and(i < 3); i++) {
-            Shares decr;
-            unchecked {
-                decr = Shares.wrap(
-                    (Tokens.unwrap(afterToBalance - expectedAfterToBalance) * Shares.unwrap(newTotalShares)).unsafeDivUp(
-                        Tokens.unwrap(totalSupply)
-                    )
-                );
-            }
-            newToShares = newToShares - decr;
-            newTotalShares = newTotalShares - decr;
-            if (newToShares <= toShares) {
-                newTotalShares = newTotalShares + (toShares - newToShares);
-                newToShares = toShares;
-                afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
-                break;
-            }
-            afterToBalance = newToShares.toTokens(totalSupply, newTotalShares);
-        }
-        {
-            bool condition = afterToBalance < expectedAfterToBalance;
-            newToShares = newToShares.inc(condition);
-            newTotalShares = newTotalShares.inc(condition);
-        }
-        */
     }
 
     function getTransferSharesToWhale(
@@ -232,36 +112,6 @@ library ReflectMath {
         counterfactualToShares = tmpTBpS().omul(
             scale(totalSupply, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(amount, BASIS - taxRate), totalShares
         ).div(scale(totalSupply, BASIS));
-
-        /*
-        // Fixup rounding error
-        bool condition = newToShares >= (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE);
-        assert(!condition);
-        newTotalShares = newTotalShares.dec(condition);
-        newToShares = newToShares.dec(condition);
-        */
-
-        /*
-        Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
-        Tokens afterFromBalance = newFromShares.toTokens(totalSupply, newTotalShares);
-        Tokens expectedAfterFromBalance = beforeFromBalance - amount;
-        {
-            bool condition = afterFromBalance > expectedAfterFromBalance;
-            newFromShares = newFromShares.dec(condition);
-            newTotalShares = newTotalShares.dec(condition);
-        }
-        {
-            bool condition = afterFromBalance < expectedAfterFromBalance;
-            newFromShares = newFromShares.inc(condition);
-            newTotalShares = newTotalShares.inc(condition);
-        }
-
-        {
-            bool condition = newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
-            newTotalShares = newTotalShares.dec(condition);
-            newToShares = newToShares.dec(condition);
-        }
-        */
     }
 
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
@@ -275,14 +125,6 @@ library ReflectMath {
         counterfactualToShares =
             cast(scale(totalShares, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(fromShares, BASIS - taxRate));
         newTotalShares = totalShares + newToShares - fromShares - toShares;
-
-        /*
-        // Fixup rounding error
-        bool condition = newToShares >= (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE);
-        assert(!condition);
-        newTotalShares = newTotalShares.dec(condition);
-        newToShares = newToShares.dec(condition);
-        */
     }
 
     function getTransferSharesFromPair(
@@ -330,23 +172,6 @@ library ReflectMath {
         newTotalShares = totalShares - (fromShares - newFromShares);
         transferTokens = cast(scale(amount, BASIS - taxRate));
         newTotalSupply = totalSupply - transferTokens;
-
-        /*
-        // Fixup rounding error
-        Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
-        Tokens afterFromBalance = newFromShares.toTokens(newTotalSupply, newTotalShares);
-        Tokens expectedAfterFromBalance = beforeFromBalance - amount;
-
-        if (afterFromBalance < expectedAfterFromBalance) {
-            Shares incr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
-            newFromShares = newFromShares + incr;
-            newTotalShares = newTotalShares + incr;
-        } else if (afterFromBalance > expectedAfterFromBalance) {
-            Shares decr = Shares.wrap(Shares.unwrap(newTotalShares).unsafeDiv(Tokens.unwrap(newTotalSupply)));
-            newFromShares = newFromShares - decr;
-            newTotalShares = newTotalShares - decr;
-        }
-        */
     }
 
     function getDeliverShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
