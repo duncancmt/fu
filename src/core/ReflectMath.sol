@@ -233,11 +233,13 @@ library ReflectMath {
             scale(totalSupply, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(amount, BASIS - taxRate), totalShares
         ).div(scale(totalSupply, BASIS));
 
+        /*
         // Fixup rounding error
         bool condition = newToShares >= (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE);
         assert(!condition);
         newTotalShares = newTotalShares.dec(condition);
         newToShares = newToShares.dec(condition);
+        */
 
         /*
         Tokens beforeFromBalance = fromShares.toTokens(totalSupply, totalShares);
@@ -274,11 +276,13 @@ library ReflectMath {
             cast(scale(totalShares, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(fromShares, BASIS - taxRate));
         newTotalShares = totalShares + newToShares - fromShares - toShares;
 
+        /*
         // Fixup rounding error
         bool condition = newToShares >= (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE);
         assert(!condition);
         newTotalShares = newTotalShares.dec(condition);
         newToShares = newToShares.dec(condition);
+        */
     }
 
     function getTransferSharesFromPair(
