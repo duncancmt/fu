@@ -134,7 +134,7 @@ library CrazyBalanceArithmetic {
         returns (CrazyBalance)
     {
         return
-            CrazyBalance.wrap(Tokens.unwrap(shares.toTokens(totalSupply, totalShares)) / Settings.CRAZY_BALANCE_BASIS);
+            CrazyBalance.wrap(Tokens.unwrap(shares.toTokens(totalSupply, totalShares.mul(Settings.CRAZY_BALANCE_BASIS))));
     }
 
     function toPairTokens(CrazyBalance balance) internal pure returns (Tokens) {
