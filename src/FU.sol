@@ -38,8 +38,6 @@ import {FastTransferLib} from "./lib/FastTransferLib.sol";
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {FastLogic} from "./lib/FastLogic.sol";
 
-import {console} from "@forge-std/console.sol";
-
 /// @custom:security non-reentrant
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
@@ -384,7 +382,6 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         (Shares originalShares, Shares cachedShares, Shares cachedTotalShares) = _loadAccount($, to);
         Tokens cachedTotalSupply = $.totalSupply;
-        // TODO: handle dust
         Tokens amountTokens = amount.toPairTokens();
 
         BasisPoints taxRate = _tax();
@@ -471,9 +468,8 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             newShares = ZERO_SHARES;
             newTotalShares = cachedTotalShares - cachedShares;
         } else {
-            Tokens amountTokens = amount.toTokens(from) + balance.getDust(from, cachedShares, cachedTotalSupply, cachedTotalShares);
             (newShares, newTotalShares, transferTokens, newTotalSupply) = ReflectMath.getTransferSharesToPair(
-                taxRate, cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
+                taxRate, cachedTotalSupply, cachedTotalShares, amount.toTokens(from), cachedShares
             );
         }
         Tokens newPairTokens = cachedPairTokens + transferTokens;
@@ -576,15 +572,8 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             newFromShares = ZERO_SHARES;
         } else {
             // TODO: reorganize these `if` statements so that we can avoid duplicating this computation
-            Tokens dust = fromBalance.getDust(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
-            Tokens amountTokens = amount.toTokens(from) + dust;
-            console.log("amount specified", Tokens.unwrap(amount.toTokens(from)));
-            console.log("amount with dust", Tokens.unwrap(amountTokens));
-            console.log("dust", Tokens.unwrap(dust));
-            console.log("amount (crazy) specified", CrazyBalance.unwrap(amount));
-            console.log("amount (crazy) with dust", CrazyBalance.unwrap(amountTokens.toCrazyBalance(from)));
             (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                amountTokens, taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                amount.toTokens(from), taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
             );
         }
 
@@ -595,10 +584,8 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
                 newFromShares = ZERO_SHARES;
             } else {
                 // TODO: see above TODO
-                Tokens dust = fromBalance.getDust(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
-                Tokens amountTokens = amount.toTokens(from) + dust;
                 (newFromShares, cachedToShares, newToShares, newTotalShares) = ReflectMath.getTransferSharesToWhale(
-                    amountTokens, taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                    amount.toTokens(from), taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
                 );
             }
             // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the

@@ -144,29 +144,6 @@ library CrazyBalanceArithmetic {
             return Tokens.wrap(CrazyBalance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS);
         }
     }
-
-    modifier freeMemory() {
-        uint256 freePtr;
-        assembly ("memory-safe") {
-            freePtr := mload(0x40)
-        }
-        _;
-        assembly ("memory-safe") {
-            mstore(0x40, freePtr)
-        }
-    }
-
-    function getDust(CrazyBalance balance, address account, Shares shares, Tokens totalSupply, Shares totalShares)
-        internal
-        pure
-        freeMemory
-        returns (Tokens r)
-    {
-        uint256 crazyBalanceFactor = uint160(account) / Settings.ADDRESS_DIVISOR;
-        return alloc().omul(shares, totalSupply.mul(crazyBalanceFactor)).isub(
-            tmp().omul(balance.toPairTokens(), totalShares)
-        ).div(totalShares.mul(crazyBalanceFactor));
-    }
 }
 
 using CrazyBalanceArithmetic for CrazyBalance global;
