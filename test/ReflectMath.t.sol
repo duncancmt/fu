@@ -199,14 +199,15 @@ contract ReflectMathTest is Boilerplate, Test {
             ReflectMath.getTransferSharesToWhale(amount, taxRate, totalSupply, totalShares, fromShares, toShares);
 
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
+        Shares whaleLimit = (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
         assertGe(
             Shares.unwrap(newToShares) + 1,
-            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE),
+            Shares.unwrap(whaleLimit),
             "to shares whale limit (lower)"
         );
         assertLe(
             Shares.unwrap(newToShares),
-            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE),
+            Shares.unwrap(whaleLimit),
             "to shares whale limit (upper)"
         );
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
@@ -278,15 +279,16 @@ contract ReflectMathTest is Boilerplate, Test {
             ReflectMath.getTransferSharesToWhale(taxRate, totalShares, fromShares, toShares);
 
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
-        assertLe(
-            Shares.unwrap(newToShares),
-            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE),
-            "to shares whale limit (upper)"
-        );
+        Shares whaleLimit = (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
         assertGe(
             Shares.unwrap(newToShares) + 1,
-            Shares.unwrap(newTotalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE),
+            Shares.unwrap(whaleLimit),
             "to shares whale limit (lower)"
+        );
+        assertLe(
+            Shares.unwrap(newToShares),
+            Shares.unwrap(whaleLimit),
+            "to shares whale limit (upper)"
         );
         assertEq(
             Shares.unwrap(totalShares - newTotalShares),

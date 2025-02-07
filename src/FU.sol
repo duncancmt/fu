@@ -588,7 +588,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             );
         }
 
-        if (newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR)) {
+        if (newToShares >= (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE)) {
             if (amount == fromBalance) {
                 (cachedToShares, newToShares, newTotalShares) =
                     ReflectMath.getTransferSharesToWhale(taxRate, cachedTotalShares, cachedFromShares, cachedToShares);
