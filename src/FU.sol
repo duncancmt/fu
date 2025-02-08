@@ -586,30 +586,27 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         Shares newToShares;
         Shares newTotalShares;
         if (amount == fromBalance) {
-            (newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                taxRate, cachedTotalShares, cachedFromShares, cachedToShares
-            );
+            (newToShares, newTotalShares) =
+                ReflectMath.getTransferShares(taxRate, cachedTotalShares, cachedFromShares, cachedToShares);
             newFromShares = ZERO_SHARES;
-        } else {
-            // TODO: reorganize these `if` statements so that we can avoid duplicating this computation
-            (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
-                amount.toTokens(from), taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
-            );
-        }
-
-        if (newToShares >= (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE)) {
-            if (amount == fromBalance) {
+            if (newToShares >= (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE)) {
                 (cachedToShares, newToShares, newTotalShares) =
                     ReflectMath.getTransferSharesToWhale(taxRate, cachedTotalShares, cachedFromShares, cachedToShares);
-                newFromShares = ZERO_SHARES;
-            } else {
-                // TODO: see above TODO
-                (newFromShares, cachedToShares, newToShares, newTotalShares) = ReflectMath.getTransferSharesToWhale(
-                    amount.toTokens(from), taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
-                );
+                // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
+                // requirement that the sum of all accounts' shares equal the total shares.
             }
-            // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
-            // requirement that the sum of all accounts' shares equal the total shares.
+        } else {
+            Tokens amountTokens = amount.toTokens(from);
+            (newFromShares, newToShares, newTotalShares) = ReflectMath.getTransferShares(
+                amountTokens, taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+            );
+            if (newToShares >= (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE)) {
+                (newFromShares, cachedToShares, newToShares, newTotalShares) = ReflectMath.getTransferSharesToWhale(
+                    amountTokens, taxRate, cachedTotalSupply, cachedTotalShares, cachedFromShares, cachedToShares
+                );
+                // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
+                // requirement that the sum of all accounts' shares equal the total shares.
+            }
         }
 
         // Take note of the `to`/`from` mismatch here. We're converting `to`'s balance into
