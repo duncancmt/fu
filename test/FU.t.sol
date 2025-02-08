@@ -814,11 +814,10 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
                 )
             )
         );
-        /*
         if (uint160(address(pairFor(IERC20(fuPrediction), WETH))) / Settings.ADDRESS_DIVISOR != 1 || uint160(buybackPrediction) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS) {
             console.log("You need to recompute the salt");
             console.log("Use the tool in `.../fu/mine`:");
-            console.log(string.concat("The FU inithash is", keccak256(fuInitcode).hexlify()));
+            console.log(string.concat("The FU inithash is ", keccak256(fuInitcode).hexlify()));
             console.log("The truncated initcode for Buyback is:");
             assembly ("memory-safe") {
                 mstore(buybackInitcode, sub(mload(buybackInitcode), 0x20))
@@ -827,7 +826,6 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
             console.log("The number of leading zeroes is", Settings.PAIR_LEADING_ZEROES);
             revert();
         }
-        */
 
         // Deploy FU
         deal(address(this), 5 ether);

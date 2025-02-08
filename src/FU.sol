@@ -102,7 +102,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         require(length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
         pair = address(pairFor(WETH, this));
-        //require(uint160(pair) / Settings.ADDRESS_DIVISOR == 1);
+        require(uint160(pair) / Settings.ADDRESS_DIVISOR == 1);
 
         assembly ("memory-safe") {
             log0(add(0x20, image_), mload(image_))
