@@ -97,10 +97,9 @@ library CrazyBalanceArithmetic {
         // slither-disable-next-line divide-before-multiply
         return CrazyBalance.wrap(
             Tokens.unwrap(
-                tmp().omul(
-                    shares,
-                    totalSupply.mul(uint160(account) / Settings.ADDRESS_DIVISOR)
-                ).div(totalShares.mul(Settings.CRAZY_BALANCE_BASIS))
+                tmp().omul(shares, totalSupply.mul(uint160(account) / Settings.ADDRESS_DIVISOR)).div(
+                    totalShares.mul(Settings.CRAZY_BALANCE_BASIS)
+                )
             )
         );
     }
@@ -133,8 +132,9 @@ library CrazyBalanceArithmetic {
         pure
         returns (CrazyBalance)
     {
-        return
-            CrazyBalance.wrap(Tokens.unwrap(shares.toTokens(totalSupply, totalShares.mul(Settings.CRAZY_BALANCE_BASIS))));
+        return CrazyBalance.wrap(
+            Tokens.unwrap(shares.toTokens(totalSupply, totalShares.mul(Settings.CRAZY_BALANCE_BASIS)))
+        );
     }
 
     function toPairTokens(CrazyBalance balance) internal pure returns (Tokens) {

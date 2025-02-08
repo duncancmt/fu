@@ -67,12 +67,12 @@ library ReflectMath {
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
     }
 
-    function getTransferShares(
-        BasisPoints taxRate,
-        Shares totalShares,
-        Shares fromShares,
-        Shares toShares
-    ) internal pure freeMemory returns (Shares newToShares, Shares newTotalShares) {
+    function getTransferShares(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
+        internal
+        pure
+        freeMemory
+        returns (Shares newToShares, Shares newTotalShares)
+    {
         // Called when `from` is sending their entire balance
         Shares uninvolvedShares = totalShares - fromShares - toShares;
         Shares2XBasisPoints n = allocS2Bp().omul(scale(uninvolvedShares, BASIS), totalShares);

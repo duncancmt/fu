@@ -200,16 +200,8 @@ contract ReflectMathTest is Boilerplate, Test {
 
         assertLe(Shares.unwrap(newFromShares), Shares.unwrap(fromShares), "from shares increased");
         Shares whaleLimit = (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
-        assertGe(
-            Shares.unwrap(newToShares) + 1,
-            Shares.unwrap(whaleLimit),
-            "to shares whale limit (lower)"
-        );
-        assertLe(
-            Shares.unwrap(newToShares),
-            Shares.unwrap(whaleLimit),
-            "to shares whale limit (upper)"
-        );
+        assertGe(Shares.unwrap(newToShares) + 1, Shares.unwrap(whaleLimit), "to shares whale limit (lower)");
+        assertLe(Shares.unwrap(newToShares), Shares.unwrap(whaleLimit), "to shares whale limit (upper)");
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         assertEq(
             Shares.unwrap(totalShares - newTotalShares),
@@ -280,16 +272,8 @@ contract ReflectMathTest is Boilerplate, Test {
 
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         Shares whaleLimit = (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
-        assertGe(
-            Shares.unwrap(newToShares) + 1,
-            Shares.unwrap(whaleLimit),
-            "to shares whale limit (lower)"
-        );
-        assertLe(
-            Shares.unwrap(newToShares),
-            Shares.unwrap(whaleLimit),
-            "to shares whale limit (upper)"
-        );
+        assertGe(Shares.unwrap(newToShares) + 1, Shares.unwrap(whaleLimit), "to shares whale limit (lower)");
+        assertLe(Shares.unwrap(newToShares), Shares.unwrap(whaleLimit), "to shares whale limit (upper)");
         assertEq(
             Shares.unwrap(totalShares - newTotalShares),
             Shares.unwrap(fromShares + toShares - newToShares),

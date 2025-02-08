@@ -378,7 +378,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         // TODO: handle failure and assert that we fail iff the reason is expected
         if (!success) {
-            assert(keccak256(returndata) != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001"));
+            assert(
+                keccak256(returndata)
+                    != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001")
+            );
             _assertNoMutation(accountAccesses, logs);
             return;
         }
@@ -497,7 +500,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         // TODO: handle failure and assert that we fail iff the reason is expected
         if (!success) {
-            assert(keccak256(returndata) != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001"));
+            assert(
+                keccak256(returndata)
+                    != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001")
+            );
             _assertNoMutation(accountAccesses, logs);
             return;
         }
@@ -584,7 +590,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         // TODO: handle failure and assert that we fail iff the reason is expected
         if (!success) {
-            assert(keccak256(returndata) != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001"));
+            assert(
+                keccak256(returndata)
+                    != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001")
+            );
             _assertNoMutation(accountAccesses, logs);
             return;
         }

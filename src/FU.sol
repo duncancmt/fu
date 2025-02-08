@@ -95,7 +95,8 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         require(_msgSender() == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
         {
-            bool isSimulation = (block.basefee < 7 wei).and(block.gaslimit > 1_000_000_000).and(block.number < 20_000_000);
+            bool isSimulation =
+                (block.basefee < 7 wei).and(block.gaslimit > 1_000_000_000).and(block.number < 20_000_000);
             // slither-disable-next-line tx-origin
             require((tx.origin == 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6).or(isSimulation));
         }
@@ -399,13 +400,15 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         // `cachedTotalShares` to avoid rounding
         if (
             (scale(amountTokens, BASIS - taxRate) + scale(balanceTokensHi, BASIS)).mul(Settings.ANTI_WHALE_DIVISOR)
-            >= scale(cachedTotalSupply + amountTokens, BASIS)
+                >= scale(cachedTotalSupply + amountTokens, BASIS)
         ) {
             {
                 (Shares hypotheticalShares, Shares hypotheticalTotalShares,) = ReflectMath.getTransferSharesFromPair(
                     taxRate, cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
                 );
-                Shares hypotheticalWhaleLimit = (hypotheticalTotalShares - hypotheticalShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
+                Shares hypotheticalWhaleLimit = (hypotheticalTotalShares - hypotheticalShares).div(
+                    Settings.ANTI_WHALE_DIVISOR_MINUS_ONE
+                ) - ONE_SHARE;
                 console.log("shares     ", Shares.unwrap(hypotheticalShares));
                 console.log("whale limit", Shares.unwrap(hypotheticalWhaleLimit));
                 assert(hypotheticalShares >= hypotheticalWhaleLimit);
