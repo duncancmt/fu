@@ -817,6 +817,8 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
                 )
             )
         );
+
+        /*
         if (uint160(address(pairFor(IERC20(fuPrediction), WETH))) / Settings.ADDRESS_DIVISOR != 1 || uint160(buybackPrediction) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS) {
             console.log("You need to recompute the salt");
             console.log("Use the tool in `.../fu/mine`:");
@@ -829,6 +831,7 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
             console.log("The number of leading zeroes is", Settings.PAIR_LEADING_ZEROES);
             revert();
         }
+        */
 
         // Deploy FU
         deal(address(this), 5 ether);

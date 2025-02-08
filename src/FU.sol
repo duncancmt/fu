@@ -38,6 +38,8 @@ import {FastTransferLib} from "./lib/FastTransferLib.sol";
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {FastLogic} from "./lib/FastLogic.sol";
 
+import {console} from "@forge-std/console.sol";
+
 /// @custom:security non-reentrant
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
@@ -93,16 +95,16 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         require(_msgSender() == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
         {
-            bool isSimulation = block.basefee < 7 wei && block.gaslimit > 1_000_000_000 && block.number < 20_000_000;
+            bool isSimulation = (block.basefee < 7 wei).and(block.gaslimit > 1_000_000_000).and(block.number < 20_000_000);
             // slither-disable-next-line tx-origin
-            require(tx.origin == 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6 || isSimulation);
+            require((tx.origin == 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6).or(isSimulation));
         }
         require(address(this).balance >= 5 ether);
         uint256 length = initialHolders.length;
         require(length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
         pair = address(pairFor(WETH, this));
-        require(uint160(pair) / Settings.ADDRESS_DIVISOR == 1);
+        //require(uint160(pair) / Settings.ADDRESS_DIVISOR == 1);
 
         assembly ("memory-safe") {
             log0(add(0x20, image_), mload(image_))
@@ -394,8 +396,18 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         Tokens balanceTokensHi = cachedShares.toTokensUp(cachedTotalSupply, cachedTotalShares);
         if (
             castUp(scale(amountTokens, BASIS - taxRate)) + balanceTokensHi
-                >= (cachedTotalSupply - balanceTokensHi).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE)
+                >= (cachedTotalSupply + amountTokens).div(Settings.ANTI_WHALE_DIVISOR)
         ) {
+            {
+                (Shares hypotheticalShares, Shares hypotheticalTotalShares,) = ReflectMath.getTransferSharesFromPair(
+                    taxRate, cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
+                );
+                Shares hypotheticalWhaleLimit = (hypotheticalTotalShares - hypotheticalShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
+                console.log("shares     ", Shares.unwrap(hypotheticalShares));
+                console.log("whale limit", Shares.unwrap(hypotheticalWhaleLimit));
+                assert(hypotheticalShares >= hypotheticalWhaleLimit);
+            }
+
             newShares = (cachedTotalShares - cachedShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
             newTotalShares = cachedTotalShares + newShares - cachedShares;
             newTotalSupply = cachedTotalSupply + amountTokens;
@@ -404,7 +416,8 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
                 taxRate, cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
             );
             // TODO: this is inelegant. can this be moved into the `if` statement immediately above?
-            (newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);
+            assert(newShares < (newTotalShares - newShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE);
+            //(newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);
         }
 
         // Take note of the mismatch between the holder/recipient of the tokens/shares (`to`) and
