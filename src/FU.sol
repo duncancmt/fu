@@ -394,9 +394,12 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         // be an off-by-one. but also maybe it doesn't matter because `getTransferSharesFromPair`
         // *mostly* works correctly when values aren't *too* extreme
         Tokens balanceTokensHi = cachedShares.toTokensUp(cachedTotalSupply, cachedTotalShares);
+        // TODO: the implicit division by `cachedTotalShares` on the preceeding line may need to be
+        // unfolded and carried forward to the next line where we explicitly multiply each term by
+        // `cachedTotalShares` to avoid rounding
         if (
-            castUp(scale(amountTokens, BASIS - taxRate)) + balanceTokensHi
-                >= (cachedTotalSupply + amountTokens).div(Settings.ANTI_WHALE_DIVISOR)
+            (scale(amountTokens, BASIS - taxRate) + scale(balanceTokensHi, BASIS)).mul(Settings.ANTI_WHALE_DIVISOR)
+            >= scale(cachedTotalSupply + amountTokens, BASIS)
         ) {
             {
                 (Shares hypotheticalShares, Shares hypotheticalTotalShares,) = ReflectMath.getTransferSharesFromPair(
@@ -423,6 +426,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         // Take note of the mismatch between the holder/recipient of the tokens/shares (`to`) and
         // the account for whom we calculate the balance delta (`pair`). The `amount` field of the
         // `Transfer` event is relative to the sender of the tokens.
+        // TODO: this needs to handle the counterfactual balances created when `to` is/becomes a whale
         CrazyBalance transferAmount = newShares.toPairBalance(newTotalSupply, newTotalShares)
             - cachedTotalShares.toPairBalance(cachedTotalSupply, cachedTotalShares);
         CrazyBalance burnAmount = amount - transferAmount;

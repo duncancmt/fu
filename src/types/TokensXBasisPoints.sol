@@ -23,6 +23,22 @@ function castUp(TokensXBasisPoints tbp) pure returns (Tokens) {
     return Tokens.wrap(UnsafeMath.unsafeDivUp(TokensXBasisPoints.unwrap(tbp), BasisPoints.unwrap(BASIS)));
 }
 
+library TokensXBasisPointsArithmetic {
+    using UnsafeMath for uint256;
+
+    function mul(TokensXBasisPoints x, uint256 y) internal pure returns (TokensXBasisPoints) {
+        unchecked {
+            return TokensXBasisPoints.wrap(TokensXBasisPoints.unwrap(x) * y);
+        }
+    }
+
+    function div(TokensXBasisPoints n, uint256 d) internal pure returns (TokensXBasisPoints) {
+        return TokensXBasisPoints.wrap(TokensXBasisPoints.unwrap(n).unsafeDiv(d));
+    }
+}
+
+using TokensXBasisPointsArithmetic for TokensXBasisPoints global;
+
 function __add(TokensXBasisPoints a, TokensXBasisPoints b) pure returns (TokensXBasisPoints) {
     unchecked {
         return TokensXBasisPoints.wrap(TokensXBasisPoints.unwrap(a) + TokensXBasisPoints.unwrap(b));
@@ -35,4 +51,30 @@ function __sub(TokensXBasisPoints a, TokensXBasisPoints b) pure returns (TokensX
     }
 }
 
-using {__add as +, __sub as -} for TokensXBasisPoints global;
+function __eq(TokensXBasisPoints a, TokensXBasisPoints b) pure returns (bool) {
+    return TokensXBasisPoints.unwrap(a) == TokensXBasisPoints.unwrap(b);
+}
+
+function __lt(TokensXBasisPoints a, TokensXBasisPoints b) pure returns (bool) {
+    return TokensXBasisPoints.unwrap(a) < TokensXBasisPoints.unwrap(b);
+}
+
+function __gt(TokensXBasisPoints a, TokensXBasisPoints b) pure returns (bool) {
+    return TokensXBasisPoints.unwrap(a) > TokensXBasisPoints.unwrap(b);
+}
+
+function __ne(TokensXBasisPoints a, TokensXBasisPoints b) pure returns (bool) {
+    return TokensXBasisPoints.unwrap(a) != TokensXBasisPoints.unwrap(b);
+}
+
+function __le(TokensXBasisPoints a, TokensXBasisPoints b) pure returns (bool) {
+    return TokensXBasisPoints.unwrap(a) <= TokensXBasisPoints.unwrap(b);
+}
+
+function __ge(TokensXBasisPoints a, TokensXBasisPoints b) pure returns (bool) {
+    return TokensXBasisPoints.unwrap(a) >= TokensXBasisPoints.unwrap(b);
+}
+
+using {
+    __add as +, __sub as -, __eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __ge as >=
+} for TokensXBasisPoints global;
