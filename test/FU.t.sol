@@ -567,16 +567,21 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         assertLe(beforeBalance - afterBalance, amount + 1, "balance delta upper");
         assertGe(beforeBalance - afterBalance + 1, amount, "balance delta lower");
-        uint256 divisor = (uint256(uint160(actor)) / Settings.ADDRESS_DIVISOR);
+        uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
         if (divisor == 0) {
             assertEq(amount, 0, "efficient address edge case");
             assertEq(beforeSupply, afterSupply, "efficient address edge case supply");
             return;
         }
-        assertLe(
-            beforeSupply - afterSupply, (amount + 1) * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta higher"
-        ); // TODO: tighten to `assertLt`
-        assertGe(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta lower");
+
+        if (amount == beforeBalance) {
+            assertLe(
+                beforeSupply - afterSupply, (amount + 1) * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta higher"
+            );
+            assertGe(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta lower");
+        } else {
+            assertEq(beforeSupply - afterSupply, amount * Settings.CRAZY_BALANCE_BASIS / divisor, "supply delta");
+        }
     }
 
     function deliver(uint256 actorIndex, uint256 amount, bool boundAmount) external {
@@ -622,9 +627,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         assertGe(saturatingAdd(afterWhaleLimit, 1), beforeWhaleLimit, "whale limit lower");
         assertLe(afterWhaleLimit, saturatingAdd(beforeWhaleLimit, 1), "whale limit upper");
+        assertEq(afterCirculating, beforeCirculating, "circulating tokens changed");
 
         if (amount == 0) {
-            assertEq(afterCirculating, beforeCirculating);
             if (actorIsWhale) {
                 assertGe(beforeTotalShares, afterTotalShares, "shares delta (whale)");
             } else if (beforeBalance == 0) {
