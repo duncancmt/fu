@@ -350,6 +350,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
     }
 
+    function _transferShouldFail(address from, address to, uint256 amount, uint256 balance) internal view returns (bool) {
+        return from == DEAD || to == DEAD || to == address(fu) || to == from || amount > balance || uint160(to) / Settings.ADDRESS_DIVISOR == 0;
+    }
+
     function transfer(uint256 actorIndex, address to, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
         if (boundAmount) {
@@ -377,11 +381,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         prank(actor);
         // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
+        assertNotEq(success, _transferShouldFail(actor, to, amount, beforeBalance), "unexpected failure");
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
 
-        // TODO: handle failure and assert that we fail iff the reason is expected
+        // TODO: handle failure
         if (!success) {
             assert(
                 keccak256(returndata)
@@ -509,6 +514,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
     }
 
+    function _burnShouldFail(address from, uint256 amount, uint256 balance) internal pure returns (bool) {
+        return from == DEAD || amount > balance;
+    }
+
     function burn(uint256 actorIndex, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
         if (boundAmount) {
@@ -531,11 +540,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         prank(actor);
         // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
+        assertNotEq(success, _burnShouldFail(actor, amount, beforeBalance), "unexpected failure");
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
 
-        // TODO: handle failure and assert that we fail iff the reason is expected
+        // TODO: handle failure
         if (!success) {
             assert(
                 keccak256(returndata)
@@ -609,6 +619,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
     }
 
+    function _deliverShouldFail(address from, uint256 amount, uint256 balance) internal pure returns (bool) {
+        return from == DEAD || amount > balance;
+    }
+
     function deliver(uint256 actorIndex, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
         if (boundAmount) {
@@ -628,11 +642,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         prank(actor);
         // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
+        assertNotEq(success, _deliverShouldFail(actor, amount, beforeBalance), "unexpected failure");
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
 
-        // TODO: handle failure and assert that we fail iff the reason is expected
+        // TODO: handle failure
         if (!success) {
             assert(
                 keccak256(returndata)
