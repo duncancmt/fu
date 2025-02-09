@@ -14,14 +14,14 @@ import {RebaseQueue} from "./core/RebaseQueue.sol";
 
 abstract contract FUStorage is IERC20, INonces, IERC5805 {
     struct Storage {
-        mapping(address account => SharesStorage shares) sharesOf;
         Tokens totalSupply;
         Tokens pairTokens;
         Shares totalShares;
+        RebaseQueue rebaseQueue;
+        Checkpoints checkpoints;
+        mapping(address account => SharesStorage shares) sharesOf;
         mapping(address owner => mapping(address spender => CrazyBalance allowed)) allowance;
         mapping(address account => address delegatee) delegates;
-        Checkpoints checkpoints;
-        RebaseQueue rebaseQueue;
         mapping(address account => uint256 nonce) nonces;
     }
 
