@@ -440,14 +440,14 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             (sendCrazyLo, sendCrazyHi) = (sendCrazyLo > sendCrazyHi) ? (sendCrazyHi, sendCrazyLo) : (sendCrazyLo, sendCrazyHi);
             uint256 sendTokensLo = sendCrazyLo * Settings.CRAZY_BALANCE_BASIS / divisor;
             uint256 sendTokensHi = ((sendCrazyHi + 1) * Settings.CRAZY_BALANCE_BASIS - 1).unsafeDivUp(divisor);
-            uint256 receiveTokensLo = sendTokensLo - (sendTokensLo * tax).unsafeDivUp(10_000);
-            uint256 receiveTokensHi = (sendTokensHi * (10_000 - tax)).unsafeDivUp(10_000);
-            uint256 balanceDeltaLo = receiveTokensLo * multiplier / Settings.CRAZY_BALANCE_BASIS;
-            uint256 balanceDeltaHi = (receiveTokensHi * multiplier).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS);
+            uint256 receiveTokensXBpLo = sendTokensLo * 10_000 - (sendTokensLo * tax);
+            uint256 receiveTokensXBpHi = sendTokensHi * (10_000 - tax);
+            uint256 balanceDeltaLo = receiveTokensXBpLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
+            uint256 balanceDeltaHi = (receiveTokensXBpHi * multiplier).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS * 10_000);
             if (!toIsWhale) {
                 assertGe(afterBalanceTo - beforeBalanceTo + 1, balanceDeltaLo, "to delta lower");
             }
-            if (!fromIsWhale) {
+            if (!actorIsWhale) {
                 assertLe(afterBalanceTo - beforeBalanceTo, balanceDeltaHi + 1, "to delta upper");
             }
         } else {
