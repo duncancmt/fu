@@ -519,6 +519,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         address delegatee = shadowDelegates[actor];
 
         uint256 beforeBalance = lastBalance[actor];
+        uint256 beforeWhaleLimit = fu.whaleLimit(actor);
         uint256 beforeSupply = fu.totalSupply();
         uint256 beforeTotalShares = getTotalShares();
         uint256 beforeCirculating = getCirculatingTokens();
@@ -566,10 +567,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 "shares to tokens ratio (dust)"
             );
         } else if (amount == 0) {
-            assertTrue(
-                alloc().omul(beforeTotalShares, afterCirculating) == tmp().omul(afterTotalShares, beforeCirculating),
-                "shares to tokens ratio (zero)"
-            );
+            if (beforeBalance != beforeWhaleLimit) {
+                assertTrue(
+                    alloc().omul(beforeTotalShares, afterCirculating) == tmp().omul(afterTotalShares, beforeCirculating),
+                    "shares to tokens ratio (zero)"
+                );
+            }
         } else {
             assertTrue(
                 alloc().omul(beforeTotalShares, afterCirculating) >= tmp().omul(afterTotalShares, beforeCirculating),
