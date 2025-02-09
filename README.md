@@ -14,7 +14,7 @@ for disclaimers.
 # Goals
 
 FU is designed to be maximally vexing for developers to integrate, while still
-being technically correct.
+being maximally technically correct.
 
 ## Features
 
@@ -31,10 +31,13 @@ being technically correct.
   * Consequently, `totalSupply` is merely an upper bound on the sum of all
     `balanceOf(...)`
   * Balances are not comparable among addresses
+  * This is the "crazy balance" mechanism/feature
 * Anti-whale
   * The anti-whale doesn't prohibit transfers, it just turns transfers above the
     limit into a `deliver`
 * Emits extraneous `Transfer` events on each call
+  * The rebases incurred by the reflection mechanism are (eventually) emitted to
+    each account as a `Transfer`
   * This breaks some off-chain data pipelines
 * Consumes a random, hard-to-predict amount of gas on each call
   * This makes `eth_estimateGas` unreliable
@@ -49,21 +52,31 @@ tokens to return nothing to signal success). However, to make things a little
 more interesting, there are some additional restrictions the authors adopted
 during development beyond what ERC20 literally requires.
 
-* Calls to `transfer` or `transferFrom` reduce the balance of the caller/`from`
-  by exactly the specified amount
+* Calls to `{transfer,burn,deliver}{,From}` reduce the balance of the caller/`from`
+  by the specified amount (plus or minus 1 wei)
 * Calls to `transfer` or `transferFrom` increase the balance of `to` by a value
   that lies in the range of reasonable interpretations of how it should be
   calculated
-  * Lower bound: compute the tax amount exactly, round it up, then deduct it
-    from the specified amount
-  * Upper bound: exactly compute the specified amount minus the tax, round it up
+  * Lower bound: take the lesser of the balance change of caller/`from` or
+    `amount`, exactly correct for the "crazy balance" of `from`, compute the tax
+    amount exactly, round it up, deduct the tax from the transfer, apply the
+    "crazy balance" for `to`, subtract 1 wei
+  * Upper bound: take the greater of the balance change of caller/`from` or
+    `amount`, exactly correct for the "crazy balance" of `from`, exactly compute
+    the specified amount minus the tax, round it up, apply the "crazy balance"
+    for `to`, add 1 wei
 
-"Normal" reflection tokens do not have these properties, and the authors adopted
-these restrictions primarily to demonstrate mastery of the required numerical
-programming techniques. This creates some interesting game-theoretic interplay
-where it sometimes becomes advantageous to store tokens in multiple addresses,
-so that the holder benefits from the tax applied to their own incoming and
-outgoing transfers.
+Basically, this is as "reasonable" as you can get for a reflection token given
+that reflection tokens operate on rationals, and therefore some degree of
+rounding error in balances is inevitable. "Normal" reflection tokens do not have
+these properties, and the authors adopted these restrictions primarily to
+demonstrate mastery of the required numerical programming techniques. This
+creates some interesting game-theoretic interplay where it sometimes becomes
+advantageous to store tokens in multiple addresses, so that the holder benefits
+from the tax applied to their own incoming and outgoing transfers.
+
+Also the `Transfer` events emitted are as "reasonable" as possible given the
+aforementioned rounding error and "crazy balance" logic.
 
 # Implementation
 
