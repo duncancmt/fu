@@ -119,37 +119,25 @@ library SharesToTokens {
         return tmp().omul(shares, totalSupply).div(totalShares);
     }
 
-    function toTokensMulti(Shares shares0, Shares shares1, Tokens totalSupply, Shares totalShares)
-        internal
-        pure
-        returns (Tokens r0, Tokens r1)
-    {
+    modifier freeMemory() {
         uint256 freePtr;
         assembly ("memory-safe") {
             freePtr := mload(0x40)
         }
-
-        TokensXShares n0 = alloc().omul(shares0, totalSupply);
-        TokensXShares n1 = tmp().omul(shares1, totalSupply);
-        (r0, r1) = n0.divMulti(n1, totalShares);
-
+        _;
         assembly ("memory-safe") {
             mstore(0x40, freePtr)
         }
     }
 
-    function toTokensUp(Shares shares, Tokens totalSupply, Shares totalShares) internal pure returns (Tokens r) {
-        uint256 freePtr;
-        assembly ("memory-safe") {
-            freePtr := mload(0x40)
-        }
-
-        TokensXShares n = alloc().omul(shares, totalSupply);
-        r = n.div(totalShares);
-        r = r.inc(tmp().omul(r, totalShares) < n);
-
-        assembly ("memory-safe") {
-            mstore(0x40, freePtr)
-        }
+    function toTokensMulti(Shares shares0, Shares shares1, Tokens totalSupply, Shares totalShares)
+        internal
+        pure
+        freeMemory
+        returns (Tokens r0, Tokens r1)
+    {
+        TokensXShares n0 = alloc().omul(shares0, totalSupply);
+        TokensXShares n1 = tmp().omul(shares1, totalSupply);
+        (r0, r1) = n0.divMulti(n1, totalShares);
     }
 }

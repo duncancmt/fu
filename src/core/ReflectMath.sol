@@ -117,7 +117,6 @@ library ReflectMath {
     function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
         internal
         pure
-        freeMemory
         returns (Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
         // Called when `to`'s final shares will be the whale limit and `from` is sending their entire balance
