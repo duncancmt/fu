@@ -30,28 +30,12 @@ function tmp() pure returns (TokensXBasisPointsXShares) {
 }
 
 library TokensXBasisPointsXSharesArithmetic {
-    function oadd(TokensXBasisPointsXShares r, TokensXBasisPointsXShares x, TokensXBasisPointsXShares y)
-        internal
-        pure
-        returns (TokensXBasisPointsXShares)
-    {
-        return cast(cast(r).oadd(cast(x), cast(y)));
-    }
-
     function iadd(TokensXBasisPointsXShares r, TokensXBasisPointsXShares x)
         internal
         pure
         returns (TokensXBasisPointsXShares)
     {
         return cast(cast(r).iadd(cast(x)));
-    }
-
-    function osub(TokensXBasisPointsXShares r, TokensXBasisPointsXShares x, TokensXBasisPointsXShares y)
-        internal
-        pure
-        returns (TokensXBasisPointsXShares)
-    {
-        return cast(cast(r).osub(cast(x), cast(y)));
     }
 
     function isub(TokensXBasisPointsXShares r, TokensXBasisPointsXShares x)

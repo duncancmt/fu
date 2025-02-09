@@ -18,47 +18,7 @@ function cast(uint512 x) pure returns (TokensXBasisPointsXShares2) {
     return TokensXBasisPointsXShares2.wrap(uint512.unwrap(x));
 }
 
-function alloc() pure returns (TokensXBasisPointsXShares2) {
-    return cast(baseAlloc());
-}
-
-function tmp() pure returns (TokensXBasisPointsXShares2) {
-    return cast(baseTmp());
-}
-
 library TokensXBasisPointsXShares2Arithmetic {
-    function oadd(TokensXBasisPointsXShares2 r, TokensXBasisPointsXShares2 x, TokensXBasisPointsXShares2 y)
-        internal
-        pure
-        returns (TokensXBasisPointsXShares2)
-    {
-        return cast(cast(r).oadd(cast(x), cast(y)));
-    }
-
-    function osub(TokensXBasisPointsXShares2 r, TokensXBasisPointsXShares2 x, TokensXBasisPointsXShares2 y)
-        internal
-        pure
-        returns (TokensXBasisPointsXShares2)
-    {
-        return cast(cast(r).osub(cast(x), cast(y)));
-    }
-
-    function omul(TokensXBasisPointsXShares2 r, TokensXBasisPointsXShares x, Shares s)
-        internal
-        pure
-        returns (TokensXBasisPointsXShares2)
-    {
-        return cast(cast(r).omul(cast2(x), Shares.unwrap(s)));
-    }
-
-    function omul(TokensXBasisPointsXShares2 r, TokensXShares x, SharesXBasisPoints y)
-        internal
-        pure
-        returns (TokensXBasisPointsXShares2)
-    {
-        return cast(cast(r).omul(cast1(x), SharesXBasisPoints.unwrap(y)));
-    }
-
     function div(TokensXBasisPointsXShares2 n, TokensXBasisPointsXShares d) internal view returns (Shares) {
         return Shares.wrap(cast(n).div(cast2(d)));
     }

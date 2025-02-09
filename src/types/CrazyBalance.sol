@@ -3,10 +3,9 @@ pragma solidity ^0.8.28;
 
 import {Settings} from "../core/Settings.sol";
 
-import {BasisPoints, BASIS} from "./BasisPoints.sol";
 import {Shares} from "./Shares.sol";
 import {Tokens} from "./Tokens.sol";
-import {tmp, alloc, SharesToTokens} from "./TokensXShares.sol";
+import {tmp, SharesToTokens} from "./TokensXShares.sol";
 
 type CrazyBalance is uint256;
 
@@ -28,12 +27,6 @@ function toCrazyBalance(uint256 x) pure returns (CrazyBalance) {
 
 CrazyBalance constant ZERO = CrazyBalance.wrap(0);
 CrazyBalance constant MAX = CrazyBalance.wrap(type(uint256).max);
-
-function __add(CrazyBalance a, CrazyBalance b) pure returns (CrazyBalance) {
-    unchecked {
-        return CrazyBalance.wrap(CrazyBalance.unwrap(a) + CrazyBalance.unwrap(b));
-    }
-}
 
 function __sub(CrazyBalance a, CrazyBalance b) pure returns (CrazyBalance) {
     unchecked {
@@ -66,7 +59,6 @@ function __ge(CrazyBalance a, CrazyBalance b) pure returns (bool) {
 }
 
 using {
-    __add as +,
     __sub as -,
     __eq as ==,
     __lt as <,

@@ -26,22 +26,6 @@ function tmp() pure returns (Shares2XBasisPoints) {
 }
 
 library Shares2XBasisPointsArithmetic {
-    function oadd(Shares2XBasisPoints r, Shares2XBasisPoints x, Shares2XBasisPoints y)
-        internal
-        pure
-        returns (Shares2XBasisPoints)
-    {
-        return cast(cast(r).oadd(cast(x), cast(y)));
-    }
-
-    function osub(Shares2XBasisPoints r, Shares2XBasisPoints x, Shares2XBasisPoints y)
-        internal
-        pure
-        returns (Shares2XBasisPoints)
-    {
-        return cast(cast(r).osub(cast(x), cast(y)));
-    }
-
     function omul(Shares2XBasisPoints r, SharesXBasisPoints sbp, Shares s)
         internal
         pure
