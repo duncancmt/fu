@@ -276,11 +276,13 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     function addActor(address newActor) external {
         assume(newActor != DEAD);
+        assume(!isActor[newActor]);
         maybeCreateActor(newActor);
         saveActor(newActor);
     }
 
     function warp(uint24 incr) external {
+        assume(incr > 0);
         warp(getBlockTimestamp() + incr);
     }
 
@@ -295,9 +297,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 "shares divisor"
             )
         );
-        if (newRatio == oldRatio) {
-            return;
-        }
+        assume(newRatio != oldRatio);
 
         uint256 total;
         {
