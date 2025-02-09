@@ -22,9 +22,7 @@ import {Tokens} from "./types/Tokens.sol";
 import {SharesToTokens} from "./types/TokensXShares.sol";
 import {SharesToTokensProportional} from "./types/TokensXBasisPointsXShares.sol";
 import {Votes, toVotes} from "./types/Votes.sol";
-import {scale, cast} from "./types/TokensXBasisPoints.sol";
-import {scale, cast} from "./types/SharesXBasisPoints.sol";
-import {SharesXBasisPoints, scale} from "./types/SharesXBasisPoints.sol";
+import {SharesXBasisPoints, scale, cast} from "./types/SharesXBasisPoints.sol";
 import {
     CrazyBalance,
     toCrazyBalance,
