@@ -430,8 +430,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 beforeBalance - afterBalance < amount ? beforeBalance - afterBalance : amount
             ) * afterTax * multiplier / (divisor * 10_000);
             uint256 expectedAfterToDeltaHi = (
-                (beforeBalance - afterBalance > amount ? beforeBalance - afterBalance : amount) * afterTax
-                    * multiplier
+                (beforeBalance - afterBalance > amount ? beforeBalance - afterBalance : amount) * afterTax * multiplier
             ).unsafeDivUp(divisor * 10_000);
             assertGe(afterBalanceTo - beforeBalanceTo + 1, expectedAfterToDeltaLo, "to delta lower");
             assertLe(afterBalanceTo - beforeBalanceTo, expectedAfterToDeltaHi + 1, "to delta upper");
@@ -853,7 +852,10 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
             )
         );
 
-        if (uint160(address(pairFor(IERC20(fuPrediction), WETH))) / Settings.ADDRESS_DIVISOR != 1 || uint160(buybackPrediction) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS) {
+        if (
+            uint160(address(pairFor(IERC20(fuPrediction), WETH))) / Settings.ADDRESS_DIVISOR != 1
+                || uint160(buybackPrediction) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS
+        ) {
             console.log("You need to recompute the salt");
             console.log("Use the tool in `.../fu/mine`:");
             console.log(string.concat("The FU inithash is ", keccak256(fuInitcode).hexlify()));
