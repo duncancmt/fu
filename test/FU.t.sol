@@ -445,10 +445,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             (sendCrazyLo, sendCrazyHi) = (sendCrazyLo > sendCrazyHi) ? (sendCrazyHi, sendCrazyLo) : (sendCrazyLo, sendCrazyHi);
             uint256 sendTokensLo = sendCrazyLo * Settings.CRAZY_BALANCE_BASIS / divisor;
             uint256 sendTokensHi = ((sendCrazyHi + 1) * Settings.CRAZY_BALANCE_BASIS - 1) / divisor;
-            uint256 receiveTokensXBpLo = sendTokensLo * 10_000 - (sendTokensLo * tax);
-            uint256 receiveTokensXBpHi = sendTokensHi * (10_000 - tax);
-            uint256 balanceDeltaLo = receiveTokensXBpLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
-            uint256 balanceDeltaHi = (receiveTokensXBpHi * multiplier).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS * 10_000);
+            uint256 receiveTokensXBasisPointsLo = sendTokensLo * 10_000 - (sendTokensLo * tax);
+            uint256 receiveTokensXBasisPointsHi = sendTokensHi * (10_000 - tax);
+            uint256 balanceDeltaLo = receiveTokensXBasisPointsLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
+            uint256 balanceDeltaHi = (receiveTokensXBasisPointsHi * multiplier).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS * 10_000);
             if (!toIsWhale) {
                 assertGe(afterBalanceTo - beforeBalanceTo + 1, balanceDeltaLo, "to delta lower");
             }
@@ -470,21 +470,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 assertEq(beforeTotalShares, afterTotalShares, "shares delta (no-op)");
             }
         } else {
-            assertTrue(
-                alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
-                string.concat(
-                    "shares to tokens ratio increased"
-                    "\n\tbefore total shares:", beforeTotalShares.itoa(),
-                    "\n\tafter total shares: ", afterTotalShares.itoa(),
-                    "\n\tbefore circulating: ", beforeCirculating.itoa(),
-                    "\n\tafter circulating:  ", afterCirculating.itoa(),
-                    "\n\tbefore shares from: ", beforeShares.itoa(),
-                    "\n\tafter shares from:  ", afterShares.itoa(),
-                    "\n\tbefore shares to:   ", beforeSharesTo.itoa(),
-                    "\n\tafter shares to:    ", afterSharesTo.itoa(),
-                    "\n\ttax (basis points): ", tax.itoa()
-                )
-            );
+            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio increased");
         }
 
         assertLe(
