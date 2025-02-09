@@ -43,7 +43,7 @@ contract DeployFU is Script {
     IERC20 internal constant _WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     uint256 internal constant _MINIMUM_LIQUIDITY = 1000;
 
-    function run(bytes32 salt) external {
+    function run(bytes32 fuSalt, bytes32 buybackSalt) external {
         address[] memory initialHolders =
             abi.decode(vm.readFile(string.concat(vm.projectRoot(), "/airdrop.json")).parseRaw("$"), (address[]));
         initialHolders.quickSort();
@@ -66,7 +66,7 @@ contract DeployFU is Script {
         FU fu = FU(
             address(
                 uint160(
-                    uint256(keccak256(abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, salt, keccak256(fuInitcode))))
+                    uint256(keccak256(abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, fuSalt, keccak256(fuInitcode))))
                 )
             )
         );
@@ -79,7 +79,7 @@ contract DeployFU is Script {
                 uint160(
                     uint256(
                         keccak256(
-                            abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, bytes32(0), keccak256(buybackInitcode))
+                            abi.encodePacked(bytes1(0xff), _DEPLOYER_PROXY, buybackSalt, keccak256(buybackInitcode))
                         )
                     )
                 )
@@ -89,7 +89,8 @@ contract DeployFU is Script {
         if (
             uint160(address(pair)) / Settings.ADDRESS_DIVISOR != 1
                 && uint160(address(buyback)) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS
-                && salt == bytes32(0)
+                && fuSalt == bytes32(0)
+                && buybackSalt == bytes32(0)
         ) {
             console.log("Use the tool in `.../fu/mine` to compute the salt:");
             console.log(
@@ -115,7 +116,7 @@ contract DeployFU is Script {
             _DEPLOYER_PROXY,
             uint256(5 ether),
             fuInitcode.length + 32,
-            bytes.concat(salt, fuInitcode),
+            bytes.concat(fuSalt, fuInitcode),
             uint8(0),
             pair,
             uint256(0),
@@ -125,7 +126,7 @@ contract DeployFU is Script {
             _DEPLOYER_PROXY,
             uint256(0),
             buybackInitcode.length + 32,
-            bytes.concat(bytes32(0), buybackInitcode)
+            bytes.concat(buybackSalt, buybackInitcode)
         );
 
         vm.startBroadcast(_DEPLOYER_BROADCASTER);

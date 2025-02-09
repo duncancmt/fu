@@ -232,13 +232,15 @@ srcup --api-key "$(< ~/.config/dedaub/credentials)" --name fu --framework Foundr
 ```Bash
 git reset --hard HEAD
 forge clean
+forge clean # do it twice
 git clean -fdx
 
 # substitute actual values
-declare -r salt="$(cast hash-zero)"
+declare -r fuSalt="$(cast hash-zero)"
+declare -r buybackSalt="$(cast hash-zero)"
 
 # add `--broadcast` when ready
-FOUNDRY_PROFILE=deploy forge script -vvvv --slow --no-storage-caching --isolate --rpc-url 'http://127.0.0.1:8545' --sig 'run(bytes32)' script/DeployFU.s.sol "$salt"
+FOUNDRY_PROFILE=deploy forge script -vvvv --slow --no-storage-caching --isolate --rpc-url 'http://127.0.0.1:8545' --sig 'run(bytes32,bytes32)' script/DeployFU.s.sol "$fuSalt" "$buybackSalt"
 ```
 
 # Legal
