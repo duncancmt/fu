@@ -142,8 +142,10 @@ contract Buyback is TwoStepOwnable, Context {
         (reserveFu, reserveWeth) = _sortTokens.maybeSwap(reserveFu, reserveWeth);
         unchecked {
             uint256 elapsed = uint32(block.timestamp) - timestampLast_; // masking and underflow is desired
+            // slither-disable-next-line divide-before-multiply
             priceFuWethCumulativeLast =
                 pair.fastPriceCumulativeLast(_sortTokens) + (reserveWeth << 112) / reserveFu * elapsed;
+            // slither-disable-next-line divide-before-multiply
             priceWethFuCumulativeLast =
                 pair.fastPriceCumulativeLast(!_sortTokens) + (reserveFu << 112) / reserveWeth * elapsed;
         }

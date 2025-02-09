@@ -103,6 +103,7 @@ library CrazyBalanceArithmetic {
 
     function toCrazyBalance(Tokens tokens, address account) internal pure returns (CrazyBalance) {
         unchecked {
+            // slither-disable-next-line divide-before-multiply
             return CrazyBalance.wrap(
                 Tokens.unwrap(tokens) * (uint160(account) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS
             );
