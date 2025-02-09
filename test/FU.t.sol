@@ -207,7 +207,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     function _sharesSlot(address account) internal pure returns (bytes32 r) {
         assembly ("memory-safe") {
             mstore(0x00, and(0xffffffffffffffffffffffffffffffffffffffff, account))
-            mstore(0x20, _BASE_SLOT)
+            mstore(0x20, add(_BASE_SLOT, 7))
             r := keccak256(0x00, 0x40)
         }
     }
@@ -227,18 +227,21 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function getTotalShares() internal view returns (uint256) {
-        uint256 value = uint256(load(address(fu), bytes32(uint256(_BASE_SLOT) + 3)));
+        uint256 value = uint256(load(address(fu), bytes32(uint256(_BASE_SLOT) + 2)));
         assertEq(value >> 177, 0, string.concat("dirty total supply slot: ", value.itoa()));
+        assertNotEq(value, 0, "zero total shares");
         return value;
     }
 
     function setTotalShares(uint256 newTotalShares) internal {
-        return store(address(fu), bytes32(uint256(_BASE_SLOT) + 3), bytes32(newTotalShares));
+        assertNotEq(newTotalShares, 0, "cannot set zero total shares");
+        return store(address(fu), bytes32(uint256(_BASE_SLOT) + 2), bytes32(newTotalShares));
     }
 
     function getCirculatingTokens() internal view returns (uint256) {
-        uint256 value = uint256(load(address(fu), bytes32(uint256(_BASE_SLOT) + 1)));
+        uint256 value = uint256(load(address(fu), _BASE_SLOT));
         assertEq(value >> 145, 0, string.concat("dirty circulating tokens slot: ", value.itoa()));
+        assertNotEq(value, 0, "zero circulating tokens");
         return value;
     }
 
