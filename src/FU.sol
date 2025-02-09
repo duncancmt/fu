@@ -54,6 +54,19 @@ library UnsafeArray {
     }
 }
 
+library TernaryShares {
+    using Ternary for bool;
+
+    function ternary(bool c, Shares x, Shares y) internal pure returns (Shares) {
+        return Shares.wrap(c.ternary(Shares.unwrap(x), Shares.unwrap(y)));
+    }
+
+    function maybeSwap(bool c, Shares x, Shares y) internal pure returns (Shares, Shares) {
+        (uint256 a, uint256 b) = c.maybeSwap(Shares.unwrap(x), Shares.unwrap(y));
+        return (Shares.wrap(a), Shares.wrap(b));
+    }
+}
+
 /// @custom:security-contact security@fuckyou.finance
 contract FU is ERC20Base, TransientStorageLayout, Context {
     using ChecksumAddress for address;
@@ -71,7 +84,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     using FastTransferLib for IERC20;
     using UnsafeArray for address[];
     using UnsafeMath for uint256;
-    using Ternary for bool;
+    using TernaryShares for bool;
     using FastLogic for bool;
 
     function totalSupply() external view override returns (uint256) {
@@ -217,10 +230,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     function _applyWhaleLimit(Shares shares, Shares totalShares_) private pure returns (Shares, Shares) {
         (Shares limit, Shares newTotalShares) = _whaleLimit(shares, totalShares_);
         bool condition = shares > limit;
-        return (
-            Shares.wrap(condition.ternary(Shares.unwrap(limit), Shares.unwrap(shares))),
-            Shares.wrap(condition.ternary(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares_)))
-        );
+        return (condition.ternary(limit, shares), condition.ternary(newTotalShares, totalShares_));
     }
 
     function _applyWhaleLimit(Shares shares0, Shares shares1, Shares totalShares_)
@@ -228,7 +238,8 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         pure
         returns (Shares, Shares, Shares)
     {
-        (Shares sharesHi, Shares sharesLo) = (shares0 > shares1) ? (shares0, shares1) : (shares1, shares0);
+        bool condition = shares0 > shares1;
+        (Shares sharesLo, Shares sharesHi) = condition.maybeSwap(shares0, shares1);
         (Shares firstLimit, Shares newTotalShares) = _whaleLimit(sharesHi, totalShares_);
         if (sharesHi > firstLimit) {
             Shares uninvolved = totalShares_ - sharesHi - sharesLo;
@@ -243,7 +254,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
                 sharesHi = firstLimit;
             }
         }
-        (shares0, shares1) = (shares0 > shares1) ? (sharesHi, sharesLo) : (sharesLo, sharesHi);
+        (shares0, shares1) = condition.maybeSwap(sharesLo, sharesHi);
         return (shares0, shares1, totalShares_);
     }
 
@@ -403,6 +414,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         CrazyBalance burnAmount = amount - transferAmount;
 
         // State modification starts here. No more bailing out allowed.
+
         $.rebaseQueue.rebaseFor(to, cachedShares, cachedTotalSupply, cachedTotalShares);
 
         $.pairTokens = $.pairTokens - amountTokens;
@@ -472,6 +484,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         // is allowed to go over the limit.
 
         // State modification starts here. No more bailing out allowed.
+
         $.rebaseQueue.rebaseFor(from, cachedShares, cachedTotalSupply, cachedTotalShares);
 
         $.sharesOf[from] = newShares.store();
@@ -585,6 +598,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         CrazyBalance burnAmount = amount - transferAmount;
 
         // State modification starts here. No more bailing out allowed.
+
         $.rebaseQueue.rebaseFor(from, cachedFromShares, cachedTotalSupply, cachedTotalShares);
         $.rebaseQueue.rebaseFor(to, cachedToShares, cachedTotalSupply, cachedTotalShares);
 
