@@ -422,15 +422,22 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             }
         }
 
-        uint256 expectedAfterToBalanceLo = (
-            beforeBalance - afterBalance < amount ? beforeBalance - afterBalance : amount
-        ) * tax * (uint160(to) / Settings.ADDRESS_DIVISOR) / (uint160(actor) / Settings.ADDRESS_DIVISOR * 10_000);
-        uint256 expectedAfterToBalanceHi = (
-            ((beforeBalance - afterBalance > amount ? beforeBalance - afterBalance : amount) + 1) * tax
-                * (uint160(to) / Settings.ADDRESS_DIVISOR)
-        ).unsafeDivUp(uint160(actor) / Settings.ADDRESS_DIVISOR * 10_000);
-        assertGe(afterBalanceTo - beforeBalanceTo + 1, expectedAfterToBalanceLo, "to amount lower");
-        assertLe(afterBalanceTo - beforeBalanceTo, expectedAfterToBalanceHi + 1, "to amount upper");
+        uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
+        if (divisor != 0) {
+            uint256 afterTax = 10_000 - tax;
+            uint256 multiplier = uint160(to) / Settings.ADDRESS_DIVISOR;
+            uint256 expectedAfterToDeltaLo = (
+                beforeBalance - afterBalance < amount ? beforeBalance - afterBalance : amount
+            ) * afterTax * multiplier / (divisor * 10_000);
+            uint256 expectedAfterToDeltaHi = (
+                (beforeBalance - afterBalance > amount ? beforeBalance - afterBalance : amount) * afterTax
+                    * multiplier
+            ).unsafeDivUp(divisor * 10_000);
+            assertGe(afterBalanceTo - beforeBalanceTo + 1, expectedAfterToDeltaLo, "to delta lower");
+            assertLe(afterBalanceTo - beforeBalanceTo, expectedAfterToDeltaHi + 1, "to delta upper");
+        } else {
+            assertEq(afterBalanceTo, beforeBalanceTo);
+        }
 
         if (amount == 0) {
             assertEq(afterCirculating, beforeCirculating);
