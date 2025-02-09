@@ -44,6 +44,11 @@ being maximally technically correct.
 * A base slot inspired by [ERC7201](https://eips.ethereum.org/EIPS/eip-7201)
   (but not directly compatible with it) to make slot detection more difficult
 
+### Features the authors thought of but didn't implement
+
+* The tax collected on each swap/transfer is used to "frontrun" each swap
+  against the primary liquidity pair upon each transfer not `from` it
+
 ## Restrictions
 
 FU is designed to still be almost completely compliant with
