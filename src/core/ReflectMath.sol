@@ -5,18 +5,14 @@ import {Settings} from "../core/Settings.sol";
 
 import {BasisPoints, BASIS} from "../types/BasisPoints.sol";
 import {Shares, ONE as ONE_SHARE} from "../types/Shares.sol";
-import {Tokens, ONE as ONE_TOKEN} from "../types/Tokens.sol";
-import {scale} from "../types/SharesXBasisPoints.sol";
-import {TokensXBasisPoints, scale, castUp, cast} from "../types/TokensXBasisPoints.sol";
-import {TokensXShares, tmp as tmpTS, alloc as allocTS, SharesToTokens} from "../types/TokensXShares.sol";
+import {Tokens} from "../types/Tokens.sol";
+import {TokensXBasisPoints, scale, cast} from "../types/TokensXBasisPoints.sol";
+import {TokensXShares, tmp as tmpTS, alloc as allocTS} from "../types/TokensXShares.sol";
 import {TokensXShares2} from "../types/TokensXShares2.sol";
 import {TokensXBasisPointsXShares, tmp as tmpTBpS, alloc as allocTBpS} from "../types/TokensXBasisPointsXShares.sol";
 import {TokensXBasisPointsXShares2} from "../types/TokensXBasisPointsXShares2.sol";
 import {SharesXBasisPoints, scale, cast} from "../types/SharesXBasisPoints.sol";
 import {Shares2XBasisPoints, alloc as allocS2Bp} from "../types/Shares2XBasisPoints.sol";
-
-import {UnsafeMath} from "../lib/UnsafeMath.sol";
-import {FastLogic} from "../lib/FastLogic.sol";
 
 /*
 
@@ -29,10 +25,6 @@ WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING
 */
 
 library ReflectMath {
-    using UnsafeMath for uint256;
-    using FastLogic for bool;
-    using SharesToTokens for Shares;
-
     modifier freeMemory() {
         uint256 freePtr;
         assembly ("memory-safe") {
