@@ -439,7 +439,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             uint256 sendCrazyHi = amount;
             (sendCrazyLo, sendCrazyHi) = (sendCrazyLo > sendCrazyHi) ? (sendCrazyHi, sendCrazyLo) : (sendCrazyLo, sendCrazyHi);
             uint256 sendTokensLo = sendCrazyLo * Settings.CRAZY_BALANCE_BASIS / divisor;
-            uint256 sendTokensHi = ((sendCrazyHi + 1) * Settings.CRAZY_BALANCE_BASIS - 1).unsafeDivUp(divisor);
+            uint256 sendTokensHi = ((sendCrazyHi + 1) * Settings.CRAZY_BALANCE_BASIS - 1) / divisor;
             uint256 receiveTokensXBpLo = sendTokensLo * 10_000 - (sendTokensLo * tax);
             uint256 receiveTokensXBpHi = sendTokensHi * (10_000 - tax);
             uint256 balanceDeltaLo = receiveTokensXBpLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
