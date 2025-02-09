@@ -23,6 +23,7 @@ import {SharesToTokens} from "./types/TokensXShares.sol";
 import {SharesToTokensProportional} from "./types/TokensXBasisPointsXShares.sol";
 import {Votes, toVotes} from "./types/Votes.sol";
 import {scale, cast} from "./types/TokensXBasisPoints.sol";
+import {scale, cast} from "./types/SharesXBasisPoints.sol";
 import {SharesXBasisPoints, scale} from "./types/SharesXBasisPoints.sol";
 import {
     CrazyBalance,
@@ -400,12 +401,20 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         (Shares newShares, Shares newTotalShares, Tokens newTotalSupply) = ReflectMath.getTransferSharesFromPair(
             _tax(), cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
         );
-        (newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);
+        {
+            Shares whaleLimit = (newTotalShares - newShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE);
+            if (newShares >= whaleLimit) {
+                newShares = whaleLimit - ONE_SHARE;
+                newTotalShares = cachedTotalShares + newTotalShares - cachedShares;
+                cachedShares = cast(scale(cachedTotalShares, BASIS.div(Settings.ANTI_WHALE_DIVISOR)));
+                // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
+                // requirement that the sum of all accounts' shares equal the total shares.
+            }
+        }
 
         // Take note of the mismatch between the holder/recipient of the tokens/shares (`to`) and
         // the account for whom we calculate the balance delta (`pair`). The `amount` field of the
         // `Transfer` event is relative to the sender of the tokens.
-        // TODO: this needs to handle the counterfactual balances created when `to` is/becomes a whale
         CrazyBalance transferAmount = newShares.toPairBalance(newTotalSupply, newTotalShares)
             - cachedTotalShares.toPairBalance(cachedTotalSupply, cachedTotalShares);
         CrazyBalance burnAmount = amount - transferAmount;
