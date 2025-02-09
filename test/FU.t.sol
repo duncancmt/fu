@@ -802,8 +802,8 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
 
         deployFuDependencies();
 
-        bytes32 fuSalt = 0x00000000000000000000000000000000000000000000000000000001571d8270;
-        bytes32 buybackSalt = 0x000000000000000000000000000000000000000000000000000000001d7a2beb;
+        bytes32 fuSalt = 0x000000000000000000000000000000000000000000000000000000008a90bd65;
+        bytes32 buybackSalt = 0x00000000000000000000000000000000000000000000000000000000cd166c20;
         bytes memory fuInitcode = bytes.concat(
             type(FU).creationCode,
             abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)
@@ -838,7 +838,6 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
             )
         );
 
-        /*
         if (uint160(address(pairFor(IERC20(fuPrediction), WETH))) / Settings.ADDRESS_DIVISOR != 1 || uint160(buybackPrediction) / Settings.ADDRESS_DIVISOR != Settings.CRAZY_BALANCE_BASIS) {
             console.log("You need to recompute the salt");
             console.log("Use the tool in `.../fu/mine`:");
@@ -851,7 +850,6 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
             console.log("The number of leading zeroes is", Settings.PAIR_LEADING_ZEROES);
             revert();
         }
-        */
 
         // Deploy FU
         deal(address(this), 5 ether);
