@@ -9,7 +9,7 @@ import {Settings} from "src/core/Settings.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory, pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 import {ChecksumAddress} from "src/lib/ChecksumAddress.sol";
-
+import {UnsafeMath} from "src/lib/UnsafeMath.sol";
 import {alloc, tmp} from "src/lib/512Math.sol";
 
 import {QuickSort} from "script/QuickSort.sol";
@@ -172,6 +172,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     using ItoA for uint256;
     using ChecksumAddress for address;
+    using UnsafeMath for uint256;
 
     IFU internal immutable fu;
     address internal immutable pair;
@@ -366,6 +367,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeSharesTo = getShares(to);
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
+        uint256 tax = fu.tax();
 
         vm.recordLogs();
         vm.startStateDiffRecording();
@@ -416,7 +418,16 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 assertLe(beforeBalance - afterBalance, amount + 1, "from amount upper");
             }
         }
-        // TODO: test the balance increase of `to`
+
+        uint256 expectedAfterToBalanceLo = (
+            beforeBalance - afterBalance < amount ? beforeBalance - afterBalance : amount
+        ) * tax * (uint160(to) / Settings.ADDRESS_DIVISOR) / (uint160(actor) / Settings.ADDRESS_DIVISOR * 10_000);
+        uint256 expectedAfterToBalanceHi = (
+            ((beforeBalance - afterBalance > amount ? beforeBalance - afterBalance : amount) + 1) * tax
+                * (uint160(to) / Settings.ADDRESS_DIVISOR)
+        ).unsafeDivUp(uint160(actor) / Settings.ADDRESS_DIVISOR * 10_000);
+        assertGe(afterBalanceTo - beforeBalanceTo + 1, expectedAfterToBalanceLo, "to amount lower");
+        assertLe(afterBalanceTo - beforeBalanceTo, expectedAfterToBalanceHi + 1, "to amount upper");
 
         if (amount == 0) {
             assertEq(afterCirculating, beforeCirculating);
