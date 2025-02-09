@@ -84,6 +84,11 @@ function ternary(bool c, Shares x, Shares y) pure returns (Shares) {
     return Shares.wrap(Ternary.ternary(c, Shares.unwrap(x), Shares.unwrap(y)));
 }
 
+function maybeSwap(bool c, Shares x, Shares y) pure returns (Shares, Shares) {
+    (uint256 a, uint256 b) = Ternary.maybeSwap(c, Shares.unwrap(x), Shares.unwrap(y));
+    return (Shares.wrap(a), Shares.wrap(b));
+}
+
 // This is the same as `Shares`, except it has padding on both ends, just to make life harder for
 // people who do state overrides. Also, unlike "normal" Solidity behavior, dirty padding is not
 // cleaned, but instead results in the entire slot being implicitly cleared.

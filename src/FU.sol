@@ -17,7 +17,7 @@ import {RebaseQueue, LibRebaseQueue} from "./core/RebaseQueue.sol";
 import {MoonPhase} from "./core/MoonPhase.sol";
 
 import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
-import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE, SharesStorage} from "./types/Shares.sol";
+import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE, SharesStorage, ternary, maybeSwap} from "./types/Shares.sol";
 import {Tokens} from "./types/Tokens.sol";
 import {SharesToTokens} from "./types/TokensXShares.sol";
 import {SharesToTokensProportional} from "./types/TokensXBasisPointsXShares.sol";
@@ -37,7 +37,6 @@ import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 import {IPFS} from "./lib/IPFS.sol";
 import {FastTransferLib} from "./lib/FastTransferLib.sol";
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
-import {Ternary} from "./lib/Ternary.sol";
 import {FastLogic} from "./lib/FastLogic.sol";
 
 /// @custom:security non-reentrant
@@ -50,19 +49,6 @@ library UnsafeArray {
         assembly ("memory-safe") {
             r := mload(add(a, add(0x20, shl(0x05, i))))
         }
-    }
-}
-
-library TernaryShares {
-    using Ternary for bool;
-
-    function ternary(bool c, Shares x, Shares y) internal pure returns (Shares) {
-        return Shares.wrap(c.ternary(Shares.unwrap(x), Shares.unwrap(y)));
-    }
-
-    function maybeSwap(bool c, Shares x, Shares y) internal pure returns (Shares, Shares) {
-        (uint256 a, uint256 b) = c.maybeSwap(Shares.unwrap(x), Shares.unwrap(y));
-        return (Shares.wrap(a), Shares.wrap(b));
     }
 }
 
@@ -83,7 +69,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     using FastTransferLib for IERC20;
     using UnsafeArray for address[];
     using UnsafeMath for uint256;
-    using TernaryShares for bool;
+    using {ternary, maybeSwap} for bool;
     using FastLogic for bool;
 
     function totalSupply() external view override returns (uint256) {
