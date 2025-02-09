@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {BasisPoints} from "./BasisPoints.sol";
 import {Shares} from "./Shares.sol";
 import {SharesXBasisPoints} from "./SharesXBasisPoints.sol";
 
-import {uint512, tmp as baseTmp, alloc as baseAlloc} from "../lib/512Math.sol";
+import {uint512, alloc as baseAlloc} from "../lib/512Math.sol";
 
 type Shares2XBasisPoints is bytes32;
 
@@ -19,10 +18,6 @@ function cast(uint512 x) pure returns (Shares2XBasisPoints) {
 
 function alloc() pure returns (Shares2XBasisPoints) {
     return cast(baseAlloc());
-}
-
-function tmp() pure returns (Shares2XBasisPoints) {
-    return cast(baseTmp());
 }
 
 library Shares2XBasisPointsArithmetic {

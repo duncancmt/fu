@@ -2,11 +2,9 @@
 pragma solidity ^0.8.28;
 
 import {Shares} from "./Shares.sol";
-import {SharesXBasisPoints} from "./SharesXBasisPoints.sol";
-import {TokensXShares, cast as cast1} from "./TokensXShares.sol";
-import {TokensXBasisPointsXShares, cast as cast2} from "./TokensXBasisPointsXShares.sol";
+import {TokensXBasisPointsXShares, cast as cast1} from "./TokensXBasisPointsXShares.sol";
 
-import {uint512, tmp as baseTmp, alloc as baseAlloc} from "../lib/512Math.sol";
+import {uint512} from "../lib/512Math.sol";
 
 type TokensXBasisPointsXShares2 is bytes32;
 
@@ -20,7 +18,7 @@ function cast(uint512 x) pure returns (TokensXBasisPointsXShares2) {
 
 library TokensXBasisPointsXShares2Arithmetic {
     function div(TokensXBasisPointsXShares2 n, TokensXBasisPointsXShares d) internal view returns (Shares) {
-        return Shares.wrap(cast(n).div(cast2(d)));
+        return Shares.wrap(cast(n).div(cast1(d)));
     }
 
     function divMulti(TokensXBasisPointsXShares2 n0, TokensXBasisPointsXShares2 n1, TokensXBasisPointsXShares d)
@@ -28,7 +26,7 @@ library TokensXBasisPointsXShares2Arithmetic {
         view
         returns (Shares, Shares)
     {
-        (uint256 r0, uint256 r1) = cast(n0).divMulti(cast(n1), cast2(d));
+        (uint256 r0, uint256 r1) = cast(n0).divMulti(cast(n1), cast1(d));
         return (Shares.wrap(r0), Shares.wrap(r1));
     }
 }
