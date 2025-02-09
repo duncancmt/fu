@@ -22,7 +22,7 @@ import {Tokens} from "./types/Tokens.sol";
 import {SharesToTokens} from "./types/TokensXShares.sol";
 import {SharesToTokensProportional} from "./types/TokensXBasisPointsXShares.sol";
 import {Votes, toVotes} from "./types/Votes.sol";
-import {scale, cast, castUp} from "./types/TokensXBasisPoints.sol";
+import {scale, cast} from "./types/TokensXBasisPoints.sol";
 import {SharesXBasisPoints, scale} from "./types/SharesXBasisPoints.sol";
 import {
     CrazyBalance,
@@ -38,8 +38,6 @@ import {FastTransferLib} from "./lib/FastTransferLib.sol";
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {Ternary} from "./lib/Ternary.sol";
 import {FastLogic} from "./lib/FastLogic.sol";
-
-import {console} from "@forge-std/console.sol";
 
 /// @custom:security non-reentrant
 IERC20 constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);

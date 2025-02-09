@@ -8,8 +8,6 @@ import {Shares} from "./Shares.sol";
 import {Tokens} from "./Tokens.sol";
 import {tmp, alloc, SharesToTokens} from "./TokensXShares.sol";
 
-import {UnsafeMath} from "../lib/UnsafeMath.sol";
-
 type CrazyBalance is uint256;
 
 library CrazyBalanceAccessors {
@@ -79,7 +77,6 @@ using {
 } for CrazyBalance global;
 
 library CrazyBalanceArithmetic {
-    using UnsafeMath for uint256;
     using SharesToTokens for Shares;
 
     function saturatingAdd(CrazyBalance x, CrazyBalance y) internal pure returns (CrazyBalance r) {
