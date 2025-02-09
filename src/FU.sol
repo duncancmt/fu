@@ -36,6 +36,7 @@ import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 import {IPFS} from "./lib/IPFS.sol";
 import {FastTransferLib} from "./lib/FastTransferLib.sol";
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
+import {Ternary} from "./lib/Ternary.sol";
 import {FastLogic} from "./lib/FastLogic.sol";
 
 import {console} from "@forge-std/console.sol";
@@ -70,6 +71,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     using FastTransferLib for IERC20;
     using UnsafeArray for address[];
     using UnsafeMath for uint256;
+    using Ternary for bool;
     using FastLogic for bool;
 
     function totalSupply() external view override returns (uint256) {
@@ -214,11 +216,11 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
     function _applyWhaleLimit(Shares shares, Shares totalShares_) private pure returns (Shares, Shares) {
         (Shares limit, Shares newTotalShares) = _whaleLimit(shares, totalShares_);
-        if (shares > limit) {
-            totalShares_ = newTotalShares;
-            shares = limit;
-        }
-        return (shares, totalShares_);
+        bool condition = shares > limit;
+        return (
+            Shares.wrap(condition.ternary(Shares.unwrap(limit), Shares.unwrap(shares))),
+            Shares.wrap(condition.ternary(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares_)))
+        );
     }
 
     function _applyWhaleLimit(Shares shares0, Shares shares1, Shares totalShares_)
@@ -387,44 +389,10 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         Tokens cachedTotalSupply = $.totalSupply;
         Tokens amountTokens = amount.toPairTokens();
 
-        BasisPoints taxRate = _tax();
-        Shares newShares;
-        Shares newTotalShares;
-        Tokens newTotalSupply;
-        // TODO: I haven't thoroughly thought through the rounding behavior of this check. there may
-        // be an off-by-one. but also maybe it doesn't matter because `getTransferSharesFromPair`
-        // *mostly* works correctly when values aren't *too* extreme
-        Tokens balanceTokensHi = cachedShares.toTokensUp(cachedTotalSupply, cachedTotalShares);
-        // TODO: the implicit division by `cachedTotalShares` on the preceeding line may need to be
-        // unfolded and carried forward to the next line where we explicitly multiply each term by
-        // `cachedTotalShares` to avoid rounding
-        if (
-            (scale(amountTokens, BASIS - taxRate) + scale(balanceTokensHi, BASIS)).mul(Settings.ANTI_WHALE_DIVISOR)
-                >= scale(cachedTotalSupply + amountTokens, BASIS)
-        ) {
-            {
-                (Shares hypotheticalShares, Shares hypotheticalTotalShares,) = ReflectMath.getTransferSharesFromPair(
-                    taxRate, cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
-                );
-                Shares hypotheticalWhaleLimit = (hypotheticalTotalShares - hypotheticalShares).div(
-                    Settings.ANTI_WHALE_DIVISOR_MINUS_ONE
-                ) - ONE_SHARE;
-                console.log("shares     ", Shares.unwrap(hypotheticalShares));
-                console.log("whale limit", Shares.unwrap(hypotheticalWhaleLimit));
-                assert(hypotheticalShares >= hypotheticalWhaleLimit);
-            }
-
-            newShares = (cachedTotalShares - cachedShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
-            newTotalShares = cachedTotalShares + newShares - cachedShares;
-            newTotalSupply = cachedTotalSupply + amountTokens;
-        } else {
-            (newShares, newTotalShares, newTotalSupply) = ReflectMath.getTransferSharesFromPair(
-                taxRate, cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
-            );
-            // TODO: this is inelegant. can this be moved into the `if` statement immediately above?
-            assert(newShares < (newTotalShares - newShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE);
-            //(newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);
-        }
+        (Shares newShares, Shares newTotalShares, Tokens newTotalSupply) = ReflectMath.getTransferSharesFromPair(
+            _tax(), cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
+        );
+        (newShares, newTotalShares) = _applyWhaleLimit(newShares, newTotalShares);
 
         // Take note of the mismatch between the holder/recipient of the tokens/shares (`to`) and
         // the account for whom we calculate the balance delta (`pair`). The `amount` field of the
