@@ -140,26 +140,26 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         Tokens totalSupply_ = Settings.INITIAL_SUPPLY - pairTokens;
         $.totalSupply = totalSupply_;
-        Shares totalShares = Shares.wrap(Tokens.unwrap(totalSupply_) * Settings.INITIAL_SHARES_RATIO);
-        $.totalShares = totalShares;
+        Shares totalShares_ = Shares.wrap(Tokens.unwrap(totalSupply_) * Settings.INITIAL_SHARES_RATIO);
+        $.totalShares = totalShares_;
 
         {
             // The queue is empty, so we have to special-case the first insertion. `DEAD` will
             // always hold a token balance, which makes many things simpler.
             $.sharesOf[DEAD] = Settings.oneTokenInShares().store();
-            Tokens tokens = $.sharesOf[DEAD].load().toTokens(totalSupply_, totalShares);
+            Tokens tokens = $.sharesOf[DEAD].load().toTokens(totalSupply_, totalShares_);
             emit Transfer(address(0), DEAD, tokens.toExternal());
             $.rebaseQueue.initialize(DEAD, tokens);
         }
         {
-            Shares toMint = totalShares - $.sharesOf[DEAD].load();
+            Shares toMint = totalShares_ - $.sharesOf[DEAD].load();
             address prev = initialHolders.unsafeGet(0);
             require(uint160(prev) >= Settings.ADDRESS_DIVISOR);
             // slither-disable-next-line divide-before-multiply
             Shares sharesRest = toMint.div(length);
             {
                 Shares sharesFirst = toMint - sharesRest.mul(length - 1);
-                Tokens amount = sharesFirst.toTokens(totalSupply_, totalShares);
+                Tokens amount = sharesFirst.toTokens(totalSupply_, totalShares_);
 
                 require(prev != DEAD);
                 $.sharesOf[prev] = sharesFirst.store();
@@ -167,7 +167,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
                 $.rebaseQueue.enqueue(prev, amount);
             }
             {
-                Tokens amount = sharesRest.toTokens(totalSupply_, totalShares);
+                Tokens amount = sharesRest.toTokens(totalSupply_, totalShares_);
                 SharesStorage sharesRestStorage = sharesRest.store();
                 for (uint256 i = 1; i < length; i = i.unsafeInc()) {
                     address to = initialHolders.unsafeGet(i);
