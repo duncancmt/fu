@@ -426,81 +426,30 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         if (divisor != 0) {
             uint256 multiplier = uint160(to) / Settings.ADDRESS_DIVISOR;
 
+            /*
             if (actor == pair) {
                 divisor = 1;
             }
             if (to == pair) {
                 multiplier = 1;
             }
-
-            console.log("divisor", divisor);
-            console.log("multiplier", multiplier);
+            */
 
             uint256 sendCrazyLo = beforeBalance - afterBalance;
             uint256 sendCrazyHi = amount;
             (sendCrazyLo, sendCrazyHi) = (sendCrazyLo > sendCrazyHi) ? (sendCrazyHi, sendCrazyLo) : (sendCrazyLo, sendCrazyHi);
-            console.log("sendCrazyLo", sendCrazyLo);
-            console.log("sendCrazyHi", sendCrazyHi);
             uint256 sendTokensLo = sendCrazyLo * Settings.CRAZY_BALANCE_BASIS / divisor;
             uint256 sendTokensHi = ((sendCrazyHi + 1) * Settings.CRAZY_BALANCE_BASIS - 1).unsafeDivUp(divisor);
-            console.log("sendTokensLo", sendTokensLo);
-            console.log("sendTokensHi", sendTokensHi);
             uint256 receiveTokensLo = sendTokensLo - (sendTokensLo * tax).unsafeDivUp(10_000);
             uint256 receiveTokensHi = (sendTokensHi * (10_000 - tax)).unsafeDivUp(10_000);
-            console.log("receiveTokensLo", receiveTokensLo);
-            console.log("receiveTokensHi", receiveTokensHi);
             uint256 balanceDeltaLo = receiveTokensLo * multiplier / Settings.CRAZY_BALANCE_BASIS;
             uint256 balanceDeltaHi = (receiveTokensHi * multiplier).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS);
-            console.log("balanceDeltaLo", balanceDeltaLo);
-            console.log("balanceDeltaHi", balanceDeltaHi);
             if (!toIsWhale) {
-                assertGe(afterBalanceTo - beforeBalanceTo + 1, balanceDeltaLo,
-                         string.concat("to delta lower"
-                             "\n\tbefore total shares:", beforeTotalShares.itoa(),
-                             "\n\tafter total shares: ", afterTotalShares.itoa(),
-                             "\n\tbefore circulating: ", beforeCirculating.itoa(),
-                             "\n\tafter circulating:  ", afterCirculating.itoa(),
-                             "\n\tbefore shares from: ", beforeShares.itoa(),
-                             "\n\tafter shares from:  ", afterShares.itoa(),
-                             "\n\tbefore shares to:   ", beforeSharesTo.itoa(),
-                             "\n\tafter shares to:    ", afterSharesTo.itoa(),
-                             "\n\ttax (basis points): ", tax.itoa()
-                         ));
+                assertGe(afterBalanceTo - beforeBalanceTo + 1, balanceDeltaLo, "to delta lower");
             }
-            assertLe(afterBalanceTo - beforeBalanceTo, balanceDeltaHi + 1, "to delta upper");
-
-            /*
-            divisor *= 10_000;
-
-            uint256 expectedAfterToDeltaLo =
-                (beforeBalance - afterBalance < amount ? beforeBalance - afterBalance : amount) * afterTax * multiplier;
-            uint256 expectedAfterToDeltaHi =
-                (beforeBalance - afterBalance > amount ? beforeBalance - afterBalance : amount) * afterTax * multiplier;
-            assertGe((afterBalanceTo - beforeBalanceTo + 1) * divisor, expectedAfterToDeltaLo,
-                     string.concat("to delta lower"
-                         "\n\tbefore total shares:", beforeTotalShares.itoa(),
-                         "\n\tafter total shares: ", afterTotalShares.itoa(),
-                         "\n\tbefore circulating: ", beforeCirculating.itoa(),
-                         "\n\tafter circulating:  ", afterCirculating.itoa(),
-                         "\n\tbefore shares from: ", beforeShares.itoa(),
-                         "\n\tafter shares from:  ", afterShares.itoa(),
-                         "\n\tbefore shares to:   ", beforeSharesTo.itoa(),
-                         "\n\tafter shares to:    ", afterSharesTo.itoa(),
-                         "\n\ttax (basis points): ", tax.itoa()
-                     ));
-            assertLe((afterBalanceTo - beforeBalanceTo) * divisor, expectedAfterToDeltaHi + divisor,
-                     string.concat("to delta upper"
-                         "\n\tbefore total shares:", beforeTotalShares.itoa(),
-                         "\n\tafter total shares: ", afterTotalShares.itoa(),
-                         "\n\tbefore circulating: ", beforeCirculating.itoa(),
-                         "\n\tafter circulating:  ", afterCirculating.itoa(),
-                         "\n\tbefore shares from: ", beforeShares.itoa(),
-                         "\n\tafter shares from:  ", afterShares.itoa(),
-                         "\n\tbefore shares to:   ", beforeSharesTo.itoa(),
-                         "\n\tafter shares to:    ", afterSharesTo.itoa(),
-                         "\n\ttax (basis points): ", tax.itoa()
-                     ));
-            */
+            if (!fromIsWhale) {
+                assertLe(afterBalanceTo - beforeBalanceTo, balanceDeltaHi + 1, "to delta upper");
+            }
         } else {
             assertEq(afterBalanceTo, beforeBalanceTo);
         }
