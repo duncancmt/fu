@@ -248,7 +248,6 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
                 totalShares_ = uninvolved + secondLimit.mul(2);
                 sharesHi = secondLimit;
                 sharesLo = secondLimit;
-                // TODO: verify that this *EXACTLY* satisfied the postcondition `sharesHi == sharesLo == totalShares_.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE`
             } else {
                 totalShares_ = newTotalShares;
                 sharesHi = firstLimit;
