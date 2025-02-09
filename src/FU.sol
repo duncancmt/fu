@@ -405,7 +405,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             Shares whaleLimit = (newTotalShares - newShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE);
             if (newShares >= whaleLimit) {
                 newShares = whaleLimit - ONE_SHARE;
-                newTotalShares = cachedTotalShares + newTotalShares - cachedShares;
+                newTotalShares = cachedTotalShares + newShares - cachedShares;
                 cachedShares = cast(scale(cachedTotalShares, BASIS.div(Settings.ANTI_WHALE_DIVISOR)));
                 // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
                 // requirement that the sum of all accounts' shares equal the total shares.
