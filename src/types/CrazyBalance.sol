@@ -58,15 +58,7 @@ function __ge(CrazyBalance a, CrazyBalance b) pure returns (bool) {
     return CrazyBalance.unwrap(a) >= CrazyBalance.unwrap(b);
 }
 
-using {
-    __sub as -,
-    __eq as ==,
-    __lt as <,
-    __gt as >,
-    __ne as !=,
-    __le as <=,
-    __ge as >=
-} for CrazyBalance global;
+using {__sub as -, __eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __ge as >=} for CrazyBalance global;
 
 library CrazyBalanceArithmetic {
     using SharesToTokens for Shares;

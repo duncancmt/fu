@@ -54,11 +54,5 @@ function __ge(TokensXBasisPoints a, TokensXBasisPoints b) pure returns (bool) {
 }
 
 using {
-    __sub as -,
-    __eq as ==,
-    __lt as <,
-    __gt as >,
-    __ne as !=,
-    __le as <=,
-    __ge as >=
+    __sub as -, __eq as ==, __lt as <, __gt as >, __ne as !=, __le as <=, __ge as >=
 } for TokensXBasisPoints global;
