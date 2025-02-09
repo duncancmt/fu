@@ -416,7 +416,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         // the account for whom we calculate the balance delta (`pair`). The `amount` field of the
         // `Transfer` event is relative to the sender of the tokens.
         CrazyBalance transferAmount = newShares.toPairBalance(newTotalSupply, newTotalShares)
-            - cachedTotalShares.toPairBalance(cachedTotalSupply, cachedTotalShares);
+            - cachedShares.toPairBalance(cachedTotalSupply, cachedTotalShares);
         CrazyBalance burnAmount = amount - transferAmount;
 
         // State modification starts here. No more bailing out allowed.
