@@ -10,7 +10,7 @@ import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory, pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 import {ChecksumAddress} from "src/lib/ChecksumAddress.sol";
 import {UnsafeMath} from "src/lib/UnsafeMath.sol";
-import {alloc, tmp} from "src/lib/512Math.sol";
+import {uint512, alloc, tmp} from "src/lib/512Math.sol";
 
 import {QuickSort} from "script/QuickSort.sol";
 import {ItoA} from "script/ItoA.sol";
@@ -444,7 +444,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             uint256 sendCrazyHi = amount;
             (sendCrazyLo, sendCrazyHi) = (sendCrazyLo > sendCrazyHi) ? (sendCrazyHi, sendCrazyLo) : (sendCrazyLo, sendCrazyHi);
             uint256 sendTokensLo = sendCrazyLo * Settings.CRAZY_BALANCE_BASIS / divisor;
-            uint256 sendTokensHi = ((sendCrazyHi + 1) * Settings.CRAZY_BALANCE_BASIS - 1) / divisor;
+            uint256 sendTokensHi = (sendCrazyHi * Settings.CRAZY_BALANCE_BASIS).unsafeDivUp(divisor);
+            if (amount == beforeBalance) {
+                uint512 product = alloc().omul(beforeShares, beforeCirculating);
+                sendTokensLo = product.div(beforeTotalShares);
+                sendTokensHi = sendTokensLo.unsafeInc(tmp().omul(sendTokensLo, beforeTotalShares) < product);
+            }
             uint256 receiveTokensXBasisPointsLo = sendTokensLo * 10_000 - (sendTokensLo * tax);
             uint256 receiveTokensXBasisPointsHi = sendTokensHi * (10_000 - tax);
             uint256 balanceDeltaLo = receiveTokensXBasisPointsLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
