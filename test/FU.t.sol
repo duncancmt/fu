@@ -483,6 +483,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             (afterTotalShares - afterSharesTo) / Settings.ANTI_WHALE_DIVISOR_MINUS_ONE - 1,
             "to over whale limit"
         );
+        if (amount != 0) {
+            assertLt(afterBalance, afterWhaleLimit, "from is still a whale");
+        }
     }
 
     function delegate(uint256 actorIndex, address delegatee) external {
