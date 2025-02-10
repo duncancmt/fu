@@ -381,7 +381,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         prank(actor);
         // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
-        assertNotEq(success, _transferShouldFail(actor, to, amount, beforeBalance), "unexpected failure");
+        assertEq(success, !_transferShouldFail(actor, to, amount, beforeBalance), "unexpected failure");
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
@@ -526,7 +526,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         prank(actor);
         // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
-        assertNotEq(success, _burnShouldFail(actor, amount, beforeBalance), "unexpected failure");
+        assertEq(success, !_burnShouldFail(actor, amount, beforeBalance), "unexpected failure");
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
@@ -628,7 +628,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         prank(actor);
         // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
-        assertNotEq(success, _deliverShouldFail(actor, amount, beforeBalance), "unexpected failure");
+        assertEq(success, !_deliverShouldFail(actor, amount, beforeBalance), "unexpected failure");
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
