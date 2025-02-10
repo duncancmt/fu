@@ -15,9 +15,10 @@ import {TransientStorageLayout} from "./core/TransientStorageLayout.sol";
 import {Checkpoints, LibCheckpoints} from "./core/Checkpoints.sol";
 import {RebaseQueue, LibRebaseQueue} from "./core/RebaseQueue.sol";
 import {MoonPhase} from "./core/MoonPhase.sol";
+import {whaleLimit as _whaleLimit, applyWhaleLimit as _applyWhaleLimit} from "./core/WhaleLimit.sol";
 
 import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
-import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE, SharesStorage, ternary, maybeSwap} from "./types/Shares.sol";
+import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE, SharesStorage} from "./types/Shares.sol";
 import {Tokens} from "./types/Tokens.sol";
 import {SharesToTokens} from "./types/TokensXShares.sol";
 import {SharesToTokensProportional} from "./types/TokensXBasisPointsXShares.sol";
@@ -67,7 +68,6 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     using FastTransferLib for IERC20;
     using UnsafeArray for address[];
     using UnsafeMath for uint256;
-    using {ternary, maybeSwap} for bool;
     using FastLogic for bool;
 
     function totalSupply() external view override returns (uint256) {
@@ -198,46 +198,6 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             }
         }
         return true;
-    }
-
-    function _whaleLimit(Shares shares, Shares totalShares_)
-        private
-        pure
-        returns (Shares limit, Shares newTotalShares)
-    {
-        Shares uninvolved = totalShares_ - shares;
-        limit = uninvolved.div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
-        newTotalShares = uninvolved + limit;
-    }
-
-    function _applyWhaleLimit(Shares shares, Shares totalShares_) private pure returns (Shares, Shares) {
-        (Shares limit, Shares newTotalShares) = _whaleLimit(shares, totalShares_);
-        bool condition = shares > limit;
-        return (condition.ternary(limit, shares), condition.ternary(newTotalShares, totalShares_));
-    }
-
-    function _applyWhaleLimit(Shares shares0, Shares shares1, Shares totalShares_)
-        private
-        pure
-        returns (Shares, Shares, Shares)
-    {
-        bool condition = shares0 > shares1;
-        (Shares sharesLo, Shares sharesHi) = condition.maybeSwap(shares0, shares1);
-        (Shares firstLimit, Shares newTotalShares) = _whaleLimit(sharesHi, totalShares_);
-        if (sharesHi > firstLimit) {
-            Shares uninvolved = totalShares_ - sharesHi - sharesLo;
-            Shares secondLimit = uninvolved.div(Settings.ANTI_WHALE_DIVISOR_MINUS_TWO) - ONE_SHARE;
-            if (sharesLo > secondLimit) {
-                totalShares_ = uninvolved + secondLimit.mul(2);
-                sharesHi = secondLimit;
-                sharesLo = secondLimit;
-            } else {
-                totalShares_ = newTotalShares;
-                sharesHi = firstLimit;
-            }
-        }
-        (shares0, shares1) = condition.maybeSwap(sharesLo, sharesHi);
-        return (shares0, shares1, totalShares_);
     }
 
     function _loadAccount(Storage storage $, address account)
@@ -386,10 +346,10 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             _tax(), cachedTotalSupply, cachedTotalShares, amountTokens, cachedShares
         );
         {
-            Shares limit = (newTotalShares - newShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE);
+            (Shares limit, Shares hypotheticalTotalShares) = _whaleLimit(newShares, newTotalShares);
             if (newShares >= limit) {
-                newShares = limit - ONE_SHARE;
-                newTotalShares = cachedTotalShares + newShares - cachedShares;
+                newShares = limit;
+                newTotalShares = hypotheticalTotalShares;
                 cachedShares = cast(scale(cachedTotalShares, BASIS.div(Settings.ANTI_WHALE_DIVISOR)));
                 // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
                 // requirement that the sum of all accounts' shares equal the total shares.

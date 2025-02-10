@@ -4,9 +4,10 @@ pragma solidity ^0.8.28;
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
 import {Settings} from "./Settings.sol";
+import {applyWhaleLimit} from "./WhaleLimit.sol";
 
 import {Tokens, ZERO as ZERO_TOKENS} from "../types/Tokens.sol";
-import {Shares, SharesStorage, ONE as ONE_SHARE, ternary} from "../types/Shares.sol";
+import {Shares, SharesStorage, ONE as ONE_SHARE} from "../types/Shares.sol";
 import {SharesToTokens} from "../types/TokensXShares.sol";
 import {Tokens} from "../types/Tokens.sol";
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
@@ -24,7 +25,6 @@ struct RebaseQueue {
 
 library LibRebaseQueue {
     using UnsafeMath for uint256;
-    using {ternary} for bool;
     using SharesToTokens for Shares;
 
     function initialize(RebaseQueue storage self, address account, Tokens tokens) internal {
@@ -133,17 +133,15 @@ library LibRebaseQueue {
     ) internal {
         address cursor = self.head;
         RebaseQueueElem storage elem = self.queue[cursor];
-        Shares limit = totalShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         uint256 i;
         assembly ("memory-safe") {
             mstore(0x00, gas())
             i := shr(0xfd, keccak256(0x00, 0x20))
         }
         for (;; i = i.unsafeDec()) {
-            Shares shares = sharesOf[cursor].load();
+            (Shares shares, Shares totalSharesLimited) = applyWhaleLimit(sharesOf[cursor].load(), totalShares);
 
-            shares = (shares > limit).ternary(limit, shares);
-            elem.lastTokens = _rebaseFor(elem, cursor, shares, totalSupply, totalShares);
+            elem.lastTokens = _rebaseFor(elem, cursor, shares, totalSupply, totalSharesLimited);
             cursor = elem.next;
             if (i == 0) {
                 break;

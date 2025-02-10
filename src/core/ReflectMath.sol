@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Settings} from "../core/Settings.sol";
+import {whaleLimit} from "../core/WhaleLimit.sol";
 
 import {BasisPoints, BASIS} from "../types/BasisPoints.sol";
 import {Shares, ONE as ONE_SHARE} from "../types/Shares.sol";
@@ -112,10 +113,9 @@ library ReflectMath {
         returns (Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
         // Called when `to`'s final shares will be the whale limit and `from` is sending their entire balance
-        newToShares = (totalShares - fromShares - toShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
+        (newToShares, newTotalShares) = whaleLimit(toShares, totalShares - fromShares);
         counterfactualToShares =
             cast(scale(totalShares, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(fromShares, BASIS - taxRate));
-        newTotalShares = totalShares + newToShares - fromShares - toShares;
     }
 
     function getTransferSharesFromPair(
