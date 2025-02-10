@@ -350,8 +350,13 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
     }
 
-    function _transferShouldFail(address from, address to, uint256 amount, uint256 balance) internal view returns (bool) {
-        return from == DEAD || to == DEAD || to == address(fu) || to == from || amount > balance || uint160(to) / Settings.ADDRESS_DIVISOR == 0;
+    function _transferShouldFail(address from, address to, uint256 amount, uint256 balance)
+        internal
+        view
+        returns (bool)
+    {
+        return from == DEAD || to == DEAD || to == address(fu) || to == from || amount > balance
+            || uint160(to) / Settings.ADDRESS_DIVISOR == 0;
     }
 
     function transfer(uint256 actorIndex, address to, uint256 amount, bool boundAmount) external {
@@ -457,7 +462,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             assertTrue(toIsWhale);
         }
 
-
         // Check that the balance increase of `to` is the expected value
         uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
         if (divisor != 0) {
@@ -490,7 +494,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 uint256 receiveTokensXBasisPointsHi = sendTokensHi * (10_000 - tax);
                 //console.log("receiveTokensXBasisPointsLo", receiveTokensXBasisPointsLo);
                 //console.log("receiveTokensXBasisPointsHi", receiveTokensXBasisPointsHi);
-                uint256 balanceDeltaLo = receiveTokensXBasisPointsLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
+                uint256 balanceDeltaLo =
+                    receiveTokensXBasisPointsLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
                 uint256 balanceDeltaHi =
                     (receiveTokensXBasisPointsHi * multiplier).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS * 10_000);
                 //console.log("balanceDeltaLo", balanceDeltaLo);
@@ -519,7 +524,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 assertEq(beforeTotalShares, afterTotalShares, "shares delta (no-op)");
             }
         } else {
-            assertTrue(alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating), "shares to tokens ratio increased");
+            assertTrue(
+                alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
+                "shares to tokens ratio increased"
+            );
         }
 
         // Check that nobody went over the whale limit
