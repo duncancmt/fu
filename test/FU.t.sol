@@ -6,6 +6,8 @@ import {IFU} from "src/interfaces/IFU.sol";
 import {FU} from "src/FU.sol";
 import {Buyback} from "src/Buyback.sol";
 import {Settings} from "src/core/Settings.sol";
+import {applyWhaleLimit} from "src/core/WhaleLimit.sol";
+import {Shares} from "src/types/Shares.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory, pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 import {ChecksumAddress} from "src/lib/ChecksumAddress.sol";
@@ -157,6 +159,15 @@ function saturatingAdd(uint256 x, uint256 y) pure returns (uint256 r) {
         r := add(x, y)
         r := or(r, sub(0x00, lt(r, y)))
     }
+}
+
+function applyWhaleLimit(uint256 shares0, uint256 shares1, uint256 totalShares)
+    pure
+    returns (uint256, uint256, uint256)
+{
+    (Shares shares0_, Shares shares1_, Shares totalShares_) =
+        applyWhaleLimit(Shares.wrap(shares0), Shares.wrap(shares1), Shares.wrap(totalShares));
+    return (Shares.unwrap(shares0_), Shares.unwrap(shares1_), Shares.unwrap(totalShares_));
 }
 
 interface ListOfInvariants {
@@ -484,9 +495,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 uint256 sendTokensLo = sendCrazyLo * Settings.CRAZY_BALANCE_BASIS / divisor;
                 uint256 sendTokensHi = (sendCrazyHi * Settings.CRAZY_BALANCE_BASIS).unsafeDivUp(divisor);
                 if (amount == beforeBalance) {
-                    uint512 product = alloc().omul(beforeShares, beforeCirculating);
-                    sendTokensLo = product.div(beforeTotalShares);
-                    sendTokensHi = sendTokensLo.unsafeInc(tmp().omul(sendTokensLo, beforeTotalShares) < product);
+                    (uint256 beforeSharesLimited,, uint256 beforeTotalSharesLimited) =
+                        applyWhaleLimit(beforeShares, beforeSharesTo, beforeTotalShares);
+                    uint512 product = alloc().omul(beforeSharesLimited, beforeCirculating);
+                    sendTokensLo = product.div(beforeTotalSharesLimited);
+                    sendTokensHi = sendTokensLo.unsafeInc(tmp().omul(sendTokensLo, beforeTotalSharesLimited) < product);
                 }
                 //console.log("sendTokensLo", sendTokensLo);
                 //console.log("sendTokensHi", sendTokensHi);
