@@ -407,7 +407,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
 
-        // TODO: handle failure
         if (!success) {
             assert(
                 keccak256(returndata)
@@ -613,7 +612,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
 
-        // TODO: handle failure
         if (!success) {
             assert(
                 keccak256(returndata)
@@ -715,7 +713,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
 
-        // TODO: handle failure
         if (!success) {
             assert(
                 keccak256(returndata)
