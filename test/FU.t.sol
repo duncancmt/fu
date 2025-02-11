@@ -520,6 +520,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 //console.log("balanceDeltaHi", balanceDeltaHi);
                 if (!toIsWhale) {
                     assertGe(afterBalanceTo - beforeBalanceTo + 1, balanceDeltaLo, "to delta lower");
+                } else {
+                    assertGe(afterBalanceTo + 1, beforeBalanceTo, "to delta lower (whale)");
+                    assertLe(afterBalanceTo, beforeBalanceTo + 1, "to delta upper (whale)");
                 }
                 if (!actorIsWhale) {
                     assertLe(afterBalanceTo - beforeBalanceTo, balanceDeltaHi + 1, "to delta upper");
