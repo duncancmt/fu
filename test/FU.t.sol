@@ -577,7 +577,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         fu.delegate(delegatee); // ERC5805 requires that this function return nothing or revert
 
         saveActor(actor);
-        if (delegatee != DEAD) {
+        if (delegatee != DEAD && delegatee != address(fu)) {
             saveActor(delegatee);
         }
     }
@@ -817,6 +817,17 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             }
             total -= power;
             assertEq(fu.getVotes(DEAD), power, string.concat("voting power for ", DEAD.toChecksumAddress()));
+        }
+        {
+            uint256 power;
+            address fu_ = address(fu);
+            assembly ("memory-safe") {
+                fu_ := and(0xffffffffffffffffffffffffffffffffffffffff, fu_)
+                power := tload(fu_)
+                tstore(fu_, 0x00)
+            }
+            total -= power;
+            assertEq(fu.getVotes(fu_), power, string.concat("voting power for ", fu_.toChecksumAddress()));
         }
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
