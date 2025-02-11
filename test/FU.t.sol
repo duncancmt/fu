@@ -267,6 +267,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         if (newActor == DEAD) {
             return;
         }
+        if (newActor == address(fu)) {
+            return;
+        }
         if (isActor[newActor]) {
             return;
         }
@@ -280,6 +283,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     function saveActor(address actor) internal {
         assertNotEq(actor, DEAD);
+        assertNotEq(actor, address(fu));
         assertTrue(isActor[actor]);
         lastBalance[actor] = fu.balanceOf(actor);
         shadowDelegates[actor] = fu.delegates(actor);
@@ -287,6 +291,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     function addActor(address newActor) external {
         assume(newActor != DEAD);
+        assume(newActor != address(fu));
         assume(!isActor[newActor]);
         maybeCreateActor(newActor);
         saveActor(newActor);
