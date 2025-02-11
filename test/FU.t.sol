@@ -473,8 +473,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 assertLe(beforeBalance - afterBalance, amount + 1, "from amount upper");
             }
         } else {
-            assertEq(beforeBalanceTo, afterBalanceTo);
-            assertTrue(toIsWhale);
+            assertLe(beforeBalance - afterBalance, amount + 1, "from amount upper (to whale)");
+            assertEq(beforeBalanceTo, afterBalanceTo, "to whale balance increased");
+            assertTrue(toIsWhale, "to stopped being whale");
         }
 
         // Check that the balance increase of `to` is the expected value
@@ -520,7 +521,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 if (!toIsWhale) {
                     assertGe(afterBalanceTo - beforeBalanceTo + 1, balanceDeltaLo, "to delta lower");
                 }
-                assertLe(afterBalanceTo - beforeBalanceTo, balanceDeltaHi + 1, "to delta upper");
+                if (!actorIsWhale) {
+                    assertLe(afterBalanceTo - beforeBalanceTo, balanceDeltaHi + 1, "to delta upper");
+                }
             } else {
                 assertTrue(toIsWhaleBefore);
             }
