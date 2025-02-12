@@ -379,6 +379,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         address actor = getActor(actorIndex);
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
+        } else {
+            console.log("amount", amount);
         }
         if (actor == pair) {
             assume(amount < fu.balanceOf(actor));
@@ -600,6 +602,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         address actor = getActor(actorIndex);
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
+        } else {
+            console.log("amount", amount);
         }
         assume(actor != pair || amount == 0);
 
@@ -704,6 +708,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         address actor = getActor(actorIndex);
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
+        } else {
+            console.log("amount", amount);
         }
         assume(actor != pair || amount == 0);
 
