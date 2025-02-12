@@ -443,6 +443,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         console.log(
             string.concat(
                 "summary"
+                "\n\tamount:                ", amount.itoa(),
                 "\n\tbefore from balance:   ", beforeBalance.itoa(),
                 "\n\tafter from balance:    ", afterBalance.itoa(),
                 "\n\tbefore whale limit:    ", beforeWhaleLimit.itoa(),
@@ -484,58 +485,58 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         // Check that the balance increase of `to` is the expected value
         uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
-        if (divisor != 0) {
-            uint256 multiplier = uint160(to) / Settings.ADDRESS_DIVISOR;
+        uint256 multiplier = uint160(to) / Settings.ADDRESS_DIVISOR;
 
-            /*
-            if (actor == pair) {
-                divisor = 1;
-            }
-            if (to == pair) {
-                multiplier = 1;
-            }
-            */
+        /*
+        if (actor == pair) {
+            divisor = 1;
+        }
+        if (to == pair) {
+            multiplier = 1;
+        }
+        */
 
-            if (beforeBalance >= afterBalance) {
-                uint256 sendCrazyLo = beforeBalance - afterBalance;
-                uint256 sendCrazyHi = amount;
-                (sendCrazyLo, sendCrazyHi) =
-                    (sendCrazyLo > sendCrazyHi) ? (sendCrazyHi, sendCrazyLo) : (sendCrazyLo, sendCrazyHi);
-                uint256 sendTokensLo = sendCrazyLo * Settings.CRAZY_BALANCE_BASIS / divisor;
-                uint256 sendTokensHi = (sendCrazyHi * Settings.CRAZY_BALANCE_BASIS).unsafeDivUp(divisor);
-                if (amount == beforeBalance) {
-                    (uint256 beforeSharesLimited,, uint256 beforeTotalSharesLimited) =
-                        applyWhaleLimit(beforeShares, beforeSharesTo, beforeTotalShares);
-                    uint512 product = alloc().omul(beforeSharesLimited, beforeCirculating);
-                    sendTokensLo = product.div(beforeTotalSharesLimited);
-                    sendTokensHi = sendTokensLo.unsafeInc(tmp().omul(sendTokensLo, beforeTotalSharesLimited) < product);
-                }
-                //console.log("sendTokensLo", sendTokensLo);
-                //console.log("sendTokensHi", sendTokensHi);
-                uint256 receiveTokensXBasisPointsLo = sendTokensLo * 10_000 - (sendTokensLo * tax);
-                uint256 receiveTokensXBasisPointsHi = sendTokensHi * (10_000 - tax);
-                //console.log("receiveTokensXBasisPointsLo", receiveTokensXBasisPointsLo);
-                //console.log("receiveTokensXBasisPointsHi", receiveTokensXBasisPointsHi);
-                uint256 balanceDeltaLo =
-                    receiveTokensXBasisPointsLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
-                uint256 balanceDeltaHi =
-                    (receiveTokensXBasisPointsHi * multiplier).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS * 10_000);
-                //console.log("balanceDeltaLo", balanceDeltaLo);
-                //console.log("balanceDeltaHi", balanceDeltaHi);
-                if (!toIsWhale) {
-                    assertGe(afterBalanceTo - beforeBalanceTo + 1, balanceDeltaLo, "to delta lower");
-                } else if (actor != pair)  {
-                    assertGe(afterBalanceTo + 1, beforeBalanceTo, "to delta lower (whale)");
-                    assertLe(afterBalanceTo, beforeBalanceTo + 1, "to delta upper (whale)");
-                }
-                if (!actorIsWhale) {
-                    assertLe(afterBalanceTo - beforeBalanceTo, balanceDeltaHi + 1, "to delta upper");
-                }
+        if (beforeBalance >= afterBalance) {
+            uint256 sendCrazyLo = beforeBalance - afterBalance;
+            uint256 sendCrazyHi = amount;
+            (sendCrazyLo, sendCrazyHi) =
+                (sendCrazyLo > sendCrazyHi) ? (sendCrazyHi, sendCrazyLo) : (sendCrazyLo, sendCrazyHi);
+            uint256 sendTokensLo;
+            uint256 sendTokensHi;
+            if (amount == beforeBalance) {
+                (uint256 beforeSharesLimited,, uint256 beforeTotalSharesLimited) =
+                    applyWhaleLimit(beforeShares, beforeSharesTo, beforeTotalShares);
+                uint512 product = alloc().omul(beforeSharesLimited, beforeCirculating);
+                sendTokensLo = product.div(beforeTotalSharesLimited);
+                sendTokensHi = sendTokensLo.unsafeInc(tmp().omul(sendTokensLo, beforeTotalSharesLimited) < product);
             } else {
-                assertTrue(toIsWhaleBefore);
+                sendTokensLo = sendCrazyLo * Settings.CRAZY_BALANCE_BASIS / divisor;
+                sendTokensHi = (sendCrazyHi * Settings.CRAZY_BALANCE_BASIS).unsafeDivUp(divisor);
+            }
+            //console.log("sendTokensLo", sendTokensLo);
+            //console.log("sendTokensHi", sendTokensHi);
+            uint256 receiveTokensXBasisPointsLo = sendTokensLo * 10_000 - (sendTokensLo * tax);
+            uint256 receiveTokensXBasisPointsHi = sendTokensHi * (10_000 - tax);
+            //console.log("receiveTokensXBasisPointsLo", receiveTokensXBasisPointsLo);
+            //console.log("receiveTokensXBasisPointsHi", receiveTokensXBasisPointsHi);
+            // TODO: don't do division here, instead multiply the other side of the comparison
+            uint256 balanceDeltaLo =
+                receiveTokensXBasisPointsLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
+            uint256 balanceDeltaHi =
+                (receiveTokensXBasisPointsHi * multiplier).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS * 10_000);
+            //console.log("balanceDeltaLo", balanceDeltaLo);
+            //console.log("balanceDeltaHi", balanceDeltaHi);
+            if (!toIsWhale) {
+                assertGe(afterBalanceTo - beforeBalanceTo + 1, balanceDeltaLo, "to delta lower");
+            } else {
+                // TODO: check that `amount` should've been enough to make `to` a whale
+                assertGe(afterBalanceTo + 1, beforeBalanceTo, "to balance lower (whale)");
+            }
+            if (!actorIsWhale) {
+                assertLe(afterBalanceTo - beforeBalanceTo, balanceDeltaHi + 1, "to delta upper");
             }
         } else {
-            assertEq(afterBalanceTo, beforeBalanceTo);
+            assertTrue(toIsWhaleBefore);
         }
 
         // Check that the shares (not balance) accounting is reasonable. The consistency of
