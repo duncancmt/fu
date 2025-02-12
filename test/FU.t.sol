@@ -529,7 +529,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             if (!toIsWhale) {
                 assertGe(afterBalanceTo - beforeBalanceTo + 1, balanceDeltaLo, "to delta lower");
             } else {
-                // TODO: check that `amount` should've been enough to make `to` a whale
+                assertGe(beforeBalanceTo + balanceDeltaHi + 1, afterWhaleLimitTo, "not enough for `to` to become whale");
                 assertGe(afterBalanceTo + 1, beforeBalanceTo, "to balance lower (whale)");
             }
             if (!actorIsWhale) {
