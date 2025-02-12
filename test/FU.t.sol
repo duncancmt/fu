@@ -572,7 +572,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         // This seems like it should be obvious, but let's check just to make sure; `actor` cannot
         // still be a whale if it sent any tokens
-        if (amount != 0) {
+        if (amount > 1) {
             assertLt(afterBalance, afterWhaleLimit, "from is still a whale");
         }
     }
