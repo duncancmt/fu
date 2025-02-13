@@ -226,7 +226,8 @@ python3 -m pip install --user --upgrade git+https://github.com/Dedaub/srcup#egg=
 ## Run some tests
 
 ```shell
-forge test -vvv --fuzz-seed "$(python3 -c 'import secrets; print(secrets.randbelow(2**53))')"
+foundryup -v v1.0.0
+forge test -vvv --fuzz-seed "$(python3 -c 'import secrets; print(secrets.randbelow(2**53))')" --show-progress --nmt vacuous
 ./medusa fuzz # or use your system `medusa`
 slither . # slither has a heisenbug; just run it repeatedly until it doesn't crash
 srcup --api-key "$(< ~/.config/dedaub/credentials)" --name fu --framework Foundry .
