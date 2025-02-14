@@ -564,6 +564,13 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 assertEq(beforeTotalShares, afterTotalShares, "shares delta (no-op)");
             }
         } else {
+            if (actor == pair) {
+                assertGe(afterCirculating, beforeCirculating, "circulating (from pair)");
+            } else if (to == pair) {
+                assertLe(afterCirculating, beforeCirculating, "circulating (to pair)");
+            } else {
+                assertEq(afterCirculating, beforeCirculating, "circulating");
+            }
             assertTrue(
                 alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
                 "shares to tokens ratio increased"
