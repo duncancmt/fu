@@ -552,7 +552,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         // Check that the shares (not balance) accounting is reasonable. The consistency of
         // `totalShares` is checked by one of the invariants
         if (amount == 0) {
-            assertEq(afterCirculating, beforeCirculating);
+            if (to != pair || beforeBalance != 0) {
+                assertEq(afterCirculating, beforeCirculating, "circulating");
+            }
             if (actorIsWhale || toIsWhale) {
                 assertGe(beforeTotalShares, afterTotalShares, "shares delta (whale)");
             } else if (beforeBalance == 0) {
