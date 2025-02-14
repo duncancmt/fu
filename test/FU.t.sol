@@ -974,8 +974,8 @@ contract FUInvariants is StdInvariant, StdAssertions, Common, ListOfInvariants {
 
         deployFuDependencies();
 
-        bytes32 fuSalt = 0x000000000000000000000000000000000000000000000000000000030b7e384e;
-        bytes32 buybackSalt = 0x00000000000000000000000000000000000000000000000000000004f40eacec;
+        bytes32 fuSalt = 0x000000000000000000000000000000000000000000000000000000005f502253;
+        bytes32 buybackSalt = 0x00000000000000000000000000000000000000000000000000000000f2349e0c;
         bytes memory fuInitcode = bytes.concat(
             type(FU).creationCode,
             abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)
