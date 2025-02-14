@@ -298,7 +298,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function warp(uint24 incr) external {
-        assume(incr > 0);
+        incr = uint24(bound(incr, 4 hours, 2**23 - 1));
         warp(getBlockTimestamp() + incr);
     }
 
