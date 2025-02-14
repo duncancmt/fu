@@ -1078,23 +1078,23 @@ contract FUInvariants is StdInvariant, StdAssertions, Common, ListOfInvariants {
     }
 
     function invariant_nonNegativeRebase() public virtual override {
-        return guide.invariant_nonNegativeRebase();
+        return ListOfInvariants(guide).invariant_nonNegativeRebase();
     }
 
     function invariant_delegatesNotChanged() public virtual override {
-        return guide.invariant_delegatesNotChanged();
+        return ListOfInvariants(guide).invariant_delegatesNotChanged();
     }
 
     function invariant_sumOfShares() public virtual override {
-        return guide.invariant_sumOfShares();
+        return ListOfInvariants(guide).invariant_sumOfShares();
     }
 
     function invariant_votingDelegation() public virtual override {
-        return guide.invariant_votingDelegation();
+        return ListOfInvariants(guide).invariant_votingDelegation();
     }
 
     function invariant_delegateeZero() public virtual override {
-        return guide.invariant_delegateeZero();
+        return ListOfInvariants(guide).invariant_delegateeZero();
     }
 
     function invariant_vacuous() external pure {}
