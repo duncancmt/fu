@@ -407,6 +407,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         vm.startStateDiffRecording();
         prank(actor);
         // TODO: expect events
+        // 2 optional: 0 -> from, 0 -> to...amount? what's this about a rebase?
+        vm.expectEmit();
+        vm.expectEmit();
+
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
         assertEq(success, !_transferShouldFail(actor, to, amount, beforeBalance), "unexpected failure");
 
@@ -430,6 +434,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         saveActor(to);
 
         // TODO: check for "rebase queue" events
+        // 0-8 transfer events?
+        // delegation events?
 
         uint256 afterBalance = lastBalance[actor];
         uint256 afterBalanceTo = lastBalance[to];
@@ -440,6 +446,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterSharesTo = getShares(to);
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
+
+        emit IERC20.Transfer(actor, to, (afterBalanceTo - beforeBalanceTo));
+        emit IERC20.Transfer(actor, address(0), tax);
 
         // Check that the whale limit for each account "doesn't" change
         if (actor != pair && to != pair) {
