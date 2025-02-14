@@ -33,6 +33,7 @@ abstract contract FUStorage is IERC20, INonces, IERC5805 {
         return _$().nonces[account];
     }
 
+    /// @inheritdoc IERC20
     string public constant override name = "Fuck You!";
 
     constructor() {

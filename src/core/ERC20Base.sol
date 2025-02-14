@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {IFU} from "../interfaces/IFU.sol";
+import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 
 import {FUStorage} from "../FUStorage.sol";
 import {AbstractContext} from "../utils/Context.sol";
@@ -54,14 +55,17 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
     function _consumeNonce(Storage storage $, address account) internal virtual returns (uint256);
     function clock() public view virtual override returns (uint48);
 
+    /// @inheritdoc IERC20
     function transfer(address to, uint256 amount) external override returns (bool) {
         return _transfer(_$(), _msgSender(), to, amount.toCrazyBalance()) && _success();
     }
 
+    /// @inheritdoc IERC20
     function approve(address spender, uint256 amount) external override returns (bool) {
         return _approve(_$(), _msgSender(), spender, amount.toCrazyBalance()) && _success();
     }
 
+    /// @inheritdoc IERC20
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
         CrazyBalance amount_ = amount.toCrazyBalance();

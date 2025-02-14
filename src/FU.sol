@@ -70,6 +70,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     using UnsafeMath for uint256;
     using FastLogic for bool;
 
+    /// @inheritdoc IERC20
     function totalSupply() external view override returns (uint256) {
         Storage storage $ = _$();
         return ($.totalSupply + $.pairTokens).toExternal();
@@ -242,6 +243,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         balance = cachedShares.toCrazyBalance(account, cachedTotalSupply, cachedTotalShares);
     }
 
+    /// @inheritdoc IERC20
     function balanceOf(address account) external view override returns (uint256) {
         Storage storage $ = _$();
         if (account == pair) {
@@ -610,6 +612,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         return _success();
     }
 
+    /// @inheritdoc IERC20
     function allowance(address owner, address spender) external view override returns (uint256) {
         if (owner == pair) {
             return 0;
@@ -677,6 +680,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         return _approve($, owner, _msgSender(), currentAllowance - amount);
     }
 
+    /// @inheritdoc IERC20
     function symbol() external view override returns (string memory r) {
         // slither-disable-next-line tx-origin
         if (tx.origin == address(0)) {
@@ -696,6 +700,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         }
     }
 
+    /// @inheritdoc IERC20
     uint8 public constant override decimals = Settings.DECIMALS;
 
     function clock() public view override returns (uint48) {
