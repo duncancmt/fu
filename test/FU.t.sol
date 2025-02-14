@@ -409,6 +409,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
 
+        if (to == DEAD) {
+            lastBalance[to] = beforeBalanceTo;
+        }
+
         if (!success) {
             assert(
                 keccak256(returndata)
@@ -782,13 +786,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 continue;
             }
             uint256 whaleLimit = fu.whaleLimit(actor);
-            if (actor != pair) {
-                assertLe(balance, whaleLimit, string.concat("whale limit exceeded: ", actor.toChecksumAddress()));
-            }
+            assertLe(balance, whaleLimit, string.concat("whale limit exceeded: ", actor.toChecksumAddress()));
             if (balance != whaleLimit) {
                 assertGe(balance, lastBalance[actor], string.concat("negative rebase: ", actor.toChecksumAddress()));
             }
         }
+        assertGe(fu.balanceOf(DEAD), lastBalance[DEAD], "negative rebase: DEAD");
     }
 
     function invariant_delegatesNotChanged() external view override {
