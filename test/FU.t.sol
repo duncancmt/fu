@@ -822,7 +822,14 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         assertEq(total, getTotalShares(), "sum(shares) mismatch with totalShares");
     }
 
-    function invariant_votingDelegation() external override {
+
+    function _smuggle(function () internal contraband) internal pure returns (function () internal pure smuggled) {
+        assembly ("memory-safe") {
+            smuggled := contraband
+        }
+    }
+
+    function _invariant_votingDelegation() internal {
         uint256 total;
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
@@ -871,6 +878,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             assertEq(fu.getVotes(actor), power, string.concat("voting power for ", actor.toChecksumAddress()));
         }
         assertEq(total, 0);
+    }
+
+    function invariant_votingDelegation() external view override {
+        return _smuggle(_invariant_votingDelegation)();
     }
 
     function invariant_delegateeZero() external view override {
