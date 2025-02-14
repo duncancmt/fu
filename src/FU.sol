@@ -250,7 +250,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             return $.pairTokens.toPairBalance().toExternal();
         }
         if (account == DEAD) {
-            return $.sharesOf[DEAD].load().toCrazyBalance(DEAD, $.totalSupply, $.totalShares).toExternal();
+            return $.sharesOf[DEAD].load().toCrazyBalance(account, $.totalSupply, $.totalShares).toExternal();
         }
         (CrazyBalance balance,,,,) = _balanceOf($, account);
         return balance.toExternal();
