@@ -865,12 +865,16 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 }
 
-contract FUInvariants is StdInvariant, Common, ListOfInvariants {
+contract FUInvariants is StdInvariant, StdAssertions, Common, ListOfInvariants {
+    Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code"))))); // TODO: remove
+
     using QuickSort for address[];
     using Hexlify for bytes32;
+    using ChecksumAddress for address;
 
     bool public constant IS_TEST = true;
     FUGuide internal guide;
+    IFU internal fu;
 
     function deployFuDependenciesFoundry() internal {
         // Deploy WETH
@@ -929,7 +933,7 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
         return deployFuDependenciesFoundry();
     }
 
-    function deployFu() internal returns (IFU fu, Buyback buyback, address[] memory initialHolders) {
+    function deployFu() internal returns (IFU fu_, Buyback buyback, address[] memory initialHolders) {
         initialHolders = new address[](Settings.ANTI_WHALE_DIVISOR * 2);
         for (uint256 i; i < initialHolders.length; i++) {
             // Generate unique addresses
@@ -1007,11 +1011,11 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
             deterministicDeployerFactory.call{value: 5 ether}(bytes.concat(fuSalt, fuInitcode));
         require(success);
         require(address(uint160(bytes20(returndata))) == fuPrediction);
-        fu = IFU(fuPrediction);
-        label(address(fu), "FU");
+        fu_ = IFU(fuPrediction);
+        label(address(fu_), "FU");
 
         // Lock initial liquidity
-        IUniswapV2Pair pair = IUniswapV2Pair(fu.pair());
+        IUniswapV2Pair pair = IUniswapV2Pair(fu_.pair());
         label(address(pair), "FU/WETH UniV2 Pair");
         pair.mint(buybackPrediction);
 
@@ -1021,7 +1025,7 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
         require(address(uint160(bytes20(returndata))) == buybackPrediction);
         buyback = Buyback(buybackPrediction);
 
-        excludeContract(address(fu));
+        excludeContract(address(fu_));
         excludeContract(address(pair));
         excludeContract(address(buyback));
 
@@ -1029,9 +1033,24 @@ contract FUInvariants is StdInvariant, Common, ListOfInvariants {
     }
 
     function setUp() external {
-        (IFU fu,, address[] memory actors) = deployFu();
+        address[] memory actors;
+        (fu,, actors) = deployFu();
         guide = new FUGuide(fu, actors);
         warp(EPOCH);
+    }
+
+    function test_name() external {
+        assertEq(fu.name(), "Fuck You!");
+    }
+
+    function test_symbol() external {
+        assertEq(fu.symbol(), string.concat("Fuck you, ", address(this).toChecksumAddress(), "!"));
+        vm.prank(address(this), address(0)); // TODO: incompatible with medusa
+        assertEq(fu.symbol(), "FU");
+    }
+
+    function test_decimals() external {
+        assertEq(fu.decimals(), 35);
     }
 
     function invariant_nonNegativeRebase() public virtual override {
