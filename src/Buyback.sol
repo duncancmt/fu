@@ -97,7 +97,7 @@ contract Buyback is TwoStepOwnable, Context {
         require(initialOwner != address(0));
         require(ownerFee_ < BASIS);
 
-        require(uint160(address(this)) / Settings.ADDRESS_DIVISOR == Settings.CRAZY_BALANCE_BASIS);
+        require(uint160(address(this)) >> Settings.ADDRESS_SHIFT == Settings.CRAZY_BALANCE_BASIS);
 
         emit IFU.GitCommit(gitCommit);
 

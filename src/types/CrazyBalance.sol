@@ -78,7 +78,7 @@ library CrazyBalanceArithmetic {
         // slither-disable-next-line divide-before-multiply
         return CrazyBalance.wrap(
             Tokens.unwrap(
-                tmp().omul(shares, totalSupply.mul(uint160(account) / Settings.ADDRESS_DIVISOR)).div(
+                tmp().omul(shares, totalSupply.mul(uint160(account) >> Settings.ADDRESS_SHIFT)).div(
                     totalShares.mul(Settings.CRAZY_BALANCE_BASIS)
                 )
             )
@@ -89,7 +89,7 @@ library CrazyBalanceArithmetic {
         unchecked {
             // slither-disable-next-line divide-before-multiply
             return CrazyBalance.wrap(
-                Tokens.unwrap(tokens) * (uint160(account) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS
+                Tokens.unwrap(tokens) * (uint160(account) >> Settings.ADDRESS_SHIFT) / Settings.CRAZY_BALANCE_BASIS
             );
         }
     }
@@ -100,7 +100,7 @@ library CrazyBalanceArithmetic {
             // zero is required.
             return Tokens.wrap(
                 CrazyBalance.unwrap(balance) * Settings.CRAZY_BALANCE_BASIS
-                    / (uint160(account) / Settings.ADDRESS_DIVISOR)
+                    / (uint160(account) >> Settings.ADDRESS_SHIFT)
             );
         }
     }

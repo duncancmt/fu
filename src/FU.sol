@@ -103,7 +103,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         require(length >= Settings.ANTI_WHALE_DIVISOR * 2);
 
         pair = address(pairFor(WETH, this));
-        require(uint160(pair) / Settings.ADDRESS_DIVISOR == 1);
+        require(uint160(pair) >> Settings.ADDRESS_SHIFT == 1);
 
         assembly ("memory-safe") {
             log0(add(0x20, image_), mload(image_))
@@ -137,7 +137,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         {
             Shares toMint = totalShares_ - $.sharesOf[DEAD].load();
             address prev = initialHolders.unsafeGet(0);
-            require(uint160(prev) >= Settings.ADDRESS_DIVISOR);
+            require(uint160(prev) >> Settings.ADDRESS_SHIFT != 0);
             // slither-disable-next-line divide-before-multiply
             Shares sharesRest = toMint.div(length);
             {
@@ -477,7 +477,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             return _transferToPair($, from, to, amount);
         }
 
-        if ((to == DEAD).or(to == address(this)).or(uint160(to) / Settings.ADDRESS_DIVISOR == 0)) {
+        if ((to == DEAD).or(to == address(this)).or(uint160(to) >> Settings.ADDRESS_SHIFT == 0)) {
             if (_check()) {
                 revert ERC20InvalidReceiver(to);
             }

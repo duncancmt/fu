@@ -42,6 +42,7 @@ library Settings {
     // and the minimum shares ratio, approximately 859 million.
 
     uint256 internal constant ADDRESS_DIVISOR = 0x80000000000000000000000000000000; // 2 ** 160 / (CRAZY_BALANCE_BASIS + 1)
+    uint256 internal constant ADDRESS_SHIFT = 127; // log_2(ADDRESS_DIVISOR)
 
     // This constant is intertwined with a bunch of hex literals in `Checkpoints.sol`, because
     // Solidity has poor support for introspecting the range of user-defined types and for defining
