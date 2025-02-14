@@ -375,7 +375,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             || uint160(to) / Settings.ADDRESS_DIVISOR == 0;
     }
 
-    function transfer(uint256 actorIndex, address to, uint256 amount, bool boundAmount) external {
+    function transfer(uint256 actorIndex, address to, uint256 amount, bool boundTo, bool boundAmount) external {
         address actor = getActor(actorIndex);
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
@@ -385,7 +385,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         if (actor == pair) {
             assume(amount < fu.balanceOf(actor));
         }
-        maybeCreateActor(to);
+        if (boundTo) {
+            to = actors[uint160(to) % actors.length];
+        } else {
+            maybeCreateActor(to);
+        }
 
         uint256 beforeBalance = lastBalance[actor];
         uint256 beforeBalanceTo = fu.balanceOf(to);
