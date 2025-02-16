@@ -317,14 +317,13 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     function _pokeRebaseQueueTo(
         Storage storage $,
         address to,
-        CrazyBalance amount,
         Shares originalShares,
         Shares newShares,
         Tokens newTotalSupply,
         Shares newTotalShares
     ) private {
         if (originalShares == ZERO_SHARES) {
-            if (amount != ZERO_BALANCE) {
+            if (newShares != ZERO_SHARES) {
                 $.rebaseQueue.enqueue(to, newShares, newTotalSupply, newTotalShares);
             }
         } else {
@@ -383,7 +382,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             $.checkpoints.burn($.delegates[to], originalShares.toVotes() - newShares.toVotes(), clock());
         }
 
-        _pokeRebaseQueueTo($, to, amount, originalShares, newShares, newTotalSupply, newTotalShares);
+        _pokeRebaseQueueTo($, to, originalShares, newShares, newTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
@@ -584,7 +583,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         _pokeRebaseQueueFrom(
             $, from, fromBalance, amount, originalFromShares, newFromShares, cachedTotalSupply, newTotalShares
         );
-        _pokeRebaseQueueTo($, to, amount, originalToShares, newToShares, cachedTotalSupply, newTotalShares);
+        _pokeRebaseQueueTo($, to, originalToShares, newToShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
