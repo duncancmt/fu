@@ -929,6 +929,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         address head = address(uint160(uint256(load(address(fu), bytes32(uint256(_BASE_SLOT) + 4)))));
         uint256 length;
+        bool deadOnQueue;
         for (address cursor = head;;) {
             assertNotEq(
                 getShares(cursor), 0, string.concat("zero shares account ", cursor.toChecksumAddress(), " on queue")
@@ -944,6 +945,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                     tstore(cursor, 0x00)
                 }
                 assertTrue(condition, string.concat("non-actor ", cursor.toChecksumAddress(), " on rebase queue"));
+            } else {
+                assertFalse(deadOnQueue, "duplicate dead entry (multicycle?)");
+                deadOnQueue = true;
             }
 
             address cursorNext = getRebaseQueueNext(cursor);
@@ -974,6 +978,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             }
         }
 
+        assertTrue(deadOnQueue, "dead is not on the queue");
         assertEq(length, actors.length, "length mismatch");
     }
 
