@@ -224,6 +224,20 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
     }
 
+    function _rebaseQueuePrevSlot(address account) internal pure returns (bytes32 r) {
+        assembly ("memory-safe") {
+            mstore(0x00, and(0xffffffffffffffffffffffffffffffffffffffff, account))
+            mstore(0x20, add(0x03, _BASE_SLOT))
+            r := keccak256(0x00, 0x40)
+        }
+    }
+
+    function _rebaseQueueNextSlot(address account) internal pure returns (bytes32 r) {
+        unchecked {
+            return bytes32(uint256(_rebaseQueuePrevSlot(account)) + 1);
+        }
+    }
+
     function getShares(address account) internal view returns (uint256) {
         uint256 value = uint256(load(address(fu), _sharesSlot(account)));
         assertEq(
@@ -255,6 +269,18 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         assertEq(value >> 145, 0, string.concat("dirty circulating tokens slot: ", value.itoa()));
         assertNotEq(value, 0, "zero circulating tokens");
         return value;
+    }
+
+    function getRebaseQueuePrev(address account) internal view returns (address) {
+        uint256 slotValue = uint256(load(address(fu), _rebaseQueuePrevSlot(account)));
+        assertLe(slotValue, type(uint160).max, "dirty rebase queue prev slot");
+        return address(uint160(slotValue));
+    }
+
+    function getRebaseQueueNext(address account) internal view returns (address) {
+        uint256 slotValue = uint256(load(address(fu), _rebaseQueueNextSlot(account)));
+        assertLe(slotValue, type(uint160).max, "dirty rebase queue next slot");
+        return address(uint160(slotValue));
     }
 
     function getActor(uint256 actorIndex) internal returns (address actor) {
@@ -921,17 +947,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 assertTrue(condition, string.concat("non-actor ", cursor.toChecksumAddress(), " on rebase queue"));
             }
 
-            uint256 elemSlot;
-            assembly ("memory-safe") {
-                mstore(0x00, and(0xffffffffffffffffffffffffffffffffffffffff, cursor))
-                mstore(0x20, rebaseQueueBaseSlot)
-                elemSlot := keccak256(0x00, 0x40)
-            }
-
-            cursor = address(uint160(uint256(load(address(fu), bytes32(elemSlot + 1)))));
-            if (cursor == head) {
+            address cursorNext = getRebaseQueueNext(cursor);
+            assertEq(getRebaseQueuePrev(cursorNext), cursor, "prev pointer mismatch");
+            if (cursorNext == head) {
                 break;
             }
+            cursor = cursorNext;
         }
 
         for (uint256 i; i < actors.length; i++) {
