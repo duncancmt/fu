@@ -176,6 +176,7 @@ interface ListOfInvariants {
     function invariant_sumOfShares() external;
     function invariant_votingDelegation() external;
     function invariant_delegateeZero() external;
+    function invariant_rebaseQueueContents() external;
 }
 
 contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
@@ -887,6 +888,69 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     function invariant_delegateeZero() external view override {
         assertEq(fu.getVotes(address(0)), 0, "zero cannot have voting power");
     }
+
+    function _invariant_rebaseQueueContents() internal {
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            assembly ("memory-safe") {
+                tstore(and(0xffffffffffffffffffffffffffffffffffffffff, actor), 0x01)
+            }
+        }
+
+        uint256 rebaseQueueBaseSlot = uint256(_BASE_SLOT) + 3;
+        address head = address(uint160(uint256(load(address(fu), bytes32(rebaseQueueBaseSlot + 1)))));
+        uint256 queueLength;
+        for (address cursor = head;;) {
+            assertNotEq(getShares(cursor), 0, string.concat("zero shares account ", cursor.toChecksumAddress(), " on queue"));
+
+            if (cursor != DEAD) {
+                queueLength++;
+
+                bool condition;
+                assembly ("memory-safe") {
+                    cursor := and(0xffffffffffffffffffffffffffffffffffffffff, cursor)
+                    condition := tload(cursor)
+                    tstore(cursor, 0x00)
+                }
+                assertTrue(condition, string.concat("non-actor ", cursor.toChecksumAddress(), " on rebase queue"));
+            }
+
+            uint256 elemSlot;
+            assembly ("memory-safe") {
+                mstore(0x00, and(0xffffffffffffffffffffffffffffffffffffffff, cursor))
+                mstore(0x20, rebaseQueueBaseSlot)
+                elemSlot := keccak256(0x00, 0x40)
+            }
+
+            cursor = address(uint160(uint256(load(address(fu), bytes32(elemSlot + 1)))));
+            if (cursor == head) {
+                break;
+            }
+        }
+
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+
+            bool condition;
+            assembly ("memory-safe") {
+                actor := and(0xffffffffffffffffffffffffffffffffffffffff, actor)
+                condition := tload(actor)
+                tstore(actor, 0x00)
+            }
+
+            if (condition) {
+                queueLength++;
+                assertEq(getShares(actor), 0, string.concat("nonzero shares account ", actor.toChecksumAddress(), " not on queue"));
+            }
+        }
+
+        assertEq(queueLength, actors.length, "length mismatch");
+
+    }
+
+    function invariant_rebaseQueueContents() external view override {
+        return _smuggle(_invariant_rebaseQueueContents)();
+    }
 }
 
 contract FUInvariants is StdInvariant, StdAssertions, Common, ListOfInvariants {
@@ -1095,6 +1159,10 @@ contract FUInvariants is StdInvariant, StdAssertions, Common, ListOfInvariants {
 
     function invariant_delegateeZero() public virtual override {
         return ListOfInvariants(guide).invariant_delegateeZero();
+    }
+
+    function invariant_rebaseQueueContents() public virtual override {
+        return ListOfInvariants(guide).invariant_rebaseQueueContents();
     }
 
     function invariant_vacuous() external pure {}
