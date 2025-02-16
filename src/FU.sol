@@ -298,14 +298,12 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     function _pokeRebaseQueueFrom(
         Storage storage $,
         address from,
-        CrazyBalance balance,
-        CrazyBalance amount,
         Shares originalShares,
         Shares newShares,
         Tokens newTotalSupply,
         Shares newTotalShares
     ) private {
-        if (amount == balance) {
+        if (newShares == ZERO_SHARES) {
             if (originalShares != ZERO_SHARES) {
                 $.rebaseQueue.dequeue(from);
             }
@@ -448,7 +446,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        _pokeRebaseQueueFrom($, from, balance, amount, originalShares, newShares, cachedTotalSupply, newTotalShares);
+        _pokeRebaseQueueFrom($, from, originalShares, newShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
@@ -581,7 +579,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         }
 
         _pokeRebaseQueueFrom(
-            $, from, fromBalance, amount, originalFromShares, newFromShares, cachedTotalSupply, newTotalShares
+            $, from, originalFromShares, newFromShares, cachedTotalSupply, newTotalShares
         );
         _pokeRebaseQueueTo($, to, originalToShares, newToShares, cachedTotalSupply, newTotalShares);
 
@@ -790,7 +788,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        _pokeRebaseQueueFrom($, from, balance, amount, originalShares, newShares, newTotalSupply, newTotalShares);
+        _pokeRebaseQueueFrom($, from, originalShares, newShares, newTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, newTotalSupply, newTotalShares);
 
@@ -843,7 +841,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        _pokeRebaseQueueFrom($, from, balance, amount, originalShares, newShares, cachedTotalSupply, newTotalShares);
+        _pokeRebaseQueueFrom($, from, originalShares, newShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
