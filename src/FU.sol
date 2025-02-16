@@ -5,6 +5,7 @@ import {ERC20Base} from "./core/ERC20Base.sol";
 import {Context} from "./utils/Context.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
+import {IFU} from "./interfaces/IFU.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
@@ -76,11 +77,13 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         return ($.totalSupply + $.pairTokens).toExternal();
     }
 
+    /// @inheritdoc IFU
     /// @custom:security non-reentrant
     address public immutable override pair;
 
     bytes32 private immutable _imageHash;
 
+    /// @inheritdoc IFU
     function image() external view override returns (string memory) {
         return _imageHash.CIDv0();
     }
@@ -279,10 +282,12 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         return MoonPhase.moonPhase(block.timestamp);
     }
 
+    /// @inheritdoc IFU
     function tax() external view override returns (uint256) {
         return BasisPoints.unwrap(_tax());
     }
 
+    /// @inheritdoc IFU
     function whaleLimit(address potentialWhale) external view override returns (uint256) {
         if ((potentialWhale == pair).or(potentialWhale == DEAD)) {
             return type(uint256).max;

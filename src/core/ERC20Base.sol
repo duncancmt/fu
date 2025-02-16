@@ -214,14 +214,17 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
         return _delegate($, signer, delegatee);
     }
 
+    /// @inheritdoc IFU
     function burn(uint256 amount) external override returns (bool) {
         return _burn(_$(), _msgSender(), amount.toCrazyBalance()) && _success();
     }
 
+    /// @inheritdoc IFU
     function deliver(uint256 amount) external override returns (bool) {
         return _deliver(_$(), _msgSender(), amount.toCrazyBalance()) && _success();
     }
 
+    /// @inheritdoc IFU
     function burnFrom(address from, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
         address operator = _msgSender();
@@ -232,6 +235,7 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
             && _spendAllowance($, from, operator, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 
+    /// @inheritdoc IFU
     function deliverFrom(address from, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
         address operator = _msgSender();
