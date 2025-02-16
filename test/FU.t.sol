@@ -331,9 +331,15 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 fu.delegate(address(0));
             }
 
-            uint256 shares = getShares(actor) * oldRatio / newRatio;
-            total += shares;
-            setShares(actor, shares);
+            uint256 oldShares = getShares(actor);
+            uint256 newShares = oldShares * oldRatio / newRatio;
+            if (oldShares != 0 && newShares == 0) {
+                // zeroing the shares of an account that previously had nonzero shares corrupts the rebase queue
+                total += oldShares;
+            } else {
+                total += newShares;
+                setShares(actor, newShares);
+            }
 
             if (delegatee != address(0)) {
                 prank(actor);
