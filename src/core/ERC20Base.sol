@@ -39,7 +39,7 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
         internal
         virtual
         returns (bool);
-    function _checkAllowance(Storage storage $, address owner, CrazyBalance amount)
+    function _checkAllowance(Storage storage $, address owner, address spender, CrazyBalance amount)
         internal
         view
         virtual
@@ -47,6 +47,7 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
     function _spendAllowance(
         Storage storage $,
         address owner,
+        address spender,
         CrazyBalance amount,
         CrazyBalance currentTempAllowance,
         CrazyBalance currentAllowance
@@ -68,11 +69,12 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
     /// @inheritdoc IERC20
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
+        address operator = _msgSender();
         CrazyBalance amount_ = amount.toCrazyBalance();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance($, from, amount_);
+            _checkAllowance($, from, operator, amount_);
         return success && _transfer($, from, to, amount_)
-            && _spendAllowance($, from, amount_, currentTempAllowance, currentAllowance) && _success();
+            && _spendAllowance($, from, operator, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 
     function eip712Domain()
@@ -222,19 +224,21 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
 
     function burnFrom(address from, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
+        address operator = _msgSender();
         CrazyBalance amount_ = amount.toCrazyBalance();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance($, from, amount_);
+            _checkAllowance($, from, operator, amount_);
         return success && _burn($, from, amount_)
-            && _spendAllowance($, from, amount_, currentTempAllowance, currentAllowance) && _success();
+            && _spendAllowance($, from, operator, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 
     function deliverFrom(address from, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
+        address operator = _msgSender();
         CrazyBalance amount_ = amount.toCrazyBalance();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance($, from, amount_);
+            _checkAllowance($, from, operator, amount_);
         return success && _deliver($, from, amount_)
-            && _spendAllowance($, from, amount_, currentTempAllowance, currentAllowance) && _success();
+            && _spendAllowance($, from, operator, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 }

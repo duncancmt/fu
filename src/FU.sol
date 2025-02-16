@@ -92,7 +92,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
                 > Settings.MIN_SHARES_RATIO * Tokens.unwrap(Settings.INITIAL_SUPPLY)
         );
 
-        require(_msgSender() == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
+        require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
         {
             bool isSimulation =
                 (block.basefee < 7 wei).and(block.gaslimit > 1_000_000_000).and(block.number < 20_000_000);
@@ -622,7 +622,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         return _$().allowance[owner][spender].saturatingAdd(temporaryAllowance).toExternal();
     }
 
-    function _checkAllowance(Storage storage $, address owner, CrazyBalance amount)
+    function _checkAllowance(Storage storage $, address owner, address spender, CrazyBalance amount)
         internal
         view
         override
@@ -633,23 +633,23 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
                 return (true, ZERO_BALANCE, ZERO_BALANCE);
             }
             if (_check()) {
-                revert ERC20InsufficientAllowance(_msgSender(), 0, amount.toExternal());
+                revert ERC20InsufficientAllowance(spender, 0, amount.toExternal());
             }
             return (false, ZERO_BALANCE, ZERO_BALANCE);
         }
-        if (_msgSender() == PERMIT2) {
+        if (spender == PERMIT2) {
             return (true, MAX_BALANCE, ZERO_BALANCE);
         }
-        CrazyBalance currentTempAllowance = _getTemporaryAllowance(owner, _msgSender());
+        CrazyBalance currentTempAllowance = _getTemporaryAllowance(owner, spender);
         if (currentTempAllowance >= amount) {
             return (true, currentTempAllowance, ZERO_BALANCE);
         }
-        CrazyBalance currentAllowance = $.allowance[owner][_msgSender()];
+        CrazyBalance currentAllowance = $.allowance[owner][spender];
         if (currentAllowance >= amount - currentTempAllowance) {
             return (true, currentTempAllowance, currentAllowance);
         }
         if (_check()) {
-            revert ERC20InsufficientAllowance(_msgSender(), currentAllowance.toExternal(), amount.toExternal());
+            revert ERC20InsufficientAllowance(spender, currentAllowance.toExternal(), amount.toExternal());
         }
         return (false, ZERO_BALANCE, ZERO_BALANCE);
     }
@@ -657,22 +657,23 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     function _spendAllowance(
         Storage storage $,
         address owner,
+        address spender,
         CrazyBalance amount,
         CrazyBalance currentTempAllowance,
         CrazyBalance currentAllowance
     ) internal override returns (bool) {
         if (currentAllowance == ZERO_BALANCE) {
-            _setTemporaryAllowance(owner, _msgSender(), currentTempAllowance - amount);
+            _setTemporaryAllowance(owner, spender, currentTempAllowance - amount);
             return true;
         }
         if (currentTempAllowance != ZERO_BALANCE) {
             amount = amount - currentTempAllowance;
-            _setTemporaryAllowance(owner, _msgSender(), ZERO_BALANCE);
+            _setTemporaryAllowance(owner, spender, ZERO_BALANCE);
         }
         if (currentAllowance.isMax()) {
             return true;
         }
-        return _approve($, owner, _msgSender(), currentAllowance - amount);
+        return _approve($, owner, spender, currentAllowance - amount);
     }
 
     /// @inheritdoc IERC20
@@ -686,7 +687,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             mstore(0x40, add(0x0a, r))
         }
         // slither-disable-next-line unused-return
-        _msgSender().toChecksumAddress();
+        msg.sender.toChecksumAddress();
         assembly ("memory-safe") {
             mstore(add(0x0a, r), 0x4675636b20796f752c20)
             mstore(r, 0x35)
