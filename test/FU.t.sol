@@ -325,7 +325,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function warp(uint24 incr) external {
-        incr = uint24(bound(incr, 4 hours, 2**23 - 1));
+        incr = uint24(bound(incr, 4 hours, 2 ** 23 - 1));
         warp(getBlockTimestamp() + incr);
     }
 
@@ -563,8 +563,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             //console.log("receiveTokensXBasisPointsLo", receiveTokensXBasisPointsLo);
             //console.log("receiveTokensXBasisPointsHi", receiveTokensXBasisPointsHi);
             // TODO: don't do division here, instead multiply the other side of the comparison
-            uint256 balanceDeltaLo =
-                receiveTokensXBasisPointsLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
+            uint256 balanceDeltaLo = receiveTokensXBasisPointsLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
             uint256 balanceDeltaHi =
                 (receiveTokensXBasisPointsHi * multiplier).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS * 10_000);
             //console.log("balanceDeltaLo", balanceDeltaLo);
@@ -855,7 +854,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         assertEq(total, getTotalShares(), "sum(shares) mismatch with totalShares");
     }
 
-
     function _smuggle(function () internal contraband) internal pure returns (function () internal pure smuggled) {
         assembly ("memory-safe") {
             smuggled := contraband
@@ -933,7 +931,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         address head = address(uint160(uint256(load(address(fu), bytes32(rebaseQueueBaseSlot + 1)))));
         uint256 queueLength;
         for (address cursor = head;;) {
-            assertNotEq(getShares(cursor), 0, string.concat("zero shares account ", cursor.toChecksumAddress(), " on queue"));
+            assertNotEq(
+                getShares(cursor), 0, string.concat("zero shares account ", cursor.toChecksumAddress(), " on queue")
+            );
 
             if (cursor != DEAD) {
                 queueLength++;
@@ -967,12 +967,15 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
             if (condition) {
                 queueLength++;
-                assertEq(getShares(actor), 0, string.concat("nonzero shares account ", actor.toChecksumAddress(), " not on queue"));
+                assertEq(
+                    getShares(actor),
+                    0,
+                    string.concat("nonzero shares account ", actor.toChecksumAddress(), " not on queue")
+                );
             }
         }
 
         assertEq(queueLength, actors.length, "length mismatch");
-
     }
 
     function invariant_rebaseQueueContents() external view override {

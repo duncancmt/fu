@@ -578,9 +578,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             );
         }
 
-        _pokeRebaseQueueFrom(
-            $, from, originalFromShares, newFromShares, cachedTotalSupply, newTotalShares
-        );
+        _pokeRebaseQueueFrom($, from, originalFromShares, newFromShares, cachedTotalSupply, newTotalShares);
         _pokeRebaseQueueTo($, to, originalToShares, newToShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
