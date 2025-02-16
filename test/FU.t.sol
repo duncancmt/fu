@@ -927,16 +927,15 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             }
         }
 
-        uint256 rebaseQueueBaseSlot = uint256(_BASE_SLOT) + 3;
-        address head = address(uint160(uint256(load(address(fu), bytes32(rebaseQueueBaseSlot + 1)))));
-        uint256 queueLength;
+        address head = address(uint160(uint256(load(address(fu), bytes32(uint256(_BASE_SLOT) + 4)))));
+        uint256 length;
         for (address cursor = head;;) {
             assertNotEq(
                 getShares(cursor), 0, string.concat("zero shares account ", cursor.toChecksumAddress(), " on queue")
             );
 
             if (cursor != DEAD) {
-                queueLength++;
+                length++;
 
                 bool condition;
                 assembly ("memory-safe") {
@@ -966,7 +965,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             }
 
             if (condition) {
-                queueLength++;
+                length++;
                 assertEq(
                     getShares(actor),
                     0,
@@ -975,7 +974,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             }
         }
 
-        assertEq(queueLength, actors.length, "length mismatch");
+        assertEq(length, actors.length, "length mismatch");
     }
 
     function invariant_rebaseQueueContents() external view override {
