@@ -18,7 +18,7 @@ import {MoonPhase} from "./core/MoonPhase.sol";
 import {whaleLimit as _whaleLimit, applyWhaleLimit as _applyWhaleLimit} from "./core/WhaleLimit.sol";
 
 import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
-import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE, SharesStorage} from "./types/Shares.sol";
+import {Shares, ZERO as ZERO_SHARES, SharesStorage} from "./types/Shares.sol";
 import {Tokens} from "./types/Tokens.sol";
 import {SharesToTokens} from "./types/TokensXShares.sol";
 import {SharesToTokensProportional} from "./types/TokensXBasisPointsXShares.sol";
