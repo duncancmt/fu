@@ -12,9 +12,12 @@ import {FUDeploy, Common} from "./Deploy.t.sol";
 import {StdCheats} from "@forge-std/StdCheats.sol";
 
 contract BuybackTest is FUDeploy, Test {
-    // Some helpful constants
-    BasisPoints public constant ZERO_BP = BasisPoints.wrap(0);
-    BasisPoints public constant THIRTY_BP = BasisPoints.wrap(30);
+    function wethBalanceSlot() internal view returns (bytes32) {
+        return keccak256(abi.encode(fu.pair(), bytes32(uint256(3))));
+    }
+    function fuBalanceSlot() internal pure returns (bytes32) {
+        return 0x00000000000000000000000000000000e086ec3a639808bbda893d5b4ac93601;
+    }
 
     // --------------------------------------
     // Test: constructor correctness
@@ -69,7 +72,7 @@ contract BuybackTest is FUDeploy, Test {
     function testRenounceOwnershipSuccessWhenFeeZero() public {
         // First set fee to zero
         prank(buyback.owner());
-        buyback.setFee(ZERO_BP);
+        buyback.setFee(BasisPoints.wrap(0));
 
         // Now renounce ownership
         prank(buyback.owner());
@@ -156,10 +159,8 @@ contract BuybackTest is FUDeploy, Test {
         uint256 percentIncrease = 1;
 
         // Step 1: Increase the liquidity
-        bytes32 wethBalanceSlot = keccak256(abi.encode(pair, bytes32(uint256(3))));
-        store(address(WETH), wethBalanceSlot, bytes32(uint256(load(address(WETH), wethBalanceSlot)) * (percentIncrease + 100) / 100));
-        bytes32 fuBalanceSlot = 0x00000000000000000000000000000000e086ec3a639808bbda893d5b4ac93601;
-        store(address(fu), fuBalanceSlot, bytes32(uint256(load(address(fu), fuBalanceSlot)) * (percentIncrease + 100) / 100));
+        store(address(WETH), wethBalanceSlot(), bytes32(uint256(load(address(WETH), wethBalanceSlot())) * (percentIncrease + 100) / 100));
+        store(address(fu), fuBalanceSlot(), bytes32(uint256(load(address(fu), fuBalanceSlot())) * (percentIncrease + 100) / 100));
         pair.sync();
 
         // Step 1: Consult the oracle and store the cumulatives
@@ -171,7 +172,7 @@ contract BuybackTest is FUDeploy, Test {
         warp(getBlockTimestamp() + elapsed);
 
         // Step 4: Decrease the price slightly so that we pass the WETH/FU price check
-        store(address(fu), fuBalanceSlot, bytes32(uint256(load(address(fu), fuBalanceSlot)) * 10001 / 10000));
+        store(address(fu), fuBalanceSlot(), bytes32(uint256(load(address(fu), fuBalanceSlot())) * 10001 / 10000));
 
         // Step 5: Check events
 
@@ -229,22 +230,28 @@ contract BuybackTest is FUDeploy, Test {
         assertGe(WETH.balanceOf(owner), expectedOwnerFees * (10000 - priceImpactToleranceBp) / 10000);
     }
 
-    /*
     function testBuybackRevertPriceTooFresh() public {
         // Must do a consult, but we do it too recently to cause revert in buyback
-        vm.warp(block.timestamp + 10);
+        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
+        warp(getBlockTimestamp() + elapsed);
         buyback.consult();
+
+        // Increase liquidity so that there's some LP tokens to burn
+        store(address(WETH), wethBalanceSlot(), bytes32(uint256(load(address(WETH), wethBalanceSlot())) * 10001 / 10000));
+        store(address(fu), fuBalanceSlot(), bytes32(uint256(load(address(fu), fuBalanceSlot())) * 10001 / 10000));
+        IUniswapV2Pair(fu.pair()).sync();
 
         // Now buyback should revert with PriceTooFresh, because not enough time has elapsed
         vm.expectRevert(
             abi.encodeWithSelector(
                 Buyback.PriceTooFresh.selector,
-                0 // or 10 or so.  The code uses `block.timestamp - timestampLast`.
+                0
             )
         );
         buyback.buyback();
     }
 
+    /*
     function testBuybackRevertPriceTooStale() public {
         // Do a consult at time T
         vm.warp(block.timestamp + 10);
