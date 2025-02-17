@@ -382,9 +382,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeTotalShares = getTotalShares();
         uint256 tax = fu.tax();
 
-        vm.recordLogs();
-        vm.startStateDiffRecording();
-        prank(actor);
         // TODO: expect events
         if (!_transferShouldFail(actor, to, amount, beforeBalance)) {
             expectEmit(true, true, true, false, address(fu));
@@ -392,6 +389,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             expectEmit(true, true, true, false, address(fu));
             emit IERC20.Transfer(actor, address(0), type(uint256).max);
         }
+
+        vm.recordLogs();
+        vm.startStateDiffRecording();
+        prank(actor);
 
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
         assertEq(success, !_transferShouldFail(actor, to, amount, beforeBalance), "unexpected failure");
