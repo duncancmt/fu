@@ -8,6 +8,7 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "./interfaces/IFU.sol";
 import {IERC5805} from "./interfaces/IERC5805.sol";
 import {IERC6372} from "./interfaces/IERC6372.sol";
+import {IERC7674} from "./interfaces/IERC7674.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
@@ -606,6 +607,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         return true;
     }
 
+    /// @inheritdoc IERC7674
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
         if (spender == PERMIT2) {
             return _success();
