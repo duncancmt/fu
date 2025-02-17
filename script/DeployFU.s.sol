@@ -142,6 +142,6 @@ contract DeployFU is Script {
         require(pair.balanceOf(address(buyback)) == liquidity);
         require(pair.balanceOf(address(0)) == _MINIMUM_LIQUIDITY);
         assert(address(buyback).code.length != 0);
-        assert(fu.image() == keccak256(bytes(imageUri)));
+        assert(keccak256(bytes(fu.image())) == keccak256(bytes(imageUri)));
     }
 }
