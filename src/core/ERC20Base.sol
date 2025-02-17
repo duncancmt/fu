@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IFU} from "../interfaces/IFU.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
+import {IERC2612} from "../interfaces/IERC2612.sol";
 
 import {FUStorage} from "../FUStorage.sol";
 import {AbstractContext} from "../utils/Context.sol";
@@ -117,6 +118,7 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
     }
 
     // slither-disable-next-line naming-convention
+    /// @inheritdoc IERC2612
     function DOMAIN_SEPARATOR() public view override returns (bytes32) {
         return block.chainid == _CHAIN_ID ? _cachedDomainSeparator : _computeDomainSeparator();
     }
@@ -124,6 +126,7 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
     bytes32 private constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
     uint256 private constant _ADDRESS_MASK = 0x00ffffffffffffffffffffffffffffffffffffffff;
 
+    /// @inheritdoc IERC2612
     function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external
         override
