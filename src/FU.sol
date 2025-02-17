@@ -723,6 +723,9 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     }
 
     function getPastVotes(address account, uint256 timepoint) external view override returns (uint256) {
+        if (timepoint >= clock()) {
+            revert ERC5805TimepointNotPast(timepoint, clock());
+        }
         return _$().checkpoints.get(account, uint48(timepoint)).toExternal();
     }
 
@@ -731,6 +734,9 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     }
 
     function getPastTotalVotes(uint256 timepoint) external view override returns (uint256) {
+        if (timepoint >= clock()) {
+            revert ERC5805TimepointNotPast(timepoint, clock());
+        }
         return _$().checkpoints.getTotal(uint48(timepoint)).toExternal();
     }
 

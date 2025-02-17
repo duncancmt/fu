@@ -14,4 +14,5 @@ interface IERC6093 {
     error ERC5805ExpiredSignature(uint256 expiry);
     error ERC5805InvalidSignature();
     error ERC5805InvalidNonce(uint256 actual, uint256 expected);
+    error ERC5805TimepointNotPast(uint256 timepoint, uint256 clock);
 }
