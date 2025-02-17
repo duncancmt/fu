@@ -23,8 +23,6 @@ import {VmSafe, Vm} from "@forge-std/Vm.sol";
 
 import {console} from "@forge-std/console.sol";
 
-address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
-
 // Copied directly from Foundry
 abstract contract Bound {
     using ItoA for int256;
@@ -947,6 +945,7 @@ contract FUInvariants is FUDeploy, StdInvariant, StdAssertions, ListOfInvariants
     FUGuide internal guide;
 
     function setUp() public virtual override {
+        super.setUp();
         excludeContract(address(fu));
         excludeContract(address(buyback));
         excludeContract(fu.pair());
