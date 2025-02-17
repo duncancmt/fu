@@ -416,6 +416,29 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         saveActor(actor);
         saveActor(to);
 
+        uint256 logAmountTransfer;
+        uint256 logAmountBurn;
+        for (uint256 i; i < logs.length; i++) {
+            VmSafe.Log memory log = logs[i];
+            if (log.topics.length == 3 && log.topics[0] == IERC20.Transfer.selector && log.topics[1] == bytes32(uint256(uint160(actor))) && log.topics[2] == bytes32(uint256(uint160(to)))) {
+                assertEq(log.emitter, address(fu), "wrong log emitter");
+                assertEq(log.data.length, 32, "wrong Transfer data length (amount)");
+                logAmountTransfer = uint256(bytes32(log.data));
+                log = logs[i + 1];
+                assertEq(log.topics.length, 3, "wrong burn Transfer event topics");
+                assertEq(log.topics[0], IERC20.Transfer.selector, "wrong burn Transfer event topic0");
+                assertEq(log.topics[1], bytes32(uint256(uint160(actor))), "wrong burn Transfer event `from`");
+                assertEq(log.topics[2], bytes32(0), "wrong burn Transfer event `to` (zero)");
+                assertEq(log.emitter, address(fu), "wrong log emitter");
+                assertEq(log.data.length, 32, "wrong burn Transfer data length (amount)");
+                logAmountBurn = uint256(bytes32(log.data));
+                break;
+            }
+        }
+        assertGe(logAmountTransfer + logAmountBurn + 1, amount, "log amount upper");
+        assertLe(logAmountTransfer + logAmountBurn, amount + 1, "log amount lower");
+        // TODO: check that the ratio of burn to total is approximately the tax
+
         // TODO: check for "rebase queue" events
         // 0-8 transfer events?
         // delegation events?
