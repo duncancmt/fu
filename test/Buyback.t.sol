@@ -22,6 +22,8 @@ contract BuybackTest is FUDeploy {
         // The constructor sets:
         //   ownerFee = 50% (our chosen initialFee)
         //   lastLpBalance & kTarget to the pair's balanceOf(buyback)
+
+        //using assertEq() here is causing inheritance clashes with the same function defined in `Common` and `Test`. Not sure if you care to fix.
         require(BasisPoints.unwrap(buyback.ownerFee()) == 5000, "ownerFee mismatch");
         require(buyback.lastLpBalance() == 72057594037927935999998999, "lastLpBalance mismatch");
         require(buyback.kTarget() == 72057594037927935999998999, "kTarget mismatch");
