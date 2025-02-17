@@ -968,7 +968,7 @@ contract FUInvariants is FUDeploy, StdInvariant, StdAssertions, ListOfInvariants
         assertEq(fu.name(), "Fuck You!");
     }
 
-    function test_symbol() external view {
+    function test_symbol() external {
         assertEq(fu.symbol(), string.concat("Fuck you, ", address(this).toChecksumAddress(), "!"));
         vm.prank(address(this), address(0)); // TODO: incompatible with medusa
         assertEq(fu.symbol(), "FU");

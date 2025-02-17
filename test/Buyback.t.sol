@@ -31,38 +31,38 @@ contract BuybackTest is FUDeploy, Test {
         assertEq(buyback.pendingOwner(), address(0), "pending owner mismatch");
     }
 
-    /*
-
     // --------------------------------------
     // Test: setFee
     // --------------------------------------
 
     function testSetFeeSuccess() public {
         // Only owner can set fee
-        vm.prank(OWNER);
+        vm.prank(buyback.owner());
         vm.expectEmit(true, true, true, true);
-        emit OwnerFee(BasisPoints.wrap(1000), BasisPoints.wrap(500));
+        emit Buyback.OwnerFee(BasisPoints.wrap(5000), BasisPoints.wrap(500));
         buyback.setFee(BasisPoints.wrap(500)); // Lower from 10% to 5%
         assertEq(BasisPoints.unwrap(buyback.ownerFee()), 500, "ownerFee should be updated");
     }
 
     function testSetFeeRevertNonOwner() public {
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert(abi.encodeWithSignature("PermissionDenied()"));
         buyback.setFee(BasisPoints.wrap(500));
     }
 
     function testSetFeeRevertFeeIncreased() public {
-        // Attempt to increase from 1000 -> 2000 should revert
-        vm.prank(OWNER);
+        // Attempt to increase from 5000 -> 5001 should revert
+        vm.prank(buyback.owner());
         vm.expectRevert(
             abi.encodeWithSelector(
                 Buyback.FeeIncreased.selector,
-                BasisPoints.wrap(1000),
-                BasisPoints.wrap(2000)
+                BasisPoints.wrap(5000),
+                BasisPoints.wrap(5001)
             )
         );
-        buyback.setFee(BasisPoints.wrap(2000));
+        buyback.setFee(BasisPoints.wrap(5001));
     }
+
+    /*
 
     // --------------------------------------
     // Test: renounceOwnership
@@ -226,12 +226,6 @@ contract BuybackTest is FUDeploy, Test {
         vm.expectRevert(Buyback.PriceTooLow.selector);
         buyback.buyback();
     }
-
-    // Events for reference (to match in expectEmit)
-    event OwnerFee(BasisPoints oldFee, BasisPoints newFee);
-    event OracleConsultation(address indexed keeper, uint256 cumulativeFuWeth, uint256 cumulativeWethFu);
-    event Buyback(address indexed caller, uint256 kTarget);
-
     */
 
     // Solidity inheritance is dumb
