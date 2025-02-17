@@ -236,7 +236,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function maybeCreateActor(address newActor) internal {
-        // TODO: change naming here as this may not be a new actor
         if (newActor == address(0)) {
             return;
         }
@@ -250,7 +249,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             return;
         }
 
-        // turn potential actor into a new actor as this passes all checks and is not, in fact, sussy
         isActor[newActor] = true;
         actors.push(newActor);
         assertEq(fu.balanceOf(newActor), 0);
