@@ -1,4 +1,4 @@
-![](image.svg)
+![The logo of the FU token. It is a stylized purple hand flipping "the bird" gesture with a green middle fingernail. It is surmounted by an orange loop. The fingers and thumb of the hand form an F lying on its side and the orange loop forms a U.](image.svg)
 
 FU is a shitpost of a token. It was designed and implemented purely for the
 amusement of its authors and its participants. It is, in a sense, blockchain
