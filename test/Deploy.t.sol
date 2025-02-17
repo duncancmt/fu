@@ -21,10 +21,10 @@ import "./EnvironmentConstants.sol";
 import {console} from "@forge-std/console.sol";
 
 uint256 constant EPOCH = 1740721485;
-address constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 
 abstract contract Common {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
+    address internal constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
 
     function assume(bool condition) internal pure virtual {
         vm.assume(condition);
