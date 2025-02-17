@@ -67,6 +67,14 @@ abstract contract Common {
     function store(address account, bytes32 slot, bytes32 newValue) internal {
         return vm.store(account, slot, newValue);
     }
+
+    function expectEmit(bool topic1, bool topic2, bool topic3, bool data, address emitter) internal {
+        vm.expectEmit(topic1, topic2, topic3, data, emitter);
+    }
+
+    function expectRevert(bytes memory reason) internal {
+        vm.expectRevert(reason);
+    }
 }
 
 contract FUDeploy is Common {

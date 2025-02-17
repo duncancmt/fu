@@ -37,22 +37,22 @@ contract BuybackTest is FUDeploy, Test {
 
     function testSetFeeSuccess() public {
         // Only owner can set fee
-        vm.prank(buyback.owner());
-        vm.expectEmit(true, true, true, true);
+        prank(buyback.owner());
+        expectEmit(true, true, true, true, address(buyback));
         emit Buyback.OwnerFee(BasisPoints.wrap(5000), BasisPoints.wrap(500));
         buyback.setFee(BasisPoints.wrap(500)); // Lower from 10% to 5%
         assertEq(buyback.ownerFee(), 500, "ownerFee should be updated");
     }
 
     function testSetFeeRevertNonOwner() public {
-        vm.expectRevert(abi.encodeWithSignature("PermissionDenied()"));
+        expectRevert(abi.encodeWithSignature("PermissionDenied()"));
         buyback.setFee(BasisPoints.wrap(500));
     }
 
     function testSetFeeRevertFeeIncreased() public {
         // Attempt to increase from 5000 -> 5001 should revert
-        vm.prank(buyback.owner());
-        vm.expectRevert(
+        prank(buyback.owner());
+        expectRevert(
             abi.encodeWithSelector(
                 Buyback.FeeIncreased.selector,
                 BasisPoints.wrap(5000),
@@ -68,11 +68,11 @@ contract BuybackTest is FUDeploy, Test {
 
     function testRenounceOwnershipSuccessWhenFeeZero() public {
         // First set fee to zero
-        vm.prank(buyback.owner());
+        prank(buyback.owner());
         buyback.setFee(ZERO_BP);
 
         // Now renounce ownership
-        vm.prank(buyback.owner());
+        prank(buyback.owner());
         bool success = buyback.renounceOwnership();
         assertTrue(success, "renounceOwnership() not successful");
         assertEq(buyback.owner(), address(0), "Owner not zeroed out");
@@ -81,8 +81,8 @@ contract BuybackTest is FUDeploy, Test {
 
     function testRenounceOwnershipRevertFeeNotZero() public {
         // Our current fee is 50%. Trying to renounce must revert
-        vm.prank(buyback.owner());
-        vm.expectRevert(
+        prank(buyback.owner());
+        expectRevert(
             abi.encodeWithSelector(
                 Buyback.FeeNotZero.selector,
                 BasisPoints.wrap(5000)
@@ -108,7 +108,7 @@ contract BuybackTest is FUDeploy, Test {
         uint256 expectedWethFu = (uint256(type(uint112).max / 5) << 112) / 5 ether * (EPOCH - deployTime + elapsed);
 
         // Expect event
-        vm.expectEmit(true, true, true, true);
+        expectEmit(true, true, true, true, address(buyback));
         emit Buyback.OracleConsultation(
             address(this),
             expectedFuWeth,
@@ -126,12 +126,12 @@ contract BuybackTest is FUDeploy, Test {
         uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
 
         // Let's do a first consult to set things up:
-        vm.warp(getBlockTimestamp() + elapsed);
+        warp(getBlockTimestamp() + elapsed);
         buyback.consult();
 
         // Now do a second consult too soon
-        vm.warp(getBlockTimestamp() + 10);
-        vm.expectRevert(
+        warp(getBlockTimestamp() + 10);
+        expectRevert(
             abi.encodeWithSelector(
                 Buyback.PriceTooFresh.selector,
                 10 // (block.timestamp - timestampLast) in this scenario
@@ -144,52 +144,92 @@ contract BuybackTest is FUDeploy, Test {
     // Test: buyback()
     // --------------------------------------
 
-    /*
     function testBuybackSuccess() public {
-        // Step 1: Let us do a consult with correct timing first
-        // Must warp forward enough that consult doesn't revert with PriceTooFresh
-        // but not so far that it triggers PriceTooStale
-        vm.warp(block.timestamp + buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE() + 1);
+        // Step 0: Sanity checks
+        IUniswapV2Pair pair = IUniswapV2Pair(fu.pair());
+        uint256 pairWethBalance = WETH.balanceOf(address(pair));
+        uint256 kTarget = buyback.kTarget();
+        assertEq(kTarget, pair.balanceOf(address(buyback)));
+        assertEq(kTarget, buyback.lastLpBalance());
+        address owner = buyback.owner();
+        assertEq(WETH.balanceOf(owner), 0);
+        uint256 percentIncrease = 1;
+
+        // Step 1: Increase the liquidity
+        bytes32 wethBalanceSlot = keccak256(abi.encode(pair, bytes32(uint256(3))));
+        store(address(WETH), wethBalanceSlot, bytes32(uint256(load(address(WETH), wethBalanceSlot)) * (percentIncrease + 100) / 100));
+        bytes32 fuBalanceSlot = 0x00000000000000000000000000000000e086ec3a639808bbda893d5b4ac93601;
+        store(address(fu), fuBalanceSlot, bytes32(uint256(load(address(fu), fuBalanceSlot)) * (percentIncrease + 100) / 100));
+        pair.sync();
+
+        // Step 1: Consult the oracle and store the cumulatives
+        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
+        warp(getBlockTimestamp() + elapsed);
         buyback.consult();
 
-        // Step 2: Set pair's reserves so we pass the price checks
-        // We set them in setUp, but let's reaffirm:
-        // (reserveFu=1,000,000, reserveWeth=10,000)
-        // We'll just keep them as is. It's consistent with a ratio that won't revert.
-        // Step 3: Let's put some WETH into the buyback contract to simulate having it after burn
-        // Actually the buyback gets WETH from the burn, which we mock in the pair.
-        // The pair's `fastBurn` returns 1000 FU and 10 WETH for example.
+        // Step 3: Mature the oracle price
+        warp(getBlockTimestamp() + elapsed);
 
-        // We also want to ensure the ratio from the TWAP is not artificially low
-        // So we might set mockPair's cumulative price:
-        // The code uses (reserveFu << 112) / reserveWeth for a check and also subtracts fastPriceCumulativeLast.
-        // We'll just keep it simple and rely on the big "2**112 * 1000" number we used above.
+        // Step 4: Decrease the price slightly so that we pass the WETH/FU price check
+        store(address(fu), fuBalanceSlot, bytes32(uint256(load(address(fu), fuBalanceSlot)) * 10001 / 10000));
 
-        // Step 4: Do the actual buyback
-        vm.expectEmit(true, true, true, true);
-        emit Buyback(address(this), buyback.kTarget()); // check the event
-        bool ok = buyback.buyback();
-        assertTrue(ok, "buyback() should not revert");
+        // Step 5: Check events
 
-        // Check that the new lastLpBalance and kTarget are updated
-        // Note: buyback sets:
-        //   (kTarget, lastLpBalance) = (uint120(kTarget_), uint120(pairBalance))
-        // We can check them with public getters
-        uint120 newKTarget = buyback.kTarget();
-        uint120 newLastLpBalance = buyback.lastLpBalance();
-        // newKTarget is scaled from old kTarget by ratio of new LP to old, in code.
-        // Because we are mocking the burn, the result might differ from a real scenario.
-        // We'll just check that they changed in some way:
-        assertTrue(newKTarget != 1000, "kTarget was not updated");
-        assertTrue(newLastLpBalance != 1000, "lastLpBalance was not updated");
+        // buyback burns LP tokens
+        expectEmit(true, true, true, false, address(pair));
+        emit IERC20.Transfer(address(buyback), address(pair), type(uint256).max);
+        expectEmit(true, true, true, false, address(pair));
+        emit IERC20.Transfer(address(pair), address(0), type(uint256).max);
 
-        // Also check that the contract's WETH was transferred to the owner
-        // The entire leftover WETH after fees & the swap is sent to `owner()`
-        // We can't trivially know the exact final WETH amount. We'll just check > 0.
-        uint256 ownerWethBal = mockWETH.balanceOf_(OWNER);
-        assertTrue(ownerWethBal > 0, "Owner did not receive WETH fee");
+        // pair transfers underlying tokens to buyback
+        if (address(WETH) < address(fu)) {
+            expectEmit(true, true, true, false, address(WETH));
+            emit IERC20.Transfer(address(pair), address(buyback), type(uint256).max);
+            expectEmit(true, true, true, false, address(fu));
+            emit IERC20.Transfer(address(pair), address(buyback), type(uint256).max);
+            expectEmit(true, true, true, false, address(fu));
+            emit IERC20.Transfer(address(pair), address(0), type(uint256).max);
+        } else {
+            expectEmit(true, true, true, false, address(fu));
+            emit IERC20.Transfer(address(pair), address(buyback), type(uint256).max);
+            expectEmit(true, true, true, false, address(fu));
+            emit IERC20.Transfer(address(pair), address(0), type(uint256).max);
+            expectEmit(true, true, true, false, address(WETH));
+            emit IERC20.Transfer(address(pair), address(buyback), type(uint256).max);
+        }
+
+        // buyback transfers WETH to pair
+        expectEmit(true, true, true, false, address(WETH));
+        emit IERC20.Transfer(address(buyback), address(pair), type(uint256).max);
+
+        // pair transfers FU to buyback
+        expectEmit(true, true, true, false, address(fu));
+        emit IERC20.Transfer(address(pair), address(buyback), type(uint256).max);
+        expectEmit(true, true, true, false, address(fu));
+        emit IERC20.Transfer(address(pair), address(0), type(uint256).max);
+
+        // buyback burns FU
+        expectEmit(true, true, true, false, address(fu));
+        emit IERC20.Transfer(address(buyback), address(0), type(uint256).max);
+        // buyback transfers WETH to owner
+        expectEmit(true, true, true, false, address(WETH));
+        emit IERC20.Transfer(address(buyback), owner, type(uint256).max);
+
+        // Step 6: Do the actual buyback
+        expectEmit(true, true, true, true, address(buyback));
+        emit Buyback.Buyback(address(this), kTarget);
+        assertTrue(buyback.buyback(), "buyback() should not revert");
+
+        assertEq(buyback.kTarget(), kTarget);
+        assertLt(buyback.lastLpBalance(), kTarget);
+        assertEq(buyback.lastLpBalance(), pair.balanceOf(address(buyback)));
+
+        uint256 priceImpactToleranceBp = 30;
+        uint256 expectedOwnerFees = pairWethBalance * percentIncrease / 100;
+        assertGe(WETH.balanceOf(owner), expectedOwnerFees * (10000 - priceImpactToleranceBp) / 10000);
     }
 
+    /*
     function testBuybackRevertPriceTooFresh() public {
         // Must do a consult, but we do it too recently to cause revert in buyback
         vm.warp(block.timestamp + 10);
