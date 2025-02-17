@@ -386,9 +386,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         vm.startStateDiffRecording();
         prank(actor);
         // TODO: expect events
-        // 2 optional: 0 -> from, 0 -> to...amount? what's this about a rebase?
-        vm.expectEmit();
-        vm.expectEmit();
+        if (!_transferShouldFail(actor, to, amount, beforeBalance)) {
+            expectEmit(true, true, true, false, address(fu));
+            emit IERC20.Transfer(actor, to, type(uint256).max);
+            expectEmit(true, true, true, false, address(fu));
+            emit IERC20.Transfer(actor, address(0), type(uint256).max);
+        }
 
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
         assertEq(success, !_transferShouldFail(actor, to, amount, beforeBalance), "unexpected failure");
