@@ -62,23 +62,24 @@ contract BuybackTest is FUDeploy, Test {
         buyback.setFee(BasisPoints.wrap(5001));
     }
 
-    /*
-
     // --------------------------------------
     // Test: renounceOwnership
     // --------------------------------------
+
     function testRenounceOwnershipSuccessWhenFeeZero() public {
         // First set fee to zero
-        vm.prank(OWNER);
+        vm.prank(buyback.owner());
         buyback.setFee(ZERO_BP);
 
         // Now renounce ownership
-        vm.prank(OWNER);
+        vm.prank(buyback.owner());
         bool success = buyback.renounceOwnership();
         assertTrue(success, "renounceOwnership() not successful");
         assertEq(buyback.owner(), address(0), "Owner not zeroed out");
+        assertEq(buyback.pendingOwner(), address(0), "Pending owner not zeroed out");
     }
 
+    /*
     function testRenounceOwnershipRevertFeeNotZero() public {
         // Our current fee is 10%. Trying to renounce must revert
         vm.prank(OWNER);
