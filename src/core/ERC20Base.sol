@@ -5,6 +5,7 @@ import {IFU} from "../interfaces/IFU.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IERC2612} from "../interfaces/IERC2612.sol";
 import {IERC5267} from "../interfaces/IERC5267.sol";
+import {IERC5805} from "../interfaces/IERC5805.sol";
 
 import {FUStorage} from "../FUStorage.sol";
 import {AbstractContext} from "../utils/Context.sol";
@@ -174,10 +175,12 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
 
     bytes32 private constant _DELEGATION_TYPEHASH = 0xe48329057bfd03d55e49b547132e39cffd9c1820ad7b9d4c5307691425d15adf;
 
+    /// @inheritdoc IERC5805
     function delegate(address delegatee) external override {
         return _delegate(_$(), _msgSender(), delegatee);
     }
 
+    /// @inheritdoc IERC5805
     function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)
         external
         override
