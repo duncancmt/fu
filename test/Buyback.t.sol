@@ -225,6 +225,16 @@ contract BuybackTest is FUDeploy, Test {
         assertLt(buyback.lastLpBalance(), kTarget);
         assertEq(buyback.lastLpBalance(), pair.balanceOf(address(buyback)));
 
+        (uint256 reserves0, uint256 reserves1, uint256 timestampLast) = pair.getReserves();
+        if (address(WETH) < address(fu)) {
+            assertEq(reserves0, WETH.balanceOf(address(pair)));
+            assertEq(reserves1, fu.balanceOf(address(pair)));
+        } else {
+            assertEq(reserves0, fu.balanceOf(address(pair)));
+            assertEq(reserves1, WETH.balanceOf(address(pair)));
+        }
+        assertEq(timestampLast, getBlockTimestamp());
+
         uint256 priceImpactToleranceBp = 30;
         uint256 expectedOwnerFees = pairWethBalance * percentIncrease / 100;
         assertGe(WETH.balanceOf(owner), expectedOwnerFees * (10000 - priceImpactToleranceBp) / 10000);
@@ -242,7 +252,7 @@ contract BuybackTest is FUDeploy, Test {
         IUniswapV2Pair(fu.pair()).sync();
 
         // Now buyback should revert with PriceTooFresh, because not enough time has elapsed
-        vm.expectRevert(
+        expectRevert(
             abi.encodeWithSelector(
                 Buyback.PriceTooFresh.selector,
                 0
@@ -251,39 +261,45 @@ contract BuybackTest is FUDeploy, Test {
         buyback.buyback();
     }
 
-    /*
     function testBuybackRevertPriceTooStale() public {
-        // Do a consult at time T
-        vm.warp(block.timestamp + 10);
+        // Do a consult
         buyback.consult();
 
-        // Warp far beyond (TWAP_PERIOD + TOLERANCE) to cause PriceTooStale
-        vm.warp(block.timestamp + buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE() + 1000);
+        // Increase liquidity so that there's some LP tokens to burn
+        store(address(WETH), wethBalanceSlot(), bytes32(uint256(load(address(WETH), wethBalanceSlot())) * 10001 / 10000));
+        store(address(fu), fuBalanceSlot(), bytes32(uint256(load(address(fu), fuBalanceSlot())) * 10001 / 10000));
+        IUniswapV2Pair(fu.pair()).sync();
 
-        vm.expectRevert(
+        // Warp beyond (TWAP_PERIOD + TOLERANCE) to cause PriceTooStale
+        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
+        warp(getBlockTimestamp() + elapsed + 1);
+
+        expectRevert(
             abi.encodeWithSelector(
                 Buyback.PriceTooStale.selector,
-                buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE() + 1000 - 10
+                elapsed + 1
             )
         );
         buyback.buyback();
     }
 
     function testBuybackRevertPriceTooLow() public {
-        // We'll manipulate the mock so that the price is artificially high in the cumulative
-        // but the *actual* ratio is very low, causing revert.
-        // Step 1: consult with correct timing
-        vm.warp(block.timestamp + buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE() + 1);
+        // Do a consult
         buyback.consult();
 
-        // Step 2: set reserves extremely unbalanced so that `(reserveFu << 112) / reserveWeth`
-        // is far lower than the "overestimated" cumulative price
-        mockPair.setReserves(10_000, 999_999_999, uint32(block.timestamp)); // Very small FU vs. big WETH
+        // Increase liquidity so that there's some LP tokens to burn
+        store(address(WETH), wethBalanceSlot(), bytes32(uint256(load(address(WETH), wethBalanceSlot())) * 10001 / 10000));
+        store(address(fu), fuBalanceSlot(), bytes32(uint256(load(address(fu), fuBalanceSlot())) * 10001 / 10000));
+        IUniswapV2Pair(fu.pair()).sync();
 
-        vm.expectRevert(Buyback.PriceTooLow.selector);
-        buyback.buyback();
+        // Warp so that the oracle has matured
+        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
+        warp(getBlockTimestamp() + elapsed);
+
+        (bool success, bytes memory reason) = address(buyback).call(abi.encodeCall(buyback.buyback, ()));
+        assertFalse(success);
+        assertEq(bytes4(reason), Buyback.PriceTooLow.selector);
     }
-    */
 
     // Solidity inheritance is dumb
     function deal(address who, uint256 value) internal virtual override(Common, StdCheats) {
