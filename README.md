@@ -60,27 +60,23 @@ more interesting, there are some additional restrictions the authors adopted
 during development beyond what ERC20 literally requires.
 
 * Calls to `{transfer,burn,deliver}{,From}` reduce the balance of the caller/`from`
-  by the specified amount (plus or minus 1 wei)
+  by the specified amount (±1 wei)
 * Calls to `transfer` or `transferFrom` increase the balance of `to` by a value
-  that lies in the range of reasonable interpretations of how it should be
-  calculated
-  * Lower bound: take the lesser of the balance change of caller/`from` or
-    `amount`, exactly correct for the "crazy balance" of `from`, compute the tax
-    amount exactly, round it up, deduct the tax from the transfer, apply the
-    "crazy balance" for `to`, subtract 1 wei
-  * Upper bound: take the greater of the balance change of caller/`from` or
-    `amount`, exactly correct for the "crazy balance" of `from`, exactly compute
-    the specified amount minus the tax, round it up, apply the "crazy balance"
-    for `to`, add 1 wei
+  that is ±1 wei from the "reasonable" range of values, accounting for the fact
+  that "crazy balance" and "tax" calculations have some inherent rounding
+  error. For the exact definition of "reasonable" consult the test file
+  [test/FU.t.sol](test/FU.t.sol).
 
 Basically, this is as "reasonable" as you can get for a reflection token given
 that reflection tokens operate on rationals, and therefore some degree of
 rounding error in balances is inevitable. "Normal" reflection tokens do not have
-these properties, and the authors adopted these restrictions primarily to
-demonstrate mastery of the required numerical programming techniques. This
-creates some interesting game-theoretic interplay where it sometimes becomes
-advantageous to store tokens in multiple addresses, so that the holder benefits
-from the tax applied to their own incoming and outgoing transfers.
+these properties; the balance of `from` decreases by slightly less than `amount`
+and the balance of `to` increases by slightly more than `amount * (1 -
+tax)`. The authors adopted these restrictions primarily to demonstrate mastery
+of the required numerical programming techniques. This creates some interesting
+game-theoretic interplay where it sometimes becomes advantageous to store tokens
+in multiple addresses, so that the holder benefits from the tax applied to their
+own incoming and outgoing transfers.
 
 Also the `Transfer` events emitted are as "reasonable" as possible given the
 aforementioned rounding error and "crazy balance" logic.
