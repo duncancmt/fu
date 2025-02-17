@@ -516,21 +516,19 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             uint256 receiveTokensXBasisPointsHi = sendTokensHi * (10_000 - tax);
             //console.log("receiveTokensXBasisPointsLo", receiveTokensXBasisPointsLo);
             //console.log("receiveTokensXBasisPointsHi", receiveTokensXBasisPointsHi);
-            // TODO: don't do division here, instead multiply the other side of the comparison
-            uint256 balanceDeltaLo = receiveTokensXBasisPointsLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
-            uint256 balanceDeltaHi =
-                (receiveTokensXBasisPointsHi * multiplier).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS * 10_000);
+            uint256 balanceDeltaLo = receiveTokensXBasisPointsLo * multiplier;
+            uint256 balanceDeltaHi = receiveTokensXBasisPointsHi * multiplier;
             //console.log("balanceDeltaLo", balanceDeltaLo);
             //console.log("balanceDeltaHi", balanceDeltaHi);
             if (!toIsWhale) {
-                assertGe(afterBalanceTo - beforeBalanceTo + 1, balanceDeltaLo, "to delta lower");
+                assertGe((afterBalanceTo - beforeBalanceTo + 1) * (Settings.CRAZY_BALANCE_BASIS * 10_000) + (Settings.CRAZY_BALANCE_BASIS * 10_000 / Settings.MIN_SHARES_RATIO - 1), balanceDeltaLo, "to delta lower");
             } else {
-                assertGe(beforeBalanceTo + balanceDeltaHi + 1, afterWhaleLimitTo, "not enough for `to` to become whale");
+                assertGe(((beforeBalanceTo + 1) * (Settings.CRAZY_BALANCE_BASIS * 10_000) + balanceDeltaHi).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS * 10_000), afterWhaleLimitTo, "not enough for `to` to become whale");
                 assertGe(afterBalanceTo + 1, beforeBalanceTo, "to balance lower (whale)");
             }
             if (!actorIsWhale) {
                 if (afterBalanceTo >= beforeBalanceTo) {
-                    assertLe(afterBalanceTo - beforeBalanceTo, balanceDeltaHi + 1, "to delta upper");
+                    assertLe((afterBalanceTo - beforeBalanceTo) * (Settings.CRAZY_BALANCE_BASIS * 10_000), balanceDeltaHi + (Settings.CRAZY_BALANCE_BASIS * 10_000), "to delta upper");
                 } else {
                     assertTrue(toIsWhaleBefore, "to balance decrease not because whale");
                     assertTrue(toIsWhale, "to balance decrease not because whale");
