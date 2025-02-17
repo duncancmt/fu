@@ -6,6 +6,7 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 
+import {IPFS} from "src/lib/IPFS.sol";
 import {Math} from "src/lib/Math.sol";
 import {ItoA} from "./ItoA.sol";
 import {Hexlify} from "./Hexlify.sol";
@@ -48,6 +49,7 @@ contract DeployFU is Script {
             abi.decode(vm.readFile(string.concat(vm.projectRoot(), "/airdrop.json")).parseRaw("$"), (address[]));
         initialHolders.quickSort();
         string memory image = vm.readFile(string.concat(vm.projectRoot(), "/image.svg"));
+        console.log("image URI", IPFS.CIDv0(IPFS.dagPbUnixFsHash(image)));
 
         bytes20 gitCommit;
         {
