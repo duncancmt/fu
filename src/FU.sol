@@ -5,6 +5,10 @@ import {ERC20Base} from "./core/ERC20Base.sol";
 import {Context} from "./utils/Context.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
+import {IFU} from "./interfaces/IFU.sol";
+import {IERC5805} from "./interfaces/IERC5805.sol";
+import {IERC6372} from "./interfaces/IERC6372.sol";
+import {IERC7674} from "./interfaces/IERC7674.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
@@ -18,7 +22,7 @@ import {MoonPhase} from "./core/MoonPhase.sol";
 import {whaleLimit as _whaleLimit, applyWhaleLimit as _applyWhaleLimit} from "./core/WhaleLimit.sol";
 
 import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
-import {Shares, ZERO as ZERO_SHARES, ONE as ONE_SHARE, SharesStorage} from "./types/Shares.sol";
+import {Shares, ZERO as ZERO_SHARES, SharesStorage} from "./types/Shares.sol";
 import {Tokens} from "./types/Tokens.sol";
 import {SharesToTokens} from "./types/TokensXShares.sol";
 import {SharesToTokensProportional} from "./types/TokensXBasisPointsXShares.sol";
@@ -76,11 +80,13 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         return ($.totalSupply + $.pairTokens).toExternal();
     }
 
+    /// @inheritdoc IFU
     /// @custom:security non-reentrant
     address public immutable override pair;
 
     bytes32 private immutable _imageHash;
 
+    /// @inheritdoc IFU
     function image() external view override returns (string memory) {
         return _imageHash.CIDv0();
     }
@@ -92,7 +98,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
                 > Settings.MIN_SHARES_RATIO * Tokens.unwrap(Settings.INITIAL_SUPPLY)
         );
 
-        require(_msgSender() == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
+        require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
         {
             bool isSimulation =
                 (block.basefee < 7 wei).and(block.gaslimit > 1_000_000_000).and(block.number < 20_000_000);
@@ -279,10 +285,12 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         return MoonPhase.moonPhase(block.timestamp);
     }
 
+    /// @inheritdoc IFU
     function tax() external view override returns (uint256) {
         return BasisPoints.unwrap(_tax());
     }
 
+    /// @inheritdoc IFU
     function whaleLimit(address potentialWhale) external view override returns (uint256) {
         if ((potentialWhale == pair).or(potentialWhale == DEAD)) {
             return type(uint256).max;
@@ -298,14 +306,12 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     function _pokeRebaseQueueFrom(
         Storage storage $,
         address from,
-        CrazyBalance balance,
-        CrazyBalance amount,
         Shares originalShares,
         Shares newShares,
         Tokens newTotalSupply,
         Shares newTotalShares
     ) private {
-        if (amount == balance) {
+        if (newShares == ZERO_SHARES) {
             if (originalShares != ZERO_SHARES) {
                 $.rebaseQueue.dequeue(from);
             }
@@ -317,14 +323,13 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     function _pokeRebaseQueueTo(
         Storage storage $,
         address to,
-        CrazyBalance amount,
         Shares originalShares,
         Shares newShares,
         Tokens newTotalSupply,
         Shares newTotalShares
     ) private {
         if (originalShares == ZERO_SHARES) {
-            if (amount != ZERO_BALANCE) {
+            if (newShares != ZERO_SHARES) {
                 $.rebaseQueue.enqueue(to, newShares, newTotalSupply, newTotalShares);
             }
         } else {
@@ -383,7 +388,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             $.checkpoints.burn($.delegates[to], originalShares.toVotes() - newShares.toVotes(), clock());
         }
 
-        _pokeRebaseQueueTo($, to, amount, originalShares, newShares, newTotalSupply, newTotalShares);
+        _pokeRebaseQueueTo($, to, originalShares, newShares, newTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
@@ -449,7 +454,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        _pokeRebaseQueueFrom($, from, balance, amount, originalShares, newShares, cachedTotalSupply, newTotalShares);
+        _pokeRebaseQueueFrom($, from, originalShares, newShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
@@ -581,10 +586,8 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             );
         }
 
-        _pokeRebaseQueueFrom(
-            $, from, fromBalance, amount, originalFromShares, newFromShares, cachedTotalSupply, newTotalShares
-        );
-        _pokeRebaseQueueTo($, to, amount, originalToShares, newToShares, cachedTotalSupply, newTotalShares);
+        _pokeRebaseQueueFrom($, from, originalFromShares, newFromShares, cachedTotalSupply, newTotalShares);
+        _pokeRebaseQueueTo($, to, originalToShares, newToShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 
@@ -604,6 +607,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         return true;
     }
 
+    /// @inheritdoc IERC7674
     function temporaryApprove(address spender, uint256 amount) external override returns (bool) {
         if (spender == PERMIT2) {
             return _success();
@@ -627,7 +631,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         return _$().allowance[owner][spender].saturatingAdd(temporaryAllowance).toExternal();
     }
 
-    function _checkAllowance(Storage storage $, address owner, CrazyBalance amount)
+    function _checkAllowance(Storage storage $, address owner, address spender, CrazyBalance amount)
         internal
         view
         override
@@ -638,23 +642,23 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
                 return (true, ZERO_BALANCE, ZERO_BALANCE);
             }
             if (_check()) {
-                revert ERC20InsufficientAllowance(_msgSender(), 0, amount.toExternal());
+                revert ERC20InsufficientAllowance(spender, 0, amount.toExternal());
             }
             return (false, ZERO_BALANCE, ZERO_BALANCE);
         }
-        if (_msgSender() == PERMIT2) {
+        if (spender == PERMIT2) {
             return (true, MAX_BALANCE, ZERO_BALANCE);
         }
-        CrazyBalance currentTempAllowance = _getTemporaryAllowance(owner, _msgSender());
+        CrazyBalance currentTempAllowance = _getTemporaryAllowance(owner, spender);
         if (currentTempAllowance >= amount) {
             return (true, currentTempAllowance, ZERO_BALANCE);
         }
-        CrazyBalance currentAllowance = $.allowance[owner][_msgSender()];
+        CrazyBalance currentAllowance = $.allowance[owner][spender];
         if (currentAllowance >= amount - currentTempAllowance) {
             return (true, currentTempAllowance, currentAllowance);
         }
         if (_check()) {
-            revert ERC20InsufficientAllowance(_msgSender(), currentAllowance.toExternal(), amount.toExternal());
+            revert ERC20InsufficientAllowance(spender, currentAllowance.toExternal(), amount.toExternal());
         }
         return (false, ZERO_BALANCE, ZERO_BALANCE);
     }
@@ -662,22 +666,27 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     function _spendAllowance(
         Storage storage $,
         address owner,
+        address spender,
         CrazyBalance amount,
         CrazyBalance currentTempAllowance,
         CrazyBalance currentAllowance
     ) internal override returns (bool) {
         if (currentAllowance == ZERO_BALANCE) {
-            _setTemporaryAllowance(owner, _msgSender(), currentTempAllowance - amount);
-            return true;
+            if (currentTempAllowance.isMax()) {
+                return true;
+            } else {
+                _setTemporaryAllowance(owner, spender, currentTempAllowance - amount);
+                return true;
+            }
         }
         if (currentTempAllowance != ZERO_BALANCE) {
             amount = amount - currentTempAllowance;
-            _setTemporaryAllowance(owner, _msgSender(), ZERO_BALANCE);
+            _setTemporaryAllowance(owner, spender, ZERO_BALANCE);
         }
         if (currentAllowance.isMax()) {
             return true;
         }
-        return _approve($, owner, _msgSender(), currentAllowance - amount);
+        return _approve($, owner, spender, currentAllowance - amount);
     }
 
     /// @inheritdoc IERC20
@@ -691,7 +700,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             mstore(0x40, add(0x0a, r))
         }
         // slither-disable-next-line unused-return
-        _msgSender().toChecksumAddress();
+        msg.sender.toChecksumAddress();
         assembly ("memory-safe") {
             mstore(add(0x0a, r), 0x4675636b20796f752c20)
             mstore(r, 0x35)
@@ -703,6 +712,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     /// @inheritdoc IERC20
     uint8 public constant override decimals = Settings.DECIMALS;
 
+    /// @inheritdoc IERC6372
     function clock() public view override returns (uint48) {
         unchecked {
             // slither-disable-next-line divide-before-multiply
@@ -711,21 +721,32 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     }
 
     // slither-disable-next-line naming-convention
+    /// @inheritdoc IERC6372
     string public constant override CLOCK_MODE = "mode=timestamp&epoch=1970-01-01T00%3A00%3A00Z&quantum=86400";
 
+    /// @inheritdoc IERC5805
     function getVotes(address account) external view override returns (uint256) {
         return _$().checkpoints.current(account).toExternal();
     }
 
+    /// @inheritdoc IERC5805
     function getPastVotes(address account, uint256 timepoint) external view override returns (uint256) {
+        if (timepoint >= clock()) {
+            revert ERC5805TimepointNotPast(timepoint, clock());
+        }
         return _$().checkpoints.get(account, uint48(timepoint)).toExternal();
     }
 
+    /// @inheritdoc IFU
     function getTotalVotes() external view override returns (uint256) {
         return _$().checkpoints.currentTotal().toExternal();
     }
 
+    /// @inheritdoc IFU
     function getPastTotalVotes(uint256 timepoint) external view override returns (uint256) {
+        if (timepoint >= clock()) {
+            revert ERC5805TimepointNotPast(timepoint, clock());
+        }
         return _$().checkpoints.getTotal(uint48(timepoint)).toExternal();
     }
 
@@ -791,7 +812,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        _pokeRebaseQueueFrom($, from, balance, amount, originalShares, newShares, newTotalSupply, newTotalShares);
+        _pokeRebaseQueueFrom($, from, originalShares, newShares, newTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, newTotalSupply, newTotalShares);
 
@@ -844,7 +865,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        _pokeRebaseQueueFrom($, from, balance, amount, originalShares, newShares, cachedTotalSupply, newTotalShares);
+        _pokeRebaseQueueFrom($, from, originalShares, newShares, cachedTotalSupply, newTotalShares);
 
         $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
 

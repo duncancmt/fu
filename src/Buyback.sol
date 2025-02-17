@@ -168,11 +168,14 @@ contract Buyback is TwoStepOwnable, Context {
             // the call to `burn` that happens before this ensures that
             // `pair.price?CumulativeLast()` is up-to-date. we don't need to handle any
             // counterfactual values.
-            uint256 oraclePrice =
+            uint256 wethFuPrice =
                 uint224((pair.fastPriceCumulativeLast(!_sortTokens) - priceWethFuCumulativeLast) / elapsed);
+            // `wethFuPrice` is a slight overestimate of the mean FU/WETH ratio, under the
+            // assumption that the price is a geometric process. this gives a small degree of laxity
+            // in this check.
             uint256 currentPrice = (reserveFu << 112) / reserveWeth;
-            if (currentPrice < oraclePrice) {
-                revert PriceTooLow(currentPrice, oraclePrice);
+            if (currentPrice < wethFuPrice) {
+                revert PriceTooLow(currentPrice, wethFuPrice);
             }
         }
     }
@@ -185,10 +188,18 @@ contract Buyback is TwoStepOwnable, Context {
     ) internal pure returns (uint256) {
         unchecked {
             uint256 liquiditySquared = reserve0 * reserve1;
+            // `fuWethPrice` is a slight overestimate of the WETH/FU ratio under the assumption that
+            // the price is a geometric Brownian walk. consequently, `reserveFu` is an underestimate
+            // of the average reserve of FU; FU is overvalued relative to WETH. so when we perform
+            // the constant-product swap FU->WETH, we get more WETH. in other words, we err on the
+            // side of giving `owner()` a too-favorable price during this hypothetical swap.
             uint256 reserveFu = tmp().omul(liquiditySquared, 1 << 112).div(fuWethPriceQ112).sqrt();
             uint512 n = alloc().omul(liquiditySquared, amountFu);
+            // `reserveFu` is rounded down above, and we take the floor of the square root. that
+            // makes this quotient slightly too high (in favor of `owner()`)
             uint256 d = reserveFu * (reserveFu + amountFu);
             uint256 q = n.div(d);
+            // round up (in favor of `owner()`)
             return q.unsafeInc(tmp().omul(q, d) < n);
         }
     }

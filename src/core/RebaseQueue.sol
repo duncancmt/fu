@@ -86,9 +86,12 @@ library LibRebaseQueue {
             return;
         }
 
-        address prev = elem.prev;
         address next = elem.next;
         address head = self.head;
+        if (next == head) {
+            return;
+        }
+        address prev = elem.prev;
         RebaseQueueElem storage headElem = self.queue[head];
         address tail = headElem.prev;
 

@@ -25,10 +25,12 @@ abstract contract FUStorage is IERC20, INonces, IERC5805 {
         mapping(address account => uint256 nonce) nonces;
     }
 
+    /// @inheritdoc IERC5805
     function delegates(address account) external view override returns (address delegatee) {
         return _$().delegates[account];
     }
 
+    /// @inheritdoc INonces
     function nonces(address account) external view override returns (uint256 nonce) {
         return _$().nonces[account];
     }

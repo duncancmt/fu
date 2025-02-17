@@ -3,6 +3,9 @@ pragma solidity ^0.8.28;
 
 import {IFU} from "../interfaces/IFU.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
+import {IERC2612} from "../interfaces/IERC2612.sol";
+import {IERC5267} from "../interfaces/IERC5267.sol";
+import {IERC5805} from "../interfaces/IERC5805.sol";
 
 import {FUStorage} from "../FUStorage.sol";
 import {AbstractContext} from "../utils/Context.sol";
@@ -39,7 +42,7 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
         internal
         virtual
         returns (bool);
-    function _checkAllowance(Storage storage $, address owner, CrazyBalance amount)
+    function _checkAllowance(Storage storage $, address owner, address spender, CrazyBalance amount)
         internal
         view
         virtual
@@ -47,6 +50,7 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
     function _spendAllowance(
         Storage storage $,
         address owner,
+        address spender,
         CrazyBalance amount,
         CrazyBalance currentTempAllowance,
         CrazyBalance currentAllowance
@@ -68,13 +72,15 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
     /// @inheritdoc IERC20
     function transferFrom(address from, address to, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
+        address operator = _msgSender();
         CrazyBalance amount_ = amount.toCrazyBalance();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance($, from, amount_);
+            _checkAllowance($, from, operator, amount_);
         return success && _transfer($, from, to, amount_)
-            && _spendAllowance($, from, amount_, currentTempAllowance, currentAllowance) && _success();
+            && _spendAllowance($, from, operator, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 
+    /// @inheritdoc IERC5267
     function eip712Domain()
         external
         view
@@ -82,11 +88,11 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
         returns (
             bytes1 fields,
             string memory name_,
-            string memory version,
+            string memory,
             uint256 chainId,
             address verifyingContract,
-            bytes32 salt,
-            uint256[] memory extensions
+            bytes32,
+            uint256[] memory
         )
     {
         fields = bytes1(0x0d);
@@ -115,6 +121,7 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
     }
 
     // slither-disable-next-line naming-convention
+    /// @inheritdoc IERC2612
     function DOMAIN_SEPARATOR() public view override returns (bytes32) {
         return block.chainid == _CHAIN_ID ? _cachedDomainSeparator : _computeDomainSeparator();
     }
@@ -122,6 +129,7 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
     bytes32 private constant _PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
     uint256 private constant _ADDRESS_MASK = 0x00ffffffffffffffffffffffffffffffffffffffff;
 
+    /// @inheritdoc IERC2612
     function permit(address owner, address spender, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external
         override
@@ -167,10 +175,12 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
 
     bytes32 private constant _DELEGATION_TYPEHASH = 0xe48329057bfd03d55e49b547132e39cffd9c1820ad7b9d4c5307691425d15adf;
 
+    /// @inheritdoc IERC5805
     function delegate(address delegatee) external override {
         return _delegate(_$(), _msgSender(), delegatee);
     }
 
+    /// @inheritdoc IERC5805
     function delegateBySig(address delegatee, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s)
         external
         override
@@ -212,29 +222,35 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
         return _delegate($, signer, delegatee);
     }
 
+    /// @inheritdoc IFU
     function burn(uint256 amount) external override returns (bool) {
         return _burn(_$(), _msgSender(), amount.toCrazyBalance()) && _success();
     }
 
+    /// @inheritdoc IFU
     function deliver(uint256 amount) external override returns (bool) {
         return _deliver(_$(), _msgSender(), amount.toCrazyBalance()) && _success();
     }
 
+    /// @inheritdoc IFU
     function burnFrom(address from, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
+        address operator = _msgSender();
         CrazyBalance amount_ = amount.toCrazyBalance();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance($, from, amount_);
+            _checkAllowance($, from, operator, amount_);
         return success && _burn($, from, amount_)
-            && _spendAllowance($, from, amount_, currentTempAllowance, currentAllowance) && _success();
+            && _spendAllowance($, from, operator, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 
+    /// @inheritdoc IFU
     function deliverFrom(address from, uint256 amount) external override returns (bool) {
         Storage storage $ = _$();
+        address operator = _msgSender();
         CrazyBalance amount_ = amount.toCrazyBalance();
         (bool success, CrazyBalance currentTempAllowance, CrazyBalance currentAllowance) =
-            _checkAllowance($, from, amount_);
+            _checkAllowance($, from, operator, amount_);
         return success && _deliver($, from, amount_)
-            && _spendAllowance($, from, amount_, currentTempAllowance, currentAllowance) && _success();
+            && _spendAllowance($, from, operator, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 }

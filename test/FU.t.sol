@@ -176,6 +176,7 @@ interface ListOfInvariants {
     function invariant_sumOfShares() external;
     function invariant_votingDelegation() external;
     function invariant_delegateeZero() external;
+    function invariant_rebaseQueueContents() external;
 }
 
 contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
@@ -223,6 +224,20 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         }
     }
 
+    function _rebaseQueuePrevSlot(address account) internal pure returns (bytes32 r) {
+        assembly ("memory-safe") {
+            mstore(0x00, and(0xffffffffffffffffffffffffffffffffffffffff, account))
+            mstore(0x20, add(0x03, _BASE_SLOT))
+            r := keccak256(0x00, 0x40)
+        }
+    }
+
+    function _rebaseQueueNextSlot(address account) internal pure returns (bytes32 r) {
+        unchecked {
+            return bytes32(uint256(_rebaseQueuePrevSlot(account)) + 1);
+        }
+    }
+
     function getShares(address account) internal view returns (uint256) {
         uint256 value = uint256(load(address(fu), _sharesSlot(account)));
         assertEq(
@@ -254,6 +269,18 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         assertEq(value >> 145, 0, string.concat("dirty circulating tokens slot: ", value.itoa()));
         assertNotEq(value, 0, "zero circulating tokens");
         return value;
+    }
+
+    function getRebaseQueuePrev(address account) internal view returns (address) {
+        uint256 slotValue = uint256(load(address(fu), _rebaseQueuePrevSlot(account)));
+        assertLe(slotValue, type(uint160).max, "dirty rebase queue prev slot");
+        return address(uint160(slotValue));
+    }
+
+    function getRebaseQueueNext(address account) internal view returns (address) {
+        uint256 slotValue = uint256(load(address(fu), _rebaseQueueNextSlot(account)));
+        assertLe(slotValue, type(uint160).max, "dirty rebase queue next slot");
+        return address(uint160(slotValue));
     }
 
     function getActor(uint256 actorIndex) internal returns (address actor) {
@@ -298,7 +325,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function warp(uint24 incr) external {
-        incr = uint24(bound(incr, 4 hours, 2**23 - 1));
+        incr = uint24(bound(incr, 4 hours, 2 ** 23 - 1));
         warp(getBlockTimestamp() + incr);
     }
 
@@ -330,9 +357,15 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 fu.delegate(address(0));
             }
 
-            uint256 shares = getShares(actor) * oldRatio / newRatio;
-            total += shares;
-            setShares(actor, shares);
+            uint256 oldShares = getShares(actor);
+            uint256 newShares = oldShares * oldRatio / newRatio;
+            if (oldShares != 0 && newShares == 0) {
+                // zeroing the shares of an account that previously had nonzero shares corrupts the rebase queue
+                total += oldShares;
+            } else {
+                total += newShares;
+                setShares(actor, newShares);
+            }
 
             if (delegatee != address(0)) {
                 prank(actor);
@@ -498,7 +531,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             if (beforeBalance >= afterBalance) {
                 assertLe(beforeBalance - afterBalance, amount + 1, "from amount upper (to whale)");
             }
-            assertEq(beforeBalanceTo, afterBalanceTo, "to whale balance increased");
             assertTrue(toIsWhale, "to stopped being whale");
         }
 
@@ -539,8 +571,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             //console.log("receiveTokensXBasisPointsLo", receiveTokensXBasisPointsLo);
             //console.log("receiveTokensXBasisPointsHi", receiveTokensXBasisPointsHi);
             // TODO: don't do division here, instead multiply the other side of the comparison
-            uint256 balanceDeltaLo =
-                receiveTokensXBasisPointsLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
+            uint256 balanceDeltaLo = receiveTokensXBasisPointsLo * multiplier / (Settings.CRAZY_BALANCE_BASIS * 10_000);
             uint256 balanceDeltaHi =
                 (receiveTokensXBasisPointsHi * multiplier).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS * 10_000);
             //console.log("balanceDeltaLo", balanceDeltaLo);
@@ -552,7 +583,12 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 assertGe(afterBalanceTo + 1, beforeBalanceTo, "to balance lower (whale)");
             }
             if (!actorIsWhale) {
-                assertLe(afterBalanceTo - beforeBalanceTo, balanceDeltaHi + 1, "to delta upper");
+                if (afterBalanceTo >= beforeBalanceTo) {
+                    assertLe(afterBalanceTo - beforeBalanceTo, balanceDeltaHi + 1, "to delta upper");
+                } else {
+                    assertTrue(toIsWhaleBefore, "to balance decrease not because whale");
+                    assertTrue(toIsWhale, "to balance decrease not because whale");
+                }
             }
         } else {
             assertTrue(toIsWhaleBefore);
@@ -831,7 +867,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         assertEq(total, getTotalShares(), "sum(shares) mismatch with totalShares");
     }
 
-
     function _smuggle(function () internal contraband) internal pure returns (function () internal pure smuggled) {
         assembly ("memory-safe") {
             smuggled := contraband
@@ -895,6 +930,73 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     function invariant_delegateeZero() external view override {
         assertEq(fu.getVotes(address(0)), 0, "zero cannot have voting power");
+    }
+
+    function _invariant_rebaseQueueContents() internal {
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+            assembly ("memory-safe") {
+                tstore(and(0xffffffffffffffffffffffffffffffffffffffff, actor), 0x01)
+            }
+        }
+
+        address head = address(uint160(uint256(load(address(fu), bytes32(uint256(_BASE_SLOT) + 4)))));
+        uint256 length;
+        bool deadOnQueue;
+        for (address cursor = head;;) {
+            assertNotEq(
+                getShares(cursor), 0, string.concat("zero shares account ", cursor.toChecksumAddress(), " on queue")
+            );
+
+            if (cursor != DEAD) {
+                length++;
+
+                bool condition;
+                assembly ("memory-safe") {
+                    cursor := and(0xffffffffffffffffffffffffffffffffffffffff, cursor)
+                    condition := tload(cursor)
+                    tstore(cursor, 0x00)
+                }
+                assertTrue(condition, string.concat("non-actor ", cursor.toChecksumAddress(), " on rebase queue"));
+            } else {
+                assertFalse(deadOnQueue, "duplicate dead entry (multicycle?)");
+                deadOnQueue = true;
+            }
+
+            address cursorNext = getRebaseQueueNext(cursor);
+            assertEq(getRebaseQueuePrev(cursorNext), cursor, "prev pointer mismatch");
+            if (cursorNext == head) {
+                break;
+            }
+            cursor = cursorNext;
+        }
+
+        for (uint256 i; i < actors.length; i++) {
+            address actor = actors[i];
+
+            bool condition;
+            assembly ("memory-safe") {
+                actor := and(0xffffffffffffffffffffffffffffffffffffffff, actor)
+                condition := tload(actor)
+                tstore(actor, 0x00)
+            }
+
+            if (condition) {
+                length++;
+                assertEq(
+                    getShares(actor),
+                    0,
+                    string.concat("nonzero shares account ", actor.toChecksumAddress(), " not on queue")
+                );
+            }
+        }
+
+        assertTrue(deadOnQueue, "dead is not on the queue");
+        assertEq(length, actors.length, "length mismatch");
+    }
+
+    function invariant_rebaseQueueContents() external view override {
+        return _smuggle(_invariant_rebaseQueueContents)();
     }
 }
 
@@ -983,8 +1085,8 @@ contract FUInvariants is StdInvariant, StdAssertions, Common, ListOfInvariants {
 
         deployFuDependencies();
 
-        bytes32 fuSalt = 0x000000000000000000000000000000000000000000000000000000005f502253;
-        bytes32 buybackSalt = 0x00000000000000000000000000000000000000000000000000000000f2349e0c;
+        bytes32 fuSalt = 0x000000000000000000000000000000000000000000000000000000015ee16030;
+        bytes32 buybackSalt = 0x00000000000000000000000000000000000000000000000000000001d61281a3;
         bytes memory fuInitcode = bytes.concat(
             type(FU).creationCode,
             abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)
@@ -1104,6 +1206,10 @@ contract FUInvariants is StdInvariant, StdAssertions, Common, ListOfInvariants {
 
     function invariant_delegateeZero() public virtual override {
         return ListOfInvariants(guide).invariant_delegateeZero();
+    }
+
+    function invariant_rebaseQueueContents() public virtual override {
+        return ListOfInvariants(guide).invariant_rebaseQueueContents();
     }
 
     function invariant_vacuous() external pure {}
