@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {IFU} from "../interfaces/IFU.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IERC2612} from "../interfaces/IERC2612.sol";
+import {IERC5267} from "../interfaces/IERC5267.sol";
 
 import {FUStorage} from "../FUStorage.sol";
 import {AbstractContext} from "../utils/Context.sol";
@@ -78,6 +79,7 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
             && _spendAllowance($, from, operator, amount_, currentTempAllowance, currentAllowance) && _success();
     }
 
+    /// @inheritdoc IERC5267
     function eip712Domain()
         external
         view
