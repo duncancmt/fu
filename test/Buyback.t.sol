@@ -7,9 +7,11 @@ import {IFU} from "src/interfaces/IFU.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {BasisPoints, BASIS} from "src/types/BasisPoints.sol";
-import {FUDeploy} from "./Deploy.t.sol";
+import {FUDeploy, Common} from "./Deploy.t.sol";
 
-contract BuybackTest is FUDeploy {
+import {StdCheats} from "@forge-std/StdCheats.sol";
+
+contract BuybackTest is FUDeploy, Test {
     // Some helpful constants
     BasisPoints public constant ZERO_BP = BasisPoints.wrap(0);
     BasisPoints public constant THIRTY_BP = BasisPoints.wrap(30);
@@ -18,17 +20,15 @@ contract BuybackTest is FUDeploy {
     // Test: constructor correctness
     // --------------------------------------
 
-    function testConstructor() public {
+    function testConstructor() public view {
         // The constructor sets:
         //   ownerFee = 50% (our chosen initialFee)
         //   lastLpBalance & kTarget to the pair's balanceOf(buyback)
-
-        //using assertEq() here is causing inheritance clashes with the same function defined in `Common` and `Test`. Not sure if you care to fix.
-        require(BasisPoints.unwrap(buyback.ownerFee()) == 5000, "ownerFee mismatch");
-        require(buyback.lastLpBalance() == 72057594037927935999998999, "lastLpBalance mismatch");
-        require(buyback.kTarget() == 72057594037927935999998999, "kTarget mismatch");
-        require(buyback.owner() == address(uint160(uint256(keccak256("Buyback owner")))), "owner mismatch");
-        require(buyback.pendingOwner() == address(0), "pending owner mismatch");
+        assertEq(BasisPoints.unwrap(buyback.ownerFee()), 5000, "ownerFee mismatch");
+        assertEq(buyback.lastLpBalance(), 72057594037927935999998999, "lastLpBalance mismatch");
+        assertEq(buyback.kTarget(), 72057594037927935999998999, "kTarget mismatch");
+        assertEq(buyback.owner(), address(uint160(uint256(keccak256("Buyback owner")))), "owner mismatch");
+        assertEq(buyback.pendingOwner(), address(0), "pending owner mismatch");
     }
 
     /*
@@ -116,7 +116,7 @@ contract BuybackTest is FUDeploy {
         // consult() requires that the last consult was older than (TWAP_PERIOD + TOLERANCE).
         // Right after deployment, `timestampLast` is 0. But it only sets when we do the first consult.
         // This is an edge condition. Typically you'd do a first consult, then a second one too soon.
-        
+
         // Let's do a first consult to set things up:
         vm.warp(block.timestamp + buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE() + 10);
         buyback.consult();
@@ -147,7 +147,7 @@ contract BuybackTest is FUDeploy {
         // (reserveFu=1,000,000, reserveWeth=10,000)
         // We'll just keep them as is. It's consistent with a ratio that won't revert.
         // Step 3: Let's put some WETH into the buyback contract to simulate having it after burn
-        // Actually the buyback gets WETH from the burn, which we mock in the pair. 
+        // Actually the buyback gets WETH from the burn, which we mock in the pair.
         // The pair's `fastBurn` returns 1000 FU and 10 WETH for example.
 
         // We also want to ensure the ratio from the TWAP is not artificially low
@@ -167,8 +167,8 @@ contract BuybackTest is FUDeploy {
         // We can check them with public getters
         uint120 newKTarget = buyback.kTarget();
         uint120 newLastLpBalance = buyback.lastLpBalance();
-        // newKTarget is scaled from old kTarget by ratio of new LP to old, in code. 
-        // Because we are mocking the burn, the result might differ from a real scenario. 
+        // newKTarget is scaled from old kTarget by ratio of new LP to old, in code.
+        // Because we are mocking the burn, the result might differ from a real scenario.
         // We'll just check that they changed in some way:
         assertTrue(newKTarget != 1000, "kTarget was not updated");
         assertTrue(newLastLpBalance != 1000, "lastLpBalance was not updated");
@@ -214,7 +214,7 @@ contract BuybackTest is FUDeploy {
 
     function testBuybackRevertPriceTooLow() public {
         // We'll manipulate the mock so that the price is artificially high in the cumulative
-        // but the *actual* ratio is very low, causing revert. 
+        // but the *actual* ratio is very low, causing revert.
         // Step 1: consult with correct timing
         vm.warp(block.timestamp + buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE() + 1);
         buyback.consult();
@@ -233,6 +233,9 @@ contract BuybackTest is FUDeploy {
     event Buyback(address indexed caller, uint256 kTarget);
 
     */
+
+    // Solidity inheritance is dumb
+    function deal(address who, uint256 value) internal virtual override(Common, StdCheats) {
+        return super.deal(who, value);
+    }
 }
-
-
