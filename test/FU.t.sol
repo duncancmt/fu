@@ -237,6 +237,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     function maybeCreateActor(address newActor) internal {
         // TODO: change naming here as this may not be a new actor
+        if (newActor == address(0)) {
+            return;
+        }
         if (newActor == DEAD) {
             return;
         }
@@ -255,6 +258,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function saveActor(address actor) internal {
+        assertNotEq(actor, address(0));
         assertNotEq(actor, DEAD);
         assertNotEq(actor, address(fu));
         assertTrue(isActor[actor]);
@@ -263,6 +267,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function addActor(address newActor) external {
+        assume(newActor != address(0));
         assume(newActor != DEAD);
         assume(newActor != address(fu));
         assume(!isActor[newActor]);
@@ -622,7 +627,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         fu.delegate(delegatee); // ERC5805 requires that this function return nothing or revert
 
         saveActor(actor);
-        if (delegatee != DEAD && delegatee != address(fu)) {
+        if (delegatee != address(0) && delegatee != DEAD && delegatee != address(fu)) {
             saveActor(delegatee);
         }
     }
