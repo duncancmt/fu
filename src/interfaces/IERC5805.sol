@@ -6,7 +6,7 @@ import {IERC6372} from "./IERC6372.sol";
 
 interface IERC5805 is INonces, IERC6372 {
     /// @notice Returns the current voting weight of an account.
-    /// @noticd This is the sum of the voting power delegated of each account delegating to it at
+    /// @notice This is the sum of the voting power delegated of each account delegating to it at
     /// this moment.
     function getVotes(address account) external view returns (uint256 votingWeight);
 
