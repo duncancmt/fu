@@ -6,6 +6,7 @@ import {Context} from "./utils/Context.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "./interfaces/IFU.sol";
+import {IERC6372} from "./interfaces/IERC6372.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
 import {FACTORY, pairFor} from "./interfaces/IUniswapV2Factory.sol";
@@ -708,6 +709,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     /// @inheritdoc IERC20
     uint8 public constant override decimals = Settings.DECIMALS;
 
+    /// @inheritdoc IERC6372
     function clock() public view override returns (uint48) {
         unchecked {
             // slither-disable-next-line divide-before-multiply
@@ -716,6 +718,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     }
 
     // slither-disable-next-line naming-convention
+    /// @inheritdoc IERC6372
     string public constant override CLOCK_MODE = "mode=timestamp&epoch=1970-01-01T00%3A00%3A00Z&quantum=86400";
 
     function getVotes(address account) external view override returns (uint256) {
