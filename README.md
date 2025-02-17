@@ -1,3 +1,5 @@
+![](image.svg)
+
 FU is a shitpost of a token. It was designed and implemented purely for the
 amusement of its authors and its participants. It is, in a sense, blockchain
 art. By holding FU, you are participating in this art project. The authors hope
