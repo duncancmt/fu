@@ -954,17 +954,17 @@ contract FUInvariants is FUDeploy, StdInvariant, StdAssertions, ListOfInvariants
         guide = new FUGuide(fu, actors);
     }
 
-    function test_name() external {
+    function test_name() external view {
         assertEq(fu.name(), "Fuck You!");
     }
 
-    function test_symbol() external {
+    function test_symbol() external view {
         assertEq(fu.symbol(), string.concat("Fuck you, ", address(this).toChecksumAddress(), "!"));
         vm.prank(address(this), address(0)); // TODO: incompatible with medusa
         assertEq(fu.symbol(), "FU");
     }
 
-    function test_decimals() external {
+    function test_decimals() external view {
         assertEq(fu.decimals(), 35);
     }
 
