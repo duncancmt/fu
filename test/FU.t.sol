@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "src/interfaces/IFU.sol";
 import {FU} from "src/FU.sol";
 import {Buyback} from "src/Buyback.sol";
@@ -385,6 +386,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         vm.startStateDiffRecording();
         prank(actor);
         // TODO: expect events
+        // 2 optional: 0 -> from, 0 -> to...amount? what's this about a rebase?
+        vm.expectEmit();
+        vm.expectEmit();
+
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
         assertEq(success, !_transferShouldFail(actor, to, amount, beforeBalance), "unexpected failure");
 
@@ -408,6 +413,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         saveActor(to);
 
         // TODO: check for "rebase queue" events
+        // 0-8 transfer events?
+        // delegation events?
 
         uint256 afterBalance = lastBalance[actor];
         uint256 afterBalanceTo = lastBalance[to];
@@ -418,6 +425,9 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterSharesTo = getShares(to);
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
+
+        emit IERC20.Transfer(actor, to, (afterBalanceTo - beforeBalanceTo));
+        emit IERC20.Transfer(actor, address(0), tax);
 
         // Check that the whale limit for each account "doesn't" change
         if (actor != pair && to != pair) {
