@@ -70,6 +70,13 @@ library CrazyBalanceArithmetic {
         }
     }
 
+    function saturatingSub(CrazyBalance x, CrazyBalance y) internal pure returns (CrazyBalance r) {
+        assembly ("memory-safe") {
+            r := sub(x, y)
+            r := mul(r, gt(x, y))
+        }
+    }
+
     function toCrazyBalance(Shares shares, address account, Tokens totalSupply, Shares totalShares)
         internal
         pure

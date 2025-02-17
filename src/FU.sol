@@ -368,7 +368,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         // `Transfer` event is relative to the sender of the tokens.
         CrazyBalance transferAmount = newShares.toPairBalance(newTotalSupply, newTotalShares)
             - cachedShares.toPairBalance(cachedTotalSupply, cachedTotalShares);
-        CrazyBalance burnAmount = amount - transferAmount;
+        CrazyBalance burnAmount = amount.saturatingSub(transferAmount);
 
         // State modification starts here. No more bailing out allowed.
 
@@ -435,7 +435,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         // whom the `CrazyBalance` is being calculated (`from`). We're converting `pair`'s balance
         // delta into units as if it were held by `from`.
         CrazyBalance transferAmount = newPairTokens.toCrazyBalance(from) - cachedPairTokens.toCrazyBalance(from);
-        CrazyBalance burnAmount = amount - transferAmount;
+        CrazyBalance burnAmount = amount.saturatingSub(transferAmount);
 
         // There is no need to apply the whale limit. `pair` holds tokens directly (not shares) and
         // is allowed to go over the limit.
@@ -552,7 +552,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         // emitted in the event does not accurately reflect the change in balance.
         CrazyBalance transferAmount = newToShares.toCrazyBalance(from, cachedTotalSupply, newTotalShares)
             - cachedToShares.toCrazyBalance(from, cachedTotalSupply, cachedTotalShares);
-        CrazyBalance burnAmount = amount - transferAmount;
+        CrazyBalance burnAmount = amount.saturatingSub(transferAmount);
 
         // State modification starts here. No more bailing out allowed.
 
