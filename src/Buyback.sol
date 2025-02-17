@@ -65,7 +65,7 @@ contract Buyback is TwoStepOwnable, Context {
 
     uint120 public lastLpBalance;
     uint120 public kTarget;
-    BasisPoints public ownerFee;
+    uint16 public ownerFee;
 
     // TODO: revisit these constants
     uint256 public constant TWAP_PERIOD = 1 days;
@@ -108,23 +108,23 @@ contract Buyback is TwoStepOwnable, Context {
         _sortTokens = address(token) > address(WETH);
         lastLpBalance = kTarget = uint120(IERC20(pair).fastBalanceOf(address(this)));
         emit Buyback(_msgSender(), kTarget);
-        ownerFee = ownerFee_;
-        emit OwnerFee(BASIS, ownerFee);
+        ownerFee = uint16(BasisPoints.unwrap(ownerFee_));
+        emit OwnerFee(BASIS, ownerFee_);
     }
 
     function setFee(BasisPoints newOwnerFee) external onlyOwner returns (bool) {
-        BasisPoints oldFee = ownerFee;
+        BasisPoints oldFee = BasisPoints.wrap(ownerFee);
         if (newOwnerFee > oldFee) {
             revert FeeIncreased(oldFee, newOwnerFee);
         }
-        ownerFee = newOwnerFee;
+        ownerFee = uint16(BasisPoints.unwrap(newOwnerFee));
         emit OwnerFee(oldFee, newOwnerFee);
         return true;
     }
 
     function renounceOwnership() public override returns (bool) {
-        if (ownerFee != ZERO_BP) {
-            revert FeeNotZero(ownerFee);
+        if (BasisPoints.wrap(ownerFee) != ZERO_BP) {
+            revert FeeNotZero(BasisPoints.wrap(ownerFee));
         }
         return super.renounceOwnership();
     }
@@ -242,7 +242,7 @@ contract Buyback is TwoStepOwnable, Context {
         // balances.
         (amountFu, amountWeth) = _sortTokens.maybeSwap(amountFu, amountWeth);
         address owner_ = owner();
-        BasisPoints ownerFee_ = ownerFee;
+        BasisPoints ownerFee_ = BasisPoints.wrap(ownerFee);
         if ((owner_ == address(0)).or(ownerFee_ == ZERO_BP)) {
             amountWeth = WETH.fastBalanceOf(address(this));
         }

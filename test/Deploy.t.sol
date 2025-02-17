@@ -20,8 +20,6 @@ import "./EnvironmentConstants.sol";
 
 import {console} from "@forge-std/console.sol";
 
-uint256 constant EPOCH = 1740721485;
-
 abstract contract Common {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
     address internal constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
@@ -80,6 +78,8 @@ contract FUDeploy is Common {
     address[] internal actors;
     IUniswapV2Factory internal constant UNIV2_FACTORY = IUniswapV2Factory(univ2Factory);
     IERC20 internal constant WETH = IERC20(weth);
+    uint256 internal constant EPOCH = 1740721485;
+    uint256 internal deployTime;
 
     function deployFuDependenciesFoundry() internal {
         // Deploy WETH
@@ -232,6 +232,7 @@ contract FUDeploy is Common {
     }
 
     function setUp() public virtual {
+        deployTime = getBlockTimestamp();
         (fu, buyback, actors) = deployFu();
         warp(EPOCH);
     }

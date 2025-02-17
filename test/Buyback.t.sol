@@ -24,7 +24,7 @@ contract BuybackTest is FUDeploy, Test {
         // The constructor sets:
         //   ownerFee = 50% (our chosen initialFee)
         //   lastLpBalance & kTarget to the pair's balanceOf(buyback)
-        assertEq(BasisPoints.unwrap(buyback.ownerFee()), 5000, "ownerFee mismatch");
+        assertEq(buyback.ownerFee(), 5000, "ownerFee mismatch");
         assertEq(buyback.lastLpBalance(), 72057594037927935999998999, "lastLpBalance mismatch");
         assertEq(buyback.kTarget(), 72057594037927935999998999, "kTarget mismatch");
         assertEq(buyback.owner(), address(uint160(uint256(keccak256("Buyback owner")))), "owner mismatch");
@@ -41,7 +41,7 @@ contract BuybackTest is FUDeploy, Test {
         vm.expectEmit(true, true, true, true);
         emit Buyback.OwnerFee(BasisPoints.wrap(5000), BasisPoints.wrap(500));
         buyback.setFee(BasisPoints.wrap(500)); // Lower from 10% to 5%
-        assertEq(BasisPoints.unwrap(buyback.ownerFee()), 500, "ownerFee should be updated");
+        assertEq(buyback.ownerFee(), 500, "ownerFee should be updated");
     }
 
     function testSetFeeRevertNonOwner() public {
@@ -79,14 +79,13 @@ contract BuybackTest is FUDeploy, Test {
         assertEq(buyback.pendingOwner(), address(0), "Pending owner not zeroed out");
     }
 
-    /*
     function testRenounceOwnershipRevertFeeNotZero() public {
-        // Our current fee is 10%. Trying to renounce must revert
-        vm.prank(OWNER);
+        // Our current fee is 50%. Trying to renounce must revert
+        vm.prank(buyback.owner());
         vm.expectRevert(
             abi.encodeWithSelector(
                 Buyback.FeeNotZero.selector,
-                BasisPoints.wrap(1000)
+                BasisPoints.wrap(5000)
             )
         );
         buyback.renounceOwnership();
@@ -95,24 +94,35 @@ contract BuybackTest is FUDeploy, Test {
     // --------------------------------------
     // Test: consult()
     // --------------------------------------
+
     function testConsultSuccess() public {
+        assertEq(load(address(buyback), bytes32(uint256(3))), bytes32(0), "fu/weth cumulative not zero");
+        assertEq(load(address(buyback), bytes32(uint256(4))), bytes32(0), "weth/fu cumulative not zero");
+        assertEq(load(address(buyback), bytes32(uint256(5))), bytes32(0), "timestamp last not zero");
+
+        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
         // Advance time to ensure consult won't revert with "PriceTooFresh"
-        vm.warp(block.timestamp + buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE() + 1);
+        warp(getBlockTimestamp() + elapsed);
+
+        uint256 expectedFuWeth = (5 ether << 112) / (type(uint112).max / 5) * (EPOCH - deployTime + elapsed);
+        uint256 expectedWethFu = (uint256(type(uint112).max / 5) << 112) / 5 ether * (EPOCH - deployTime + elapsed);
 
         // Expect event
         vm.expectEmit(true, true, true, true);
-        emit OracleConsultation(
+        emit Buyback.OracleConsultation(
             address(this),
-            0, // We can't easily predict the exact cumulative in a simple mock
-            0
+            expectedFuWeth,
+            expectedWethFu
         );
 
         buyback.consult();
-        // After consult, we can check that `timestampLast` was updated
-        // But we'd need to read it from the contract's storage.
-        // For brevity, we won't do a direct SLOAD; you can add an accessor or read via cheatcodes.
+
+        assertEq(load(address(buyback), bytes32(uint256(3))), bytes32(expectedFuWeth), "fu/weth cumulative not zero");
+        assertEq(load(address(buyback), bytes32(uint256(4))), bytes32(expectedWethFu), "weth/fu cumulative not zero");
+        assertEq(load(address(buyback), bytes32(uint256(5))), bytes32(getBlockTimestamp()), "timestamp last not zero");
     }
 
+    /*
     function testConsultRevertPriceTooFresh() public {
         // consult() requires that the last consult was older than (TWAP_PERIOD + TOLERANCE).
         // Right after deployment, `timestampLast` is 0. But it only sets when we do the first consult.
