@@ -6,6 +6,7 @@ import {Context} from "./utils/Context.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "./interfaces/IFU.sol";
+import {IERC5805} from "./interfaces/IERC5805.sol";
 import {IERC6372} from "./interfaces/IERC6372.sol";
 
 import {IUniswapV2Pair} from "./interfaces/IUniswapV2Pair.sol";
@@ -721,10 +722,12 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     /// @inheritdoc IERC6372
     string public constant override CLOCK_MODE = "mode=timestamp&epoch=1970-01-01T00%3A00%3A00Z&quantum=86400";
 
+    /// @inheritdoc IERC5805
     function getVotes(address account) external view override returns (uint256) {
         return _$().checkpoints.current(account).toExternal();
     }
 
+    /// @inheritdoc IERC5805
     function getPastVotes(address account, uint256 timepoint) external view override returns (uint256) {
         if (timepoint >= clock()) {
             revert ERC5805TimepointNotPast(timepoint, clock());
@@ -732,10 +735,12 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         return _$().checkpoints.get(account, uint48(timepoint)).toExternal();
     }
 
+    /// @inheritdoc IFU
     function getTotalVotes() external view override returns (uint256) {
         return _$().checkpoints.currentTotal().toExternal();
     }
 
+    /// @inheritdoc IFU
     function getPastTotalVotes(uint256 timepoint) external view override returns (uint256) {
         if (timepoint >= clock()) {
             revert ERC5805TimepointNotPast(timepoint, clock());
