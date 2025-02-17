@@ -655,10 +655,14 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeVotingPower = fu.getVotes(delegatee);
         uint256 beforeShares = getShares(actor);
 
+        if (!_burnShouldFail(actor, amount, beforeBalance)) {
+            expectEmit(true, true, true, true, address(fu));
+            emit IERC20.Transfer(actor, address(0), amount);
+        }
+
         vm.recordLogs();
         vm.startStateDiffRecording();
         prank(actor);
-        // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
         assertEq(success, !_burnShouldFail(actor, amount, beforeBalance), "unexpected failure");
 
@@ -758,10 +762,14 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
 
+        if (!_burnShouldFail(actor, amount, beforeBalance)) {
+            expectEmit(true, true, true, true, address(fu));
+            emit IERC20.Transfer(actor, address(0), amount);
+        }
+
         vm.recordLogs();
         vm.startStateDiffRecording();
         prank(actor);
-        // TODO: expect events
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
         assertEq(success, !_deliverShouldFail(actor, amount, beforeBalance), "unexpected failure");
 
