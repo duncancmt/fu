@@ -87,11 +87,11 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
         returns (
             bytes1 fields,
             string memory name_,
-            string memory version,
+            string memory,
             uint256 chainId,
             address verifyingContract,
-            bytes32 salt,
-            uint256[] memory extensions
+            bytes32,
+            uint256[] memory
         )
     {
         fields = bytes1(0x0d);
