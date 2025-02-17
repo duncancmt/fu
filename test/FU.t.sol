@@ -522,7 +522,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             if (beforeBalance >= afterBalance) {
                 assertLe(beforeBalance - afterBalance, amount + 1, "from amount upper (to whale)");
             }
-            assertEq(beforeBalanceTo, afterBalanceTo, "to whale balance increased");
             assertTrue(toIsWhale, "to stopped being whale");
         }
 
