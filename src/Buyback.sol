@@ -110,6 +110,8 @@ contract Buyback is TwoStepOwnable, Context {
         emit Buyback(_msgSender(), kTarget);
         ownerFee = uint16(BasisPoints.unwrap(ownerFee_));
         emit OwnerFee(BASIS, ownerFee_);
+
+        _consult();
     }
 
     function setFee(BasisPoints newOwnerFee) external onlyOwner returns (bool) {
@@ -129,13 +131,7 @@ contract Buyback is TwoStepOwnable, Context {
         return super.renounceOwnership();
     }
 
-    function consult() external returns (bool) {
-        unchecked {
-            if (timestampLast + (TWAP_PERIOD + TWAP_PERIOD_TOLERANCE) > block.timestamp) {
-                revert PriceTooFresh(block.timestamp - timestampLast);
-            }
-        }
-
+    function _consult() private {
         // this is the standard formula for taking the counterfactual cumulative of the pair at the
         // current price _without_ doing an expensive call to `pair.sync()`
         (uint256 reserveFu, uint256 reserveWeth, uint32 timestampLast_) = pair.fastGetReserves();
@@ -152,6 +148,16 @@ contract Buyback is TwoStepOwnable, Context {
 
         timestampLast = block.timestamp;
         emit OracleConsultation(_msgSender(), priceFuWethCumulativeLast, priceWethFuCumulativeLast);
+    }
+
+    function consult() public returns (bool) {
+        unchecked {
+            if (timestampLast + (TWAP_PERIOD + TWAP_PERIOD_TOLERANCE) > block.timestamp) {
+                revert PriceTooFresh(block.timestamp - timestampLast);
+            }
+        }
+
+        _consult();
 
         return true;
     }

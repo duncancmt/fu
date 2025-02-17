@@ -98,7 +98,7 @@ contract BuybackTest is FUDeploy, Test {
     function testConsultSuccess() public {
         assertEq(load(address(buyback), bytes32(uint256(3))), bytes32(0), "fu/weth cumulative not zero");
         assertEq(load(address(buyback), bytes32(uint256(4))), bytes32(0), "weth/fu cumulative not zero");
-        assertEq(load(address(buyback), bytes32(uint256(5))), bytes32(0), "timestamp last not zero");
+        assertEq(load(address(buyback), bytes32(uint256(5))), bytes32(uint256(deployTime)), "timestamp last not equal to deploy time");
 
         uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
         // Advance time to ensure consult won't revert with "PriceTooFresh"
@@ -122,18 +122,15 @@ contract BuybackTest is FUDeploy, Test {
         assertEq(load(address(buyback), bytes32(uint256(5))), bytes32(getBlockTimestamp()), "timestamp last not zero");
     }
 
-    /*
     function testConsultRevertPriceTooFresh() public {
-        // consult() requires that the last consult was older than (TWAP_PERIOD + TOLERANCE).
-        // Right after deployment, `timestampLast` is 0. But it only sets when we do the first consult.
-        // This is an edge condition. Typically you'd do a first consult, then a second one too soon.
+        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
 
         // Let's do a first consult to set things up:
-        vm.warp(block.timestamp + buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE() + 10);
+        vm.warp(getBlockTimestamp() + elapsed);
         buyback.consult();
 
         // Now do a second consult too soon
-        vm.warp(block.timestamp + 10);
+        vm.warp(getBlockTimestamp() + 10);
         vm.expectRevert(
             abi.encodeWithSelector(
                 Buyback.PriceTooFresh.selector,
@@ -146,6 +143,8 @@ contract BuybackTest is FUDeploy, Test {
     // --------------------------------------
     // Test: buyback()
     // --------------------------------------
+
+    /*
     function testBuybackSuccess() public {
         // Step 1: Let us do a consult with correct timing first
         // Must warp forward enough that consult doesn't revert with PriceTooFresh
