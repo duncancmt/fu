@@ -49,7 +49,9 @@ contract DeployFU is Script {
             abi.decode(vm.readFile(string.concat(vm.projectRoot(), "/airdrop.json")).parseRaw("$"), (address[]));
         initialHolders.quickSort();
         string memory image = vm.readFile(string.concat(vm.projectRoot(), "/image.svg"));
-        console.log("image URI", IPFS.CIDv0(IPFS.dagPbUnixFsHash(image)));
+        string memory imageUri = IPFS.CIDv0(IPFS.dagPbUnixFsHash(image));
+        console.log("image URI", imageUri);
+        assert(keccak256(bytes(imageUri)) == keccak256("ipfs://Qmcb6z1T9PFcQRQtEz6WYG841HhdoZ83rMLxkYDXdKtsRb"));
 
         bytes20 gitCommit;
         {
@@ -140,7 +142,6 @@ contract DeployFU is Script {
         require(pair.balanceOf(address(buyback)) == liquidity);
         require(pair.balanceOf(address(0)) == _MINIMUM_LIQUIDITY);
         assert(address(buyback).code.length != 0);
-
-        console.log("FU.image():", fu.image());
+        assert(fu.image() == keccak256(bytes(imageUri)));
     }
 }
