@@ -238,6 +238,9 @@ contract BuybackTest is FUDeploy, Test {
         uint256 priceImpactToleranceBp = 30;
         uint256 expectedOwnerFees = pairWethBalance * percentIncrease / 100;
         assertGe(WETH.balanceOf(owner), expectedOwnerFees * (10000 - priceImpactToleranceBp) / 10000);
+
+        assertEq(WETH.balanceOf(address(buyback)), 0);
+        assertEq(fu.balanceOf(address(buyback)), 0);
     }
 
     function testBuybackRevertPriceTooFresh() public {
