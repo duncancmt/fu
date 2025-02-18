@@ -50,7 +50,7 @@ abstract contract Common is StdAssertions {
         return getActor(uint160(seed));
     }
 
-    function maybeCreateActor(address newActor) internal {
+    function maybeCreateActor(address newActor) internal virtual {
         if (newActor == address(0)) {
             return;
         }
