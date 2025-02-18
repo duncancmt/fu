@@ -539,7 +539,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             }
             //console.log("sendTokensLo", sendTokensLo);
             //console.log("sendTokensHi", sendTokensHi);
-            uint256 receiveTokensXBasisPointsLo = sendTokensLo * 10_000 - (sendTokensLo * tax);
+            uint256 receiveTokensXBasisPointsLo = sendTokensLo * (10_000 - tax);
             uint256 receiveTokensXBasisPointsHi = sendTokensHi * (10_000 - tax);
             //console.log("receiveTokensXBasisPointsLo", receiveTokensXBasisPointsLo);
             //console.log("receiveTokensXBasisPointsHi", receiveTokensXBasisPointsHi);
