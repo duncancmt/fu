@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {ERC20Base} from "./core/ERC20Base.sol";
-import {Context} from "./utils/Context.sol";
+import {MultiCallContext} from "./utils/MultiCallContext.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "./interfaces/IFU.sol";
@@ -56,7 +56,7 @@ library UnsafeArray {
 }
 
 /// @custom:security-contact security@fuckyou.finance
-contract FU is ERC20Base, TransientStorageLayout, Context {
+contract FU is ERC20Base, TransientStorageLayout, MultiCallContext {
     using ChecksumAddress for address;
     using {toCrazyBalance} for uint256;
     using SharesToTokens for Shares;
