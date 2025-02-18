@@ -13,10 +13,9 @@ import {IUniswapV2Factory, pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 import {ChecksumAddress} from "src/lib/ChecksumAddress.sol";
 import {UnsafeMath} from "src/lib/UnsafeMath.sol";
 import {uint512, alloc, tmp} from "src/lib/512Math.sol";
+import {ItoA} from "src/lib/ItoA.sol";
 
 import {FUDeploy, Common} from "./Deploy.t.sol";
-
-import {ItoA} from "script/ItoA.sol";
 
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
 import {StdInvariant} from "@forge-std/StdInvariant.sol";

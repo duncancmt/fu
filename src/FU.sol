@@ -6,6 +6,7 @@ import {Context} from "./utils/Context.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "./interfaces/IFU.sol";
+import {IERC1046} from "./interfaces/IERC1046.sol";
 import {IERC5805} from "./interfaces/IERC5805.sol";
 import {IERC6372} from "./interfaces/IERC6372.sol";
 import {IERC7674} from "./interfaces/IERC7674.sol";
@@ -38,6 +39,7 @@ import {
 
 import {ChecksumAddress} from "./lib/ChecksumAddress.sol";
 import {IPFS} from "./lib/IPFS.sol";
+import {ItoA} from "./lib/ItoA.sol";
 import {FastTransferLib} from "./lib/FastTransferLib.sol";
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {FastLogic} from "./lib/FastLogic.sol";
@@ -68,6 +70,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     using LibRebaseQueue for RebaseQueue;
     using IPFS for string;
     using IPFS for bytes32;
+    using ItoA for uint256;
     using FastTransferLib for address payable;
     using FastTransferLib for IERC20;
     using UnsafeArray for address[];
@@ -89,6 +92,13 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
     /// @inheritdoc IFU
     function image() external view override returns (string memory) {
         return _imageHash.CIDv0();
+    }
+
+    bytes32 private immutable _tokenUriHash;
+
+    /// @inheritdoc IERC1046
+    function tokenURI() external view override returns (string memory) {
+        return _tokenUriHash.CIDv0();
     }
 
     constructor(bytes20 gitCommit, string memory image_, address[] memory initialHolders) payable {
@@ -117,6 +127,18 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         }
         emit GitCommit(gitCommit);
         _imageHash = image_.dagPbUnixFsHash();
+        string memory imageUri = _imageHash.CIDv0();
+        _tokenUriHash = string.concat(
+            "{\"interop\":{\"erc1046\":true},\"name\":\"",
+            name,
+            "\",\"symbol\":\"FU\",\"decimals\":",
+            uint256(Settings.DECIMALS).itoa(),
+            ",\"image\":\"",
+            imageUri,
+            "\",\"content\":{\"mime\":\"image/svg+xml\",\"uri\":\"",
+            imageUri,
+            "\"}}\n"
+        ).dagPbUnixFsHash();
 
         payable(address(WETH)).fastSendEth(address(this).balance);
         WETH.fastTransfer(pair, WETH.fastBalanceOf(address(this)));

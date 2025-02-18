@@ -8,7 +8,7 @@ import {pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 
 import {IPFS} from "src/lib/IPFS.sol";
 import {Math} from "src/lib/Math.sol";
-import {ItoA} from "./ItoA.sol";
+import {ItoA} from "src/lib/ItoA.sol";
 import {Hexlify} from "./Hexlify.sol";
 import {QuickSort} from "./QuickSort.sol";
 import {stdJson} from "@forge-std/StdJson.sol";
@@ -51,7 +51,7 @@ contract DeployFU is Script {
         string memory image = vm.readFile(string.concat(vm.projectRoot(), "/image.svg"));
         string memory imageUri = IPFS.CIDv0(IPFS.dagPbUnixFsHash(image));
         console.log("image URI", imageUri);
-        assert(keccak256(bytes(imageUri)) == keccak256("ipfs://Qmcb6z1T9PFcQRQtEz6WYG841HhdoZ83rMLxkYDXdKtsRb"));
+        assert(keccak256(bytes(imageUri)) == keccak256("ipfs://QmWH4FgvCpXdaZZ9zj5Zn2jvNYMgsLJ9YdG7YWD72p6wmP"));
 
         bytes20 gitCommit;
         {
@@ -143,5 +143,6 @@ contract DeployFU is Script {
         require(pair.balanceOf(address(0)) == _MINIMUM_LIQUIDITY);
         assert(address(buyback).code.length != 0);
         assert(keccak256(bytes(fu.image())) == keccak256(bytes(imageUri)));
+        assert(keccak256(bytes(fu.tokenURI())) == keccak256("ipfs://QmYFBfLpRNdTHFEmLNt26xCF7zkeSkJ5Nv7UZ4djFKDMWR"));
     }
 }
