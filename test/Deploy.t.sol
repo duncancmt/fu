@@ -15,14 +15,72 @@ import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory, FACTORY, pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 
 import {Vm} from "@forge-std/Vm.sol";
+import {StdAssertions} from "@forge-std/StdAssertions.sol";
 
 import "./EnvironmentConstants.sol";
 
 import {console} from "@forge-std/console.sol";
 
-abstract contract Common {
+abstract contract Common is StdAssertions {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
     address internal constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
+    address internal constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+    bytes32 internal constant BASE_SLOT = 0x00000000000000000000000000000000e086ec3a639808bbda893d5b4ac93600;
+
+    IFU internal fu;
+    Buyback internal buyback;
+    address internal pair;
+    address[] internal actors;
+    mapping(address => bool) internal isActor;
+
+    function setUpActors(address[] memory initialActors) internal {
+        for (uint256 i; i < initialActors.length; i++) {
+            address actor = initialActors[i];
+            actors.push(actor);
+            isActor[actor] = true;
+        }
+    }
+
+    function getActor(uint256 actorIndex) internal virtual returns (address actor) {
+        actor = actors[actorIndex % actors.length];
+        console.log("actor", actor);
+    }
+
+    function getActor(address seed) internal returns (address) {
+        return getActor(uint160(seed));
+    }
+
+    function maybeCreateActor(address newActor) internal {
+        if (newActor == address(0)) {
+            return;
+        }
+        if (newActor == DEAD) {
+            return;
+        }
+        if (newActor == address(fu)) {
+            return;
+        }
+        if (isActor[newActor]) {
+            return;
+        }
+
+        isActor[newActor] = true;
+        actors.push(newActor);
+        assertEq(fu.balanceOf(newActor), 0);
+        assertEq(fu.delegates(newActor), address(0));
+    }
+
+    function saveActor(address actor) internal virtual {
+        assertNotEq(actor, address(0));
+        assertNotEq(actor, DEAD);
+        assertNotEq(actor, address(fu));
+        assertTrue(isActor[actor]);
+    }
+
+    function callOptionalReturn(bytes memory data) internal returns (bool success, bytes memory returndata) {
+        (success, returndata) = address(fu).call(data);
+        success = success && (returndata.length == 0 || abi.decode(returndata, (bool)));
+    }
 
     function assume(bool condition) internal pure virtual {
         vm.assume(condition);
@@ -81,9 +139,6 @@ contract FUDeploy is Common {
     using QuickSort for address[];
     using Hexlify for bytes32;
 
-    IFU internal fu;
-    Buyback internal buyback;
-    address[] internal actors;
     IUniswapV2Factory internal constant UNIV2_FACTORY = IUniswapV2Factory(univ2Factory);
     IERC20 internal constant WETH = IERC20(weth);
     uint256 internal constant EPOCH = 1740721485;
@@ -241,7 +296,10 @@ contract FUDeploy is Common {
 
     function setUp() public virtual {
         deployTime = getBlockTimestamp();
-        (fu, buyback, actors) = deployFu();
+        address[] memory initialActors;
+        (fu, buyback, initialActors) = deployFu();
+        pair = fu.pair();
+        setUpActors(initialActors);
         warp(EPOCH);
     }
 }

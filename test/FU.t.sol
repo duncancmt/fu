@@ -17,7 +17,6 @@ import {ItoA} from "src/lib/ItoA.sol";
 
 import {FUDeploy, Common} from "./Deploy.t.sol";
 
-import {StdAssertions} from "@forge-std/StdAssertions.sol";
 import {StdInvariant} from "@forge-std/StdInvariant.sol";
 import {VmSafe, Vm} from "@forge-std/Vm.sol";
 
@@ -124,47 +123,38 @@ interface ListOfInvariants {
     function invariant_rebaseQueueContents() external;
 }
 
-contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
+contract FUGuide is Common, Bound, ListOfInvariants {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code"))))); // TODO: remove
 
     using ItoA for uint256;
     using ChecksumAddress for address;
     using UnsafeMath for uint256;
 
-    IFU internal immutable fu;
-    address internal immutable pair;
-    address[] internal actors;
-    mapping(address => bool) internal isActor;
     mapping(address => uint256) internal lastBalance;
     mapping(address => address) internal shadowDelegates;
     uint32 internal shareRatio = 1;
 
-    constructor(IFU fu_, address[] memory actors_) {
+    constructor(IFU fu_, Buyback buyback_, address[] memory actors_) {
         fu = fu_;
+        buyback = buyback_;
         pair = fu.pair();
-        actors = actors_;
+        setUpActors(actors_);
 
         lastBalance[DEAD] = fu.balanceOf(DEAD);
+
         actors.push(pair);
+        isActor[pair] = true;
 
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
-            isActor[actor] = true;
             lastBalance[actor] = fu.balanceOf(actor);
         }
     }
 
-    function callOptionalReturn(bytes memory data) internal returns (bool success, bytes memory returndata) {
-        (success, returndata) = address(fu).call(data);
-        success = success && (returndata.length == 0 || abi.decode(returndata, (bool)));
-    }
-
-    bytes32 private constant _BASE_SLOT = 0x00000000000000000000000000000000e086ec3a639808bbda893d5b4ac93600;
-
     function _sharesSlot(address account) internal pure returns (bytes32 r) {
         assembly ("memory-safe") {
             mstore(0x00, and(0xffffffffffffffffffffffffffffffffffffffff, account))
-            mstore(0x20, add(_BASE_SLOT, 7))
+            mstore(0x20, add(BASE_SLOT, 7))
             r := keccak256(0x00, 0x40)
         }
     }
@@ -172,7 +162,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     function _rebaseQueuePrevSlot(address account) internal pure returns (bytes32 r) {
         assembly ("memory-safe") {
             mstore(0x00, and(0xffffffffffffffffffffffffffffffffffffffff, account))
-            mstore(0x20, add(0x03, _BASE_SLOT))
+            mstore(0x20, add(0x03, BASE_SLOT))
             r := keccak256(0x00, 0x40)
         }
     }
@@ -198,7 +188,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 
     function getTotalShares() internal view returns (uint256) {
-        uint256 value = uint256(load(address(fu), bytes32(uint256(_BASE_SLOT) + 2)));
+        uint256 value = uint256(load(address(fu), bytes32(uint256(BASE_SLOT) + 2)));
         assertEq(value >> 177, 0, string.concat("dirty total supply slot: ", value.itoa()));
         assertNotEq(value, 0, "zero total shares");
         return value;
@@ -206,11 +196,11 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
     function setTotalShares(uint256 newTotalShares) internal {
         assertNotEq(newTotalShares, 0, "cannot set zero total shares");
-        return store(address(fu), bytes32(uint256(_BASE_SLOT) + 2), bytes32(newTotalShares));
+        return store(address(fu), bytes32(uint256(BASE_SLOT) + 2), bytes32(newTotalShares));
     }
 
     function getCirculatingTokens() internal view returns (uint256) {
-        uint256 value = uint256(load(address(fu), _BASE_SLOT));
+        uint256 value = uint256(load(address(fu), BASE_SLOT));
         assertEq(value >> 145, 0, string.concat("dirty circulating tokens slot: ", value.itoa()));
         assertNotEq(value, 0, "zero circulating tokens");
         return value;
@@ -228,37 +218,13 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         return address(uint160(slotValue));
     }
 
-    function getActor(uint256 actorIndex) internal returns (address actor) {
-        actor = actors[actorIndex % actors.length];
+    function getActor(uint256 actorIndex) internal override returns (address actor) {
+        actor = super.getActor(actorIndex);
         lastBalance[actor] = fu.balanceOf(actor);
-        console.log("actor", actor);
     }
 
-    function maybeCreateActor(address newActor) internal {
-        if (newActor == address(0)) {
-            return;
-        }
-        if (newActor == DEAD) {
-            return;
-        }
-        if (newActor == address(fu)) {
-            return;
-        }
-        if (isActor[newActor]) {
-            return;
-        }
-
-        isActor[newActor] = true;
-        actors.push(newActor);
-        assertEq(fu.balanceOf(newActor), 0);
-        assertEq(fu.delegates(newActor), address(0));
-    }
-
-    function saveActor(address actor) internal {
-        assertNotEq(actor, address(0));
-        assertNotEq(actor, DEAD);
-        assertNotEq(actor, address(fu));
-        assertTrue(isActor[actor]);
+    function saveActor(address actor) internal override {
+        super.saveActor(actor);
         lastBalance[actor] = fu.balanceOf(actor);
         shadowDelegates[actor] = fu.delegates(actor);
     }
@@ -367,13 +333,13 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             assume(amount < fu.balanceOf(actor));
         }
         if (boundTo) {
-            to = actors[uint160(to) % actors.length];
+            to = getActor(to);
         } else {
             maybeCreateActor(to);
         }
 
         uint256 beforeBalance = lastBalance[actor];
-        uint256 beforeBalanceTo = fu.balanceOf(to);
+        uint256 beforeBalanceTo = lastBalance[to];
         uint256 beforeWhaleLimit = fu.whaleLimit(actor);
         uint256 beforeWhaleLimitTo = fu.whaleLimit(to);
         bool actorIsWhale = beforeBalance == beforeWhaleLimit;
@@ -401,10 +367,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
-
-        if (to == DEAD) {
-            lastBalance[to] = beforeBalanceTo;
-        }
 
         if (!success) {
             assert(
@@ -936,7 +898,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             }
         }
 
-        address head = address(uint160(uint256(load(address(fu), bytes32(uint256(_BASE_SLOT) + 4)))));
+        address head = address(uint160(uint256(load(address(fu), bytes32(uint256(BASE_SLOT) + 4)))));
         uint256 length;
         bool deadOnQueue;
         for (address cursor = head;;) {
@@ -996,7 +958,7 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     }
 }
 
-contract FUInvariants is FUDeploy, StdInvariant, StdAssertions, ListOfInvariants {
+contract FUInvariants is FUDeploy, StdInvariant, ListOfInvariants {
     using ChecksumAddress for address;
 
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code"))))); // TODO: remove
@@ -1011,7 +973,7 @@ contract FUInvariants is FUDeploy, StdInvariant, StdAssertions, ListOfInvariants
         excludeContract(fu.pair());
         excludeContract(address(WETH));
         excludeContract(address(UNIV2_FACTORY));
-        guide = new FUGuide(fu, actors);
+        guide = new FUGuide(fu, buyback, actors);
     }
 
     function test_name() external view {
