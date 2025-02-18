@@ -456,9 +456,6 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
 
-        emit IERC20.Transfer(actor, to, (afterBalanceTo - beforeBalanceTo));
-        emit IERC20.Transfer(actor, address(0), tax);
-
         // Check that the whale limit for each account "doesn't" change
         if (actor != pair && to != pair) {
             assertGe(saturatingAdd(afterWhaleLimit, 1), beforeWhaleLimit, "actor whale limit lower");
