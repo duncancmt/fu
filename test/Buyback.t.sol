@@ -15,6 +15,7 @@ contract BuybackTest is FUDeploy, Test {
     function wethBalanceSlot() internal view returns (bytes32) {
         return keccak256(abi.encode(fu.pair(), bytes32(uint256(3))));
     }
+
     function fuBalanceSlot() internal pure returns (bytes32) {
         return 0x00000000000000000000000000000000e086ec3a639808bbda893d5b4ac93601;
     }
@@ -56,11 +57,7 @@ contract BuybackTest is FUDeploy, Test {
         // Attempt to increase from 5000 -> 5001 should revert
         prank(buyback.owner());
         expectRevert(
-            abi.encodeWithSelector(
-                Buyback.FeeIncreased.selector,
-                BasisPoints.wrap(5000),
-                BasisPoints.wrap(5001)
-            )
+            abi.encodeWithSelector(Buyback.FeeIncreased.selector, BasisPoints.wrap(5000), BasisPoints.wrap(5001))
         );
         buyback.setFee(BasisPoints.wrap(5001));
     }
@@ -85,12 +82,7 @@ contract BuybackTest is FUDeploy, Test {
     function testRenounceOwnershipRevertFeeNotZero() public {
         // Our current fee is 50%. Trying to renounce must revert
         prank(buyback.owner());
-        expectRevert(
-            abi.encodeWithSelector(
-                Buyback.FeeNotZero.selector,
-                BasisPoints.wrap(5000)
-            )
-        );
+        expectRevert(abi.encodeWithSelector(Buyback.FeeNotZero.selector, BasisPoints.wrap(5000)));
         buyback.renounceOwnership();
     }
 
@@ -101,7 +93,11 @@ contract BuybackTest is FUDeploy, Test {
     function testConsultSuccess() public {
         assertEq(load(address(buyback), bytes32(uint256(3))), bytes32(0), "fu/weth cumulative not zero");
         assertEq(load(address(buyback), bytes32(uint256(4))), bytes32(0), "weth/fu cumulative not zero");
-        assertEq(load(address(buyback), bytes32(uint256(5))), bytes32(uint256(deployTime)), "timestamp last not equal to deploy time");
+        assertEq(
+            load(address(buyback), bytes32(uint256(5))),
+            bytes32(uint256(deployTime)),
+            "timestamp last not equal to deploy time"
+        );
 
         uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
         // Advance time to ensure consult won't revert with "PriceTooFresh"
@@ -112,11 +108,7 @@ contract BuybackTest is FUDeploy, Test {
 
         // Expect event
         expectEmit(true, true, true, true, address(buyback));
-        emit Buyback.OracleConsultation(
-            address(this),
-            expectedFuWeth,
-            expectedWethFu
-        );
+        emit Buyback.OracleConsultation(address(this), expectedFuWeth, expectedWethFu);
 
         buyback.consult();
 
@@ -159,8 +151,16 @@ contract BuybackTest is FUDeploy, Test {
         uint256 percentIncrease = 1;
 
         // Step 1: Increase the liquidity
-        store(address(WETH), wethBalanceSlot(), bytes32(uint256(load(address(WETH), wethBalanceSlot())) * (percentIncrease + 100) / 100));
-        store(address(fu), fuBalanceSlot(), bytes32(uint256(load(address(fu), fuBalanceSlot())) * (percentIncrease + 100) / 100));
+        store(
+            address(WETH),
+            wethBalanceSlot(),
+            bytes32(uint256(load(address(WETH), wethBalanceSlot())) * (percentIncrease + 100) / 100)
+        );
+        store(
+            address(fu),
+            fuBalanceSlot(),
+            bytes32(uint256(load(address(fu), fuBalanceSlot())) * (percentIncrease + 100) / 100)
+        );
         pair.sync();
 
         // Step 1: Consult the oracle and store the cumulatives
@@ -250,17 +250,14 @@ contract BuybackTest is FUDeploy, Test {
         buyback.consult();
 
         // Increase liquidity so that there's some LP tokens to burn
-        store(address(WETH), wethBalanceSlot(), bytes32(uint256(load(address(WETH), wethBalanceSlot())) * 10001 / 10000));
+        store(
+            address(WETH), wethBalanceSlot(), bytes32(uint256(load(address(WETH), wethBalanceSlot())) * 10001 / 10000)
+        );
         store(address(fu), fuBalanceSlot(), bytes32(uint256(load(address(fu), fuBalanceSlot())) * 10001 / 10000));
         IUniswapV2Pair(fu.pair()).sync();
 
         // Now buyback should revert with PriceTooFresh, because not enough time has elapsed
-        expectRevert(
-            abi.encodeWithSelector(
-                Buyback.PriceTooFresh.selector,
-                0
-            )
-        );
+        expectRevert(abi.encodeWithSelector(Buyback.PriceTooFresh.selector, 0));
         buyback.buyback();
     }
 
@@ -269,7 +266,9 @@ contract BuybackTest is FUDeploy, Test {
         buyback.consult();
 
         // Increase liquidity so that there's some LP tokens to burn
-        store(address(WETH), wethBalanceSlot(), bytes32(uint256(load(address(WETH), wethBalanceSlot())) * 10001 / 10000));
+        store(
+            address(WETH), wethBalanceSlot(), bytes32(uint256(load(address(WETH), wethBalanceSlot())) * 10001 / 10000)
+        );
         store(address(fu), fuBalanceSlot(), bytes32(uint256(load(address(fu), fuBalanceSlot())) * 10001 / 10000));
         IUniswapV2Pair(fu.pair()).sync();
 
@@ -277,12 +276,7 @@ contract BuybackTest is FUDeploy, Test {
         uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
         warp(getBlockTimestamp() + elapsed + 1);
 
-        expectRevert(
-            abi.encodeWithSelector(
-                Buyback.PriceTooStale.selector,
-                elapsed + 1
-            )
-        );
+        expectRevert(abi.encodeWithSelector(Buyback.PriceTooStale.selector, elapsed + 1));
         buyback.buyback();
     }
 
@@ -291,7 +285,9 @@ contract BuybackTest is FUDeploy, Test {
         buyback.consult();
 
         // Increase liquidity so that there's some LP tokens to burn
-        store(address(WETH), wethBalanceSlot(), bytes32(uint256(load(address(WETH), wethBalanceSlot())) * 10001 / 10000));
+        store(
+            address(WETH), wethBalanceSlot(), bytes32(uint256(load(address(WETH), wethBalanceSlot())) * 10001 / 10000)
+        );
         store(address(fu), fuBalanceSlot(), bytes32(uint256(load(address(fu), fuBalanceSlot())) * 10001 / 10000));
         IUniswapV2Pair(fu.pair()).sync();
 

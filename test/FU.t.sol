@@ -422,7 +422,10 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
         uint256 logAmountBurn;
         for (uint256 i; i < logs.length; i++) {
             VmSafe.Log memory log = logs[i];
-            if (log.topics.length == 3 && log.topics[0] == IERC20.Transfer.selector && log.topics[1] == bytes32(uint256(uint160(actor))) && log.topics[2] == bytes32(uint256(uint160(to)))) {
+            if (
+                log.topics.length == 3 && log.topics[0] == IERC20.Transfer.selector
+                    && log.topics[1] == bytes32(uint256(uint160(actor))) && log.topics[2] == bytes32(uint256(uint160(to)))
+            ) {
                 assertEq(log.emitter, address(fu), "wrong log emitter");
                 assertEq(log.data.length, 32, "wrong Transfer data length (amount)");
                 logAmountTransfer = uint256(bytes32(log.data));
@@ -547,14 +550,29 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
             //console.log("balanceDeltaLo", balanceDeltaLo);
             //console.log("balanceDeltaHi", balanceDeltaHi);
             if (!toIsWhale) {
-                assertGe((afterBalanceTo - beforeBalanceTo + 1) * (Settings.CRAZY_BALANCE_BASIS * 10_000) + (Settings.CRAZY_BALANCE_BASIS * 10_000 / Settings.MIN_SHARES_RATIO - 1), balanceDeltaLo, "to delta lower");
+                assertGe(
+                    (afterBalanceTo - beforeBalanceTo + 1) * (Settings.CRAZY_BALANCE_BASIS * 10_000)
+                        + (Settings.CRAZY_BALANCE_BASIS * 10_000 / Settings.MIN_SHARES_RATIO - 1),
+                    balanceDeltaLo,
+                    "to delta lower"
+                );
             } else {
-                assertGe(((beforeBalanceTo + 1) * (Settings.CRAZY_BALANCE_BASIS * 10_000) + balanceDeltaHi).unsafeDivUp(Settings.CRAZY_BALANCE_BASIS * 10_000), afterWhaleLimitTo, "not enough for `to` to become whale");
+                assertGe(
+                    ((beforeBalanceTo + 1) * (Settings.CRAZY_BALANCE_BASIS * 10_000) + balanceDeltaHi).unsafeDivUp(
+                        Settings.CRAZY_BALANCE_BASIS * 10_000
+                    ),
+                    afterWhaleLimitTo,
+                    "not enough for `to` to become whale"
+                );
                 assertGe(afterBalanceTo + 1, beforeBalanceTo, "to balance lower (whale)");
             }
             if (!actorIsWhale) {
                 if (afterBalanceTo >= beforeBalanceTo) {
-                    assertLe((afterBalanceTo - beforeBalanceTo) * (Settings.CRAZY_BALANCE_BASIS * 10_000), balanceDeltaHi + (Settings.CRAZY_BALANCE_BASIS * 10_000), "to delta upper");
+                    assertLe(
+                        (afterBalanceTo - beforeBalanceTo) * (Settings.CRAZY_BALANCE_BASIS * 10_000),
+                        balanceDeltaHi + (Settings.CRAZY_BALANCE_BASIS * 10_000),
+                        "to delta upper"
+                    );
                 } else {
                     assertTrue(toIsWhaleBefore, "to balance decrease not because whale");
                     assertTrue(toIsWhale, "to balance decrease not because whale");
