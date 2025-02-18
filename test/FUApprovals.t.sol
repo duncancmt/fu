@@ -18,7 +18,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         console.log("amount", amount);
 
         if (boundSpender) {
-            spender = actors[uint160(spender) % actors.length];
+            spender = getActor(spender);
         } else {
             maybeCreateActor(spender);
         }
