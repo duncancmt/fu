@@ -139,6 +139,8 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
     mapping(address => uint256) internal lastBalance;
     mapping(address => address) internal shadowDelegates;
     uint32 internal shareRatio = 1;
+    //TODO figure out why other constants from FU.sol import but not this one
+    address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
     constructor(IFU fu_, address[] memory actors_) {
         fu = fu_;
@@ -805,6 +807,37 @@ contract FUGuide is StdAssertions, Common, Bound, ListOfInvariants {
                 alloc().omul(beforeTotalShares, afterCirculating) > tmp().omul(afterTotalShares, beforeCirculating),
                 "shares to tokens ratio increased"
             );
+        }
+    }
+
+    function testTemporaryApprove(uint256 actorIndex, address spender, uint256 amount, bool boundSpender, bool boundAmount) external returns (bool) {
+        address actor = getActor(actorIndex);
+        if (boundAmount) {
+            amount = bound(amount, 0, type(uint256).max, "amount");
+        } else {
+            console.log("amount", amount);
+        }
+        if (boundSpender) {
+            spender = actors[uint160(spender) % actors.length];
+        } else {
+            maybeCreateActor(spender);
+        }
+
+        uint256 beforeAllowance = uint256(vm.load(address(fu), (keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(_BASE_SLOT) + 8))))))); //allowance mapping offset is 8, see https://github.com/duncancmt/fu/blob/c64c7b7fbafd1ea362c056e4fecef44ed4ac5688/src/FUStorage.sol#L16-L26
+
+        vm.recordLogs();
+        vm.startStateDiffRecording();
+        prank(actor);
+
+        (bool success,) = callOptionalReturn(abi.encodeCall(fu.temporaryApprove, (spender, amount)));
+
+        VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
+        VmSafe.Log[] memory logs = vm.getRecordedLogs();
+
+        uint256 afterAllowance = uint256(vm.load(address(fu), (keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(_BASE_SLOT) + 8)))))));
+
+        if (spender == PERMIT2) {
+            assertEq(beforeAllowance, afterAllowance, "permit2 allowance should already be maximum");
         }
     }
 
