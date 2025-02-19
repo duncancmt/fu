@@ -69,7 +69,7 @@ contract Buyback is TwoStepOwnable, Context {
 
     // TODO: revisit these constants
     uint256 public constant TWAP_PERIOD = 1 days;
-    uint256 public constant TWAP_PERIOD_TOLERANCE = 1 hours;
+    uint256 public constant TWAP_PERIOD_TOLERANCE = 30 minutes;
 
     uint256 internal priceFuWethCumulativeLast;
     uint256 internal priceWethFuCumulativeLast;
@@ -310,6 +310,7 @@ contract Buyback is TwoStepOwnable, Context {
         // requires finding a root of a degree-4 polynomial, which is absolutely awful to attempt to
         // compute on-chain. so we accept this inaccuracy as a concession to the limits of
         // complexity and gas.
+        timestampLast = 1;
 
         emit Buyback(_msgSender(), kTarget);
 
