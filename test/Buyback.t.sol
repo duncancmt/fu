@@ -117,6 +117,22 @@ contract BuybackTest is FUDeploy, Test {
         assertEq(load(address(buyback), bytes32(uint256(5))), bytes32(getBlockTimestamp()), "timestamp last not zero");
     }
 
+    function testConsultCounterfactualLogic() public {
+        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
+        warp(getBlockTimestamp() + elapsed);
+
+        buyback.consult();
+        IUniswapV2Pair pair = IUniswapV2Pair(fu.pair());
+        pair.sync();
+        if (address(WETH) < address(fu)) {
+            assertEq(pair.price0CumulativeLast(), uint256(load(address(buyback), bytes32(uint256(4)))));
+            assertEq(pair.price1CumulativeLast(), uint256(load(address(buyback), bytes32(uint256(3)))));
+        } else {
+            assertEq(pair.price0CumulativeLast(), uint256(load(address(buyback), bytes32(uint256(3)))));
+            assertEq(pair.price1CumulativeLast(), uint256(load(address(buyback), bytes32(uint256(4)))));
+        }
+    }
+
     function testConsultRevertPriceTooFresh() public {
         uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
 
