@@ -120,8 +120,8 @@ abstract contract ERC20Base is IFU, FUStorage, AbstractContext {
         }
     }
 
-    // slither-disable-next-line naming-convention
     /// @inheritdoc IERC2612
+    // slither-disable-next-line naming-convention
     function DOMAIN_SEPARATOR() public view override returns (bytes32) {
         return block.chainid == _CHAIN_ID ? _cachedDomainSeparator : _computeDomainSeparator();
     }

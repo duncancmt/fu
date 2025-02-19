@@ -753,6 +753,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
     /// @inheritdoc IERC5805
     function getPastVotes(address account, uint256 timepoint) external view override returns (uint256) {
+        // slither-disable-next-line timestamp
         if (timepoint >= clock()) {
             revert ERC5805TimepointNotPast(timepoint, clock());
         }
@@ -766,6 +767,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
     /// @inheritdoc IFU
     function getPastTotalVotes(uint256 timepoint) external view override returns (uint256) {
+        // slither-disable-next-line timestamp
         if (timepoint >= clock()) {
             revert ERC5805TimepointNotPast(timepoint, clock());
         }

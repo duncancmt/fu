@@ -15,7 +15,8 @@ interface IERC2612 is IERC20, INonces {
     /// @param deadline The current blocktime must be less than or equal to `deadline`.
     function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external;
-    // slither-disable-next-line naming-convention
+
     /// @notice Returns the EIP-712 domain separator used for signature verification.
+    // slither-disable-next-line naming-convention
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
