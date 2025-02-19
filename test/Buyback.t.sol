@@ -117,9 +117,9 @@ contract BuybackTest is FUDeploy, Test {
         assertEq(load(address(buyback), bytes32(uint256(5))), bytes32(getBlockTimestamp()), "timestamp last not zero");
     }
 
-    function testConsultCounterfactualLogic() public {
-        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
-        warp(getBlockTimestamp() + elapsed);
+    function testConsultCounterfactualLogic(uint256 elapsed) public {
+        assume(elapsed >= buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE() + deployTime);
+        warp(elapsed);
 
         buyback.consult();
         IUniswapV2Pair pair = IUniswapV2Pair(fu.pair());
