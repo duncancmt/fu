@@ -72,8 +72,7 @@ library CrazyBalanceArithmetic {
 
     function saturatingSub(CrazyBalance x, CrazyBalance y) internal pure returns (CrazyBalance r) {
         assembly ("memory-safe") {
-            r := sub(x, y)
-            r := mul(r, gt(x, y))
+            r := mul(sub(x, y), gt(x, y))
         }
     }
 
