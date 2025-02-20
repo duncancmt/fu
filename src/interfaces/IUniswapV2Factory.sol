@@ -7,6 +7,26 @@ import {IUniswapV2Pair, INIT_HASH} from "./IUniswapV2Pair.sol";
 interface IUniswapV2Factory {
     function createPair(IERC20 tokenA, IERC20 tokenB) external returns (IUniswapV2Pair pair);
     function getPair(IERC20 tokenA, IERC20 tokenB) external view returns (IUniswapV2Pair pair);
+    function feeTo() external view returns (address);
+}
+
+library FastUniswapV2FactoryLib {
+    function fastFeeTo(IUniswapV2Factory factory) internal view returns (address r) {
+        assembly ("memory-safe") {
+            mstore(0x00, 0x017e7e58) // selector for `feeTo()`
+
+            if iszero(staticcall(gas(), factory, 0x1c, 0x04, 0x00, 0x20)) {
+                let ptr := mload(0x40)
+                returndatacopy(ptr, 0x00, returndatasize())
+                revert(ptr, returndatasize())
+            }
+
+            r := mload(0x00)
+            if shr(0xa0, r) {
+                revert(0x00, 0x00)
+            }
+        }
+    }
 }
 
 IUniswapV2Factory constant FACTORY = IUniswapV2Factory(0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f);

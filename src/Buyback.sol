@@ -8,6 +8,7 @@ import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "./interfaces/IFU.sol";
 
 import {IUniswapV2Pair, FastUniswapV2PairLib} from "./interfaces/IUniswapV2Pair.sol";
+import {IUniswapV2Factory, FastUniswapV2FactoryLib, FACTORY} from "./interfaces/IUniswapV2Factory.sol";
 import {pairFor} from "./interfaces/IUniswapV2Factory.sol";
 
 import {BasisPoints, ZERO as ZERO_BP, BASIS, scaleUp} from "./types/BasisPoints.sol";
@@ -54,6 +55,7 @@ contract Buyback is TwoStepOwnable, Context {
     using FastTransferLib for IUniswapV2Pair;
     using FastFu for IFU;
     using FastUniswapV2PairLib for IUniswapV2Pair;
+    using FastUniswapV2FactoryLib for IUniswapV2Factory;
     using Math for uint256;
     using UnsafeMath for uint256;
     using FastLogic for bool;
@@ -226,13 +228,25 @@ contract Buyback is TwoStepOwnable, Context {
 
         // compute the amount of LP to be burned to (approximately) bring `k` back to the target
         // amount. the 30bp swap fee applied by the pair results in a slight underestimation of the
-        // amount of LP required to burn.
+        // amount of LP required to burn. we compute:
+        //     (lpBalance * totalLiquidity - totalLpSupply * targetLiquidity) / totalLiquidity
         uint256 left;
-        uint256 right;
         unchecked {
             left = lpBalance * liquidity;
+        }
+        // if Uniswap turns on the fee switch, we need to adjust `totalLpSupply` before we call burn
+        uint256 totalLpSupply = pair.fastTotalSupply();
+        if (FACTORY.fastFeeTo() != address(0)) {
+            uint256 rootKLast = pair.fastKLast().sqrt();
+            uint256 liquidityGrowth = liquidity - rootKLast; // underflow indicates that (somehow) liquidity has decreased
+            unchecked {
+                totalLpSupply += totalLpSupply * liquidityGrowth / (liquidity * 5 + rootKLast);
+            }
+        }
+        uint256 right;
+        unchecked {
             // slither-disable-next-line divide-before-multiply
-            right = pair.fastTotalSupply() * kTarget_;
+            right = totalLpSupply * kTarget_;
         }
         uint256 burnLp = (left - right).unsafeDiv(liquidity); // underflow indicates that (somehow) liquidity has decreased
 

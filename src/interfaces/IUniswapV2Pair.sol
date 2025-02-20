@@ -7,6 +7,7 @@ interface IUniswapV2Pair is IERC2612 {
     function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
     function price0CumulativeLast() external view returns (uint256);
     function price1CumulativeLast() external view returns (uint256);
+    function kLast() external view returns (uint256);
 
     function mint(address to) external returns (uint256 liquidity);
     function burn(address to) external returns (uint256 amount0, uint256 amount1);
@@ -49,6 +50,20 @@ library FastUniswapV2PairLib {
                 returndatacopy(ptr, 0x00, returndatasize())
                 revert(ptr, returndatasize())
             }
+            r := mload(0x00)
+        }
+    }
+
+    function fastKLast(IUniswapV2Pair pair) internal view returns (uint256 r) {
+        assembly ("memory-safe") {
+            mstore(0x00, 0x7464fc3d) // selector for `kLast()`
+
+            if iszero(staticcall(gas(), pair, 0x1c, 0x04, 0x00, 0x20)) {
+                let ptr := mload(0x40)
+                returndatacopy(ptr, 0x00, returndatasize())
+                revert(ptr, returndatasize())
+            }
+
             r := mload(0x00)
         }
     }

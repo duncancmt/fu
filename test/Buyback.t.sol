@@ -11,6 +11,9 @@ import {FUDeploy, Common} from "./Deploy.t.sol";
 
 import {StdCheats} from "@forge-std/StdCheats.sol";
 
+uint256 constant TWAP_PERIOD = 1 days;
+uint256 constant TWAP_PERIOD_TOLERANCE = 30 minutes;
+
 contract BuybackTest is FUDeploy, Test {
     function wethBalanceSlot() internal view returns (bytes32) {
         return keccak256(abi.encode(fu.pair(), bytes32(uint256(3))));
@@ -99,7 +102,7 @@ contract BuybackTest is FUDeploy, Test {
             "timestamp last not equal to deploy time"
         );
 
-        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
+        uint256 elapsed = TWAP_PERIOD + TWAP_PERIOD_TOLERANCE;
         // Advance time to ensure consult won't revert with "PriceTooFresh"
         warp(getBlockTimestamp() + elapsed);
 
@@ -118,7 +121,7 @@ contract BuybackTest is FUDeploy, Test {
     }
 
     function testConsultCounterfactualLogic(uint256 elapsed, uint16 fuIncrease, uint16 wethIncrease) public {
-        assume(elapsed >= buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE() + deployTime);
+        assume(elapsed >= TWAP_PERIOD + TWAP_PERIOD_TOLERANCE + deployTime);
         assume(fuIncrease != 0);
         assume(wethIncrease != 0);
 
@@ -152,7 +155,7 @@ contract BuybackTest is FUDeploy, Test {
     }
 
     function testConsultRevertPriceTooFresh() public {
-        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
+        uint256 elapsed = TWAP_PERIOD + TWAP_PERIOD_TOLERANCE;
 
         // Let's do a first consult to set things up:
         warp(getBlockTimestamp() + elapsed);
@@ -198,7 +201,7 @@ contract BuybackTest is FUDeploy, Test {
         pair.sync();
 
         // Step 1: Consult the oracle and store the cumulatives
-        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
+        uint256 elapsed = TWAP_PERIOD + TWAP_PERIOD_TOLERANCE;
         warp(getBlockTimestamp() + elapsed);
         buyback.consult();
 
@@ -279,7 +282,7 @@ contract BuybackTest is FUDeploy, Test {
 
     function testBuybackRevertPriceTooFresh() public {
         // Must do a consult, but we do it too recently to cause revert in buyback
-        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
+        uint256 elapsed = TWAP_PERIOD + TWAP_PERIOD_TOLERANCE;
         warp(getBlockTimestamp() + elapsed);
         buyback.consult();
 
@@ -307,7 +310,7 @@ contract BuybackTest is FUDeploy, Test {
         IUniswapV2Pair(fu.pair()).sync();
 
         // Warp beyond (TWAP_PERIOD + TOLERANCE) to cause PriceTooStale
-        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
+        uint256 elapsed = TWAP_PERIOD + TWAP_PERIOD_TOLERANCE;
         warp(getBlockTimestamp() + elapsed + 1);
 
         expectRevert(abi.encodeWithSelector(Buyback.PriceTooStale.selector, elapsed + 1));
@@ -326,7 +329,7 @@ contract BuybackTest is FUDeploy, Test {
         IUniswapV2Pair(fu.pair()).sync();
 
         // Warp so that the oracle has matured
-        uint256 elapsed = buyback.TWAP_PERIOD() + buyback.TWAP_PERIOD_TOLERANCE();
+        uint256 elapsed = TWAP_PERIOD + TWAP_PERIOD_TOLERANCE;
         warp(getBlockTimestamp() + elapsed);
 
         (bool success, bytes memory reason) = address(buyback).call(abi.encodeCall(buyback.buyback, ()));
