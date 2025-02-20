@@ -200,9 +200,7 @@ contract Buyback is TwoStepOwnable, Context {
             // the constant-product swap FU->WETH, we get more WETH. in other words, we err on the
             // side of giving `owner()` a too-favorable price during this hypothetical swap.
             uint256 reserveFu = tmp().omul(liquiditySquared, 1 << 112).div(fuWethPriceQ112).sqrt();
-            uint512 n = alloc().omul(liquiditySquared, amountFu);
-            uint256 d = reserveFu * (reserveFu + amountFu);
-            return n.div(d);
+            return tmp().omul(liquiditySquared, amountFu).div(reserveFu * (reserveFu + amountFu));
         }
     }
 
