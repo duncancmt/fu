@@ -69,9 +69,8 @@ contract Buyback is TwoStepOwnable, Context {
     uint120 public kTarget;
     uint16 public ownerFee;
 
-    // TODO: revisit these constants
-    uint256 public constant TWAP_PERIOD = 1 days;
-    uint256 public constant TWAP_PERIOD_TOLERANCE = 30 minutes;
+    uint256 internal constant _TWAP_PERIOD = 1 days;
+    uint256 internal constant _TWAP_PERIOD_TOLERANCE = 30 minutes;
 
     uint256 internal priceFuWethCumulativeLast;
     uint256 internal priceWethFuCumulativeLast;
@@ -156,7 +155,7 @@ contract Buyback is TwoStepOwnable, Context {
     function consult() public returns (bool) {
         unchecked {
             // slither-disable-next-line timestamp
-            if (timestampLast + (TWAP_PERIOD + TWAP_PERIOD_TOLERANCE) > block.timestamp) {
+            if (timestampLast + (_TWAP_PERIOD + _TWAP_PERIOD_TOLERANCE) > block.timestamp) {
                 revert PriceTooFresh(block.timestamp - timestampLast);
             }
         }
@@ -169,10 +168,10 @@ contract Buyback is TwoStepOwnable, Context {
     function _checkWethFuOraclePrice(uint256 reserveFu, uint256 reserveWeth) internal view returns (uint256 elapsed) {
         unchecked {
             elapsed = block.timestamp - timestampLast;
-            if (elapsed < TWAP_PERIOD - TWAP_PERIOD_TOLERANCE) {
+            if (elapsed < _TWAP_PERIOD - _TWAP_PERIOD_TOLERANCE) {
                 revert PriceTooFresh(elapsed);
             }
-            if (elapsed > TWAP_PERIOD + TWAP_PERIOD_TOLERANCE) {
+            if (elapsed > _TWAP_PERIOD + _TWAP_PERIOD_TOLERANCE) {
                 revert PriceTooStale(elapsed);
             }
             // the call to `burn` that happens before this ensures that
