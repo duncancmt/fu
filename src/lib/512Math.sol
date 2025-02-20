@@ -582,45 +582,6 @@ library Lib512MathArithmetic {
         }
     }
 
-    function _toOdd256(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo)
-        private
-        pure
-        returns (uint256 rx_lo, uint256 ry_lo)
-    {
-        // Factor powers of two out of `y_lo` and apply the same shift to [x_hi
-        // x_lo]
-        (uint256 twos, uint256 twosInv) = _twos(y_lo);
-
-        assembly ("memory-safe") {
-            // Divide [y_hi y_lo] by the power of two, returning only the low limb
-            ry_lo := or(div(y_lo, twos), mul(y_hi, twosInv))
-
-            // Divide [x_hi x_lo] by the power of two, returning only the low limb
-            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
-        }
-    }
-
-    function _toOdd256Multi(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo, uint256 d_hi, uint256 d_lo)
-        private
-        pure
-        returns (uint256 rx, uint256 ry, uint256 rd)
-    {
-        // Factor powers of two out of `d_lo` and apply the same shift to [x_hi
-        // x_lo] and [y_hi y_lo]
-        (uint256 twos, uint256 twosInv) = _twos(d_lo);
-
-        assembly ("memory-safe") {
-            // Divide [d_hi d_lo] by the power of two, returning only the low limb
-            rd := or(div(d_lo, twos), mul(d_hi, twosInv))
-
-            // Divide [x_hi x_lo] by the power of two, returning only the low limb
-            rx := or(div(x_lo, twos), mul(x_hi, twosInv))
-
-            // Divide [y_hi y_lo] by the power of two, returning only the low limb
-            ry := or(div(y_lo, twos), mul(y_hi, twosInv))
-        }
-    }
-
     function _toOdd512(uint256 x_hi, uint256 x_lo, uint256 y)
         private
         pure
@@ -637,73 +598,6 @@ library Lib512MathArithmetic {
             // Divide [x_hi x_lo] by the power of two
             rx_hi := div(x_hi, twos)
             rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
-        }
-    }
-
-    function _toOdd512Multi(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo, uint256 d)
-        private
-        pure
-        returns (uint256 rx_hi, uint256 rx_lo, uint256 ry_hi, uint256 ry_lo, uint256 rd)
-    {
-        // Factor powers of two out of `d` and apply the same shift to [x_hi
-        // x_lo] and [y_hi y_lo]
-        (uint256 twos, uint256 twosInv) = _twos(d);
-
-        assembly ("memory-safe") {
-            // Divide `d` by the power of two
-            rd := div(d, twos)
-
-            // Divide [x_hi x_lo] by the power of two
-            rx_hi := div(x_hi, twos)
-            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
-
-            // Divide [y_hi y_lo] by the power of two
-            ry_hi := div(y_hi, twos)
-            ry_lo := or(div(y_lo, twos), mul(y_hi, twosInv))
-        }
-    }
-
-    function _toOdd512(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo)
-        private
-        pure
-        returns (uint256 rx_hi, uint256 rx_lo, uint256 ry_hi, uint256 ry_lo)
-    {
-        // Factor powers of two out of [y_hi y_lo] and apply the same shift to
-        // [x_hi x_lo] and [y_hi y_lo]
-        (uint256 twos, uint256 twosInv) = _twos(y_lo);
-
-        assembly ("memory-safe") {
-            // Divide [y_hi y_lo] by the power of two
-            ry_hi := div(y_hi, twos)
-            ry_lo := or(div(y_lo, twos), mul(y_hi, twosInv))
-
-            // Divide [x_hi x_lo] by the power of two
-            rx_hi := div(x_hi, twos)
-            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
-        }
-    }
-
-    function _toOdd512Multi(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo, uint256 d_hi, uint256 d_lo)
-        private
-        pure
-        returns (uint256 rx_hi, uint256 rx_lo, uint256 ry_hi, uint256 ry_lo, uint256 rd_hi, uint256 rd_lo)
-    {
-        // Factor powers of two out of [d_hi d_lo] and apply the same shift to
-        // [x_hi x_lo] and [d_hi d_lo]
-        (uint256 twos, uint256 twosInv) = _twos(d_lo);
-
-        assembly ("memory-safe") {
-            // Divide [d_hi d_lo] by the power of two
-            rd_hi := div(d_hi, twos)
-            rd_lo := or(div(d_lo, twos), mul(d_hi, twosInv))
-
-            // Divide [x_hi x_lo] by the power of two
-            rx_hi := div(x_hi, twos)
-            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
-
-            // Divide [y_hi y_lo] by the power of two
-            ry_hi := div(y_hi, twos)
-            ry_lo := or(div(y_lo, twos), mul(y_hi, twosInv))
         }
     }
 
@@ -743,25 +637,6 @@ library Lib512MathArithmetic {
 
         // tmp = d * inv_lo % 2**512
         (uint256 tmp_hi, uint256 tmp_lo) = _mul(d, inv_lo);
-        // tmp = 2 - tmp % 2**512
-        (tmp_hi, tmp_lo) = _sub(0, 2, tmp_hi, tmp_lo);
-
-        assembly ("memory-safe") {
-            // inv_hi = inv_lo * tmp / 2**256 % 2**256
-            let mm := mulmod(inv_lo, tmp_lo, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
-            inv_hi := add(mul(inv_lo, tmp_hi), sub(sub(mm, inv_lo), lt(mm, inv_lo)))
-        }
-    }
-
-    function _invert512(uint256 d_hi, uint256 d_lo) private pure returns (uint256 inv_hi, uint256 inv_lo) {
-        // First, we get the inverse of `d` mod 2²⁵⁶
-        inv_lo = _invert256(d_lo);
-
-        // To extend this to the inverse mod 2⁵¹², we perform a more elaborate
-        // 7th Newton-Raphson-Hensel iteration with 512 bits of precision.
-
-        // tmp = d * inv_lo % 2**512
-        (uint256 tmp_hi, uint256 tmp_lo) = _mul(d_hi, d_lo, inv_lo);
         // tmp = 2 - tmp % 2**512
         (tmp_hi, tmp_lo) = _sub(0, 2, tmp_hi, tmp_lo);
 
