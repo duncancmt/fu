@@ -50,6 +50,7 @@ library FastUniswapV2PairLib {
                 returndatacopy(ptr, 0x00, returndatasize())
                 revert(ptr, returndatasize())
             }
+
             r := mload(0x00)
         }
     }

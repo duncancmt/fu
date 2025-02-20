@@ -68,7 +68,7 @@ contract Buyback is TwoStepOwnable, Context {
     bool internal immutable _sortTokens;
 
     uint120 public lastLpBalance;
-    uint120 public kTarget;
+    uint120 public liquidityTarget;
     uint16 public ownerFee;
 
     uint256 internal constant _TWAP_PERIOD = 1 days;
@@ -80,7 +80,7 @@ contract Buyback is TwoStepOwnable, Context {
 
     event OwnerFee(BasisPoints oldFee, BasisPoints newFee);
     event OracleConsultation(address indexed keeper, uint256 cumulativeFuWeth, uint256 cumulativeWethFu);
-    event Buyback(address indexed caller, uint256 kTarget);
+    event Buyback(address indexed caller, uint256 liquidityTarget);
 
     error FeeIncreased(BasisPoints oldFee, BasisPoints newFee);
     error FeeNotZero(BasisPoints ownerFee);
@@ -109,8 +109,8 @@ contract Buyback is TwoStepOwnable, Context {
         pair = pairFor(token, WETH);
         assert(token.pair() == address(pair));
         _sortTokens = address(token) > address(WETH);
-        lastLpBalance = kTarget = uint120(IERC20(pair).fastBalanceOf(address(this)));
-        emit Buyback(_msgSender(), kTarget);
+        lastLpBalance = liquidityTarget = uint120(IERC20(pair).fastBalanceOf(address(this)));
+        emit Buyback(_msgSender(), liquidityTarget);
         ownerFee = uint16(BasisPoints.unwrap(ownerFee_));
         emit OwnerFee(BASIS, ownerFee_);
 
@@ -210,12 +210,12 @@ contract Buyback is TwoStepOwnable, Context {
     }
 
     function buyback() external returns (bool) {
-        // adjust `kTarget` to account for any extra LP tokens that may have been sent to this
-        // contract since the last time `buyback` was called
+        // adjust `liquidityTarget` to account for any extra LP tokens that may have been sent to
+        // this contract since the last time `buyback` was called
         uint256 lpBalance = pair.fastBalanceOf(address(this));
-        uint256 kTarget_;
+        uint256 liquidityTarget_;
         unchecked {
-            kTarget_ = (kTarget * lpBalance).unsafeDivUp(lastLpBalance);
+            liquidityTarget_ = (liquidityTarget * lpBalance).unsafeDivUp(lastLpBalance);
         }
 
         // compute the underlying liquidity
@@ -226,9 +226,9 @@ contract Buyback is TwoStepOwnable, Context {
             liquidity = (reserve0 * reserve1).sqrt();
         }
 
-        // compute the amount of LP to be burned to (approximately) bring `k` back to the target
-        // amount. the 30bp swap fee applied by the pair results in a slight underestimation of the
-        // amount of LP required to burn. we compute:
+        // compute the amount of LP to be burned to (approximately) bring `liquidity` back to the
+        // target amount. the 30bp swap fee applied by the pair results in a slight underestimation
+        // of the amount of LP required to burn. we compute:
         //     (lpBalance * totalLiquidity - totalLpSupply * targetLiquidity) / totalLiquidity
         uint256 left;
         unchecked {
@@ -237,16 +237,19 @@ contract Buyback is TwoStepOwnable, Context {
         // if Uniswap turns on the fee switch, we need to adjust `totalLpSupply` before we call burn
         uint256 totalLpSupply = pair.fastTotalSupply();
         if (FACTORY.fastFeeTo() != address(0)) {
-            uint256 rootKLast = pair.fastKLast().sqrt();
-            uint256 liquidityGrowth = liquidity - rootKLast; // underflow indicates that (somehow) liquidity has decreased
-            unchecked {
-                totalLpSupply += totalLpSupply * liquidityGrowth / (liquidity * 5 + rootKLast);
+            uint256 kLast = pair.fastKLast();
+            if (kLast != 0) {
+                uint256 liquidityLast = kLast.sqrt();
+                uint256 liquidityGrowth = liquidity - liquidityLast; // underflow indicates that (somehow) liquidity has decreased
+                unchecked {
+                    totalLpSupply += totalLpSupply * liquidityGrowth / (liquidity * 5 + liquidityLast);
+                }
             }
         }
         uint256 right;
         unchecked {
             // slither-disable-next-line divide-before-multiply
-            right = totalLpSupply * kTarget_;
+            right = totalLpSupply * liquidityTarget_;
         }
         uint256 burnLp = (left - right).unsafeDiv(liquidity); // underflow indicates that (somehow) liquidity has decreased
 
@@ -312,16 +315,16 @@ contract Buyback is TwoStepOwnable, Context {
         WETH.fastTransfer(owner_, WETH.fastBalanceOf(address(this)));
 
         // update state for next time, in case somebody sends LP tokens to this contract
-        (kTarget, lastLpBalance) = (uint120(kTarget_), uint120(pair.fastBalanceOf(address(this))));
-        // because we had to apply the 30bp fee when swapping WETH->FU above, the actual `k`
-        // represented by the LP tokens held by this contract is _still_ above `kTarget`. attempting
-        // to solve for the amount of LP tokens to burn to bring these values into exact equality
-        // requires finding a root of a degree-4 polynomial, which is absolutely awful to attempt to
-        // compute on-chain. so we accept this inaccuracy as a concession to the limits of
-        // complexity and gas.
+        (liquidityTarget, lastLpBalance) = (uint120(liquidityTarget_), uint120(pair.fastBalanceOf(address(this))));
+        // because we had to apply the 30bp fee when swapping WETH->FU above, the actual `liquidity`
+        // represented by the LP tokens held by this contract is _still_ above
+        // `liquidityTarget`. attempting to solve for the amount of LP tokens to burn to bring these
+        // values into exact equality requires finding a root of a degree-4 polynomial, which is
+        // absolutely awful to attempt to compute on-chain. so we accept this inaccuracy as a
+        // concession to the limits of complexity and gas.
         timestampLast = 1;
 
-        emit Buyback(_msgSender(), kTarget);
+        emit Buyback(_msgSender(), liquidityTarget);
 
         return true;
     }

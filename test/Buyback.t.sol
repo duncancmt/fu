@@ -5,8 +5,10 @@ import {Test} from "@forge-std/Test.sol";
 import {Buyback} from "src/Buyback.sol";
 import {IFU} from "src/interfaces/IFU.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
+import {FACTORY} from "src/interfaces/IUniswapV2Factory.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {BasisPoints, BASIS} from "src/types/BasisPoints.sol";
+import {Math} from "src/lib/Math.sol";
 import {FUDeploy, Common} from "./Deploy.t.sol";
 
 import {StdCheats} from "@forge-std/StdCheats.sol";
@@ -30,10 +32,10 @@ contract BuybackTest is FUDeploy, Test {
     function testConstructor() public view {
         // The constructor sets:
         //   ownerFee = 50% (our chosen initialFee)
-        //   lastLpBalance & kTarget to the pair's balanceOf(buyback)
+        //   lastLpBalance & liquidityTarget to the pair's balanceOf(buyback)
         assertEq(buyback.ownerFee(), 5000, "ownerFee mismatch");
         assertEq(buyback.lastLpBalance(), 72057594037927935999998999, "lastLpBalance mismatch");
-        assertEq(buyback.kTarget(), 72057594037927935999998999, "kTarget mismatch");
+        assertEq(buyback.liquidityTarget(), 72057594037927935999998999, "liquidityTarget mismatch");
         assertEq(buyback.owner(), address(uint160(uint256(keccak256("Buyback owner")))), "owner mismatch");
         assertEq(buyback.pendingOwner(), address(0), "pending owner mismatch");
     }
@@ -180,9 +182,9 @@ contract BuybackTest is FUDeploy, Test {
         // Step 0: Sanity checks
         IUniswapV2Pair pair = IUniswapV2Pair(fu.pair());
         uint256 pairWethBalance = WETH.balanceOf(address(pair));
-        uint256 kTarget = buyback.kTarget();
-        assertEq(kTarget, pair.balanceOf(address(buyback)));
-        assertEq(kTarget, buyback.lastLpBalance());
+        uint256 liquidityTarget = buyback.liquidityTarget();
+        assertEq(liquidityTarget, pair.balanceOf(address(buyback)));
+        assertEq(liquidityTarget, buyback.lastLpBalance());
         address owner = buyback.owner();
         assertEq(WETH.balanceOf(owner), 0);
         uint256 percentIncrease = 1;
@@ -255,11 +257,11 @@ contract BuybackTest is FUDeploy, Test {
 
         // Step 6: Do the actual buyback
         expectEmit(true, true, true, true, address(buyback));
-        emit Buyback.Buyback(address(this), kTarget);
+        emit Buyback.Buyback(address(this), liquidityTarget);
         assertTrue(buyback.buyback(), "buyback() should not revert");
 
-        assertEq(buyback.kTarget(), kTarget);
-        assertLt(buyback.lastLpBalance(), kTarget);
+        assertEq(buyback.liquidityTarget(), liquidityTarget);
+        assertLt(buyback.lastLpBalance(), liquidityTarget);
         assertEq(buyback.lastLpBalance(), pair.balanceOf(address(buyback)));
 
         (uint256 reserves0, uint256 reserves1, uint256 timestampLast) = pair.getReserves();
@@ -278,6 +280,65 @@ contract BuybackTest is FUDeploy, Test {
 
         assertEq(WETH.balanceOf(address(buyback)), 0);
         assertEq(fu.balanceOf(address(buyback)), 0);
+    }
+
+    function testBuybackFeeToSuccess() public {
+        address factoryOwner;
+        {
+            (bool success, bytes memory returndata) = address(FACTORY).staticcall(abi.encodeWithSignature("feeToSetter()"));
+            require(success);
+            factoryOwner = abi.decode(returndata, (address));
+        }
+
+        prank(factoryOwner);
+        {
+            (bool success, bytes memory returndata) = address(FACTORY).call(abi.encodeWithSignature("setFeeTo(address)", address(this)));
+            require(success);
+            require(returndata.length == 0);
+        }
+
+        IUniswapV2Pair pair = IUniswapV2Pair(fu.pair());
+        uint256 pairWethBalance = WETH.balanceOf(address(pair));
+        uint256 liquidityTarget = buyback.liquidityTarget();
+        uint256 kLast = pairWethBalance * fu.balanceOf(address(pair));
+        assertEq(liquidityTarget, Math.sqrt(kLast) - 1000);
+
+        address owner = buyback.owner();
+        uint256 percentIncrease = 1;
+
+        store(address(pair), bytes32(uint256(0x0b)), bytes32(kLast)); // overwrite kLast
+        store(
+            address(WETH),
+            wethBalanceSlot(),
+            bytes32(uint256(load(address(WETH), wethBalanceSlot())) * (percentIncrease + 100) / 100)
+        );
+        store(
+            address(fu),
+            fuBalanceSlot(),
+            bytes32(uint256(load(address(fu), fuBalanceSlot())) * (percentIncrease + 100) / 100)
+        );
+        pair.sync();
+
+        uint256 elapsed = TWAP_PERIOD + TWAP_PERIOD_TOLERANCE;
+        warp(getBlockTimestamp() + elapsed);
+        buyback.consult();
+
+        warp(getBlockTimestamp() + elapsed);
+
+        store(address(fu), fuBalanceSlot(), bytes32(uint256(load(address(fu), fuBalanceSlot())) * 10001 / 10000));
+
+        buyback.buyback();
+
+        uint256 priceImpactToleranceBp = 30;
+        uint256 expectedOwnerFees = pairWethBalance * percentIncrease / 100;
+        uint256 ownerWethBalance = WETH.balanceOf(owner);
+        assertLe(ownerWethBalance, expectedOwnerFees * (10000 - priceImpactToleranceBp) / 10000);
+        expectedOwnerFees = expectedOwnerFees * 5 / 6;
+        assertGe(ownerWethBalance, expectedOwnerFees * (10000 - priceImpactToleranceBp) / 10000);
+
+        //console.log("original liquidity target", liquidityTarget);
+        //console.log("new liquidity target", buyback.liquidityTarget());
+        //console.log("pro rata liquidity", Math.sqrt(fu.balanceOf(address(pair)) * WETH.balanceOf(address(pair))) * pair.balanceOf(address(buyback)) / pair.totalSupply());
     }
 
     function testBuybackRevertPriceTooFresh() public {
