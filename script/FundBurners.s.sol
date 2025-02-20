@@ -21,7 +21,7 @@ contract FundBurners is Script {
     using stdJson for string;
 
     IMulticall internal constant _MULTICALL = IMulticall(0x40A2aCCbd92BCA938b02010E17A5b8929b49130D);
-    address internal constant _DEPLOYER_BROADCASTER = 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6;
+    address internal constant _BROADCASTER = 0xD6B66609E5C05210BE0A690aB3b9788BA97aFa60;
 
     function run() external {
         address[] memory burners =
@@ -49,7 +49,7 @@ contract FundBurners is Script {
         }
 
         uint256 totalValue = 0.01 ether * burners.length;
-        vm.startBroadcast(_DEPLOYER_BROADCASTER);
+        vm.startBroadcast(_BROADCASTER);
         _MULTICALL.multiSend{value: totalValue}(payload);
         vm.stopBroadcast();
     }
