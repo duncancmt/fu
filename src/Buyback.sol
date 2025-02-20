@@ -47,6 +47,7 @@ library FastFu {
     }
 }
 
+/// @custom:security-contact security@fuckyou.finance
 contract Buyback is TwoStepOwnable, Context {
     using FastTransferLib for IERC20;
     using FastTransferLib for IFU;
