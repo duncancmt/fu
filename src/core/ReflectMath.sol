@@ -56,7 +56,7 @@ library ReflectMath {
             tmpTBpS().omul(scale(toShares, BASIS), totalSupply)
         ).imul(uninvolvedShares);
 
-        (newFromShares, newToShares) = n0.divMulti(n1, d);
+        (newFromShares, newToShares) = (n0.div(d), n1.div(d));
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
     }
 
@@ -99,7 +99,7 @@ library ReflectMath {
             uninvolvedShares.mul(Settings.ANTI_WHALE_DIVISOR)
         );
 
-        (newToShares, newFromShares) = n0.divMulti(n1, d);
+        (newToShares, newFromShares) = (n0.div(d), n1.div(d));
         newToShares = newToShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newTotalShares = totalShares - (fromShares + toShares - newFromShares - newToShares);
         counterfactualToShares = tmpTBpS().omul(

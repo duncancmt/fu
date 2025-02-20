@@ -18,12 +18,7 @@ function cast2(uint512 x) pure returns (TokensXShares2) {
 
 library TokensXShares2Arithmetic {
     function div(TokensXShares2 n, TokensXShares d) internal view returns (Shares) {
-        return Shares.wrap(cast(n).div(cast(d)));
-    }
-
-    function divMulti(TokensXShares2 n0, TokensXShares2 n1, TokensXShares d) internal view returns (Shares, Shares) {
-        (uint256 r0, uint256 r1) = cast(n0).divMulti(cast(n1), cast(d));
-        return (Shares.wrap(r0), Shares.wrap(r1));
+        return Shares.wrap(cast(n).divAlt(cast(d)));
     }
 }
 
