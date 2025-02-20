@@ -16,6 +16,8 @@ import {Settings} from "./core/Settings.sol";
 import {FastTransferLib} from "./lib/FastTransferLib.sol";
 import {uint512, tmp, alloc} from "./lib/512Math.sol";
 import {Math} from "./lib/Math.sol";
+import {UnsafeMath} from "./lib/UnsafeMath.sol";
+import {Panic} from "./lib/Panic.sol";
 import {FastLogic} from "./lib/FastLogic.sol";
 import {Ternary} from "./lib/Ternary.sol";
 
@@ -52,6 +54,7 @@ contract Buyback is TwoStepOwnable, Context {
     using FastFu for IFU;
     using FastUniswapV2PairLib for IUniswapV2Pair;
     using Math for uint256;
+    using UnsafeMath for uint256;
     using FastLogic for bool;
     using Ternary for bool;
 
@@ -139,10 +142,10 @@ contract Buyback is TwoStepOwnable, Context {
             uint256 elapsed = uint32(block.timestamp) - timestampLast_; // masking and underflow is desired
             // slither-disable-next-line divide-before-multiply
             priceFuWethCumulativeLast =
-                pair.fastPriceCumulativeLast(_sortTokens) + (reserveWeth << 112) / reserveFu * elapsed;
+                pair.fastPriceCumulativeLast(_sortTokens) + (reserveWeth << 112).unsafeDiv(reserveFu) * elapsed;
             // slither-disable-next-line divide-before-multiply
             priceWethFuCumulativeLast =
-                pair.fastPriceCumulativeLast(!_sortTokens) + (reserveFu << 112) / reserveWeth * elapsed;
+                pair.fastPriceCumulativeLast(!_sortTokens) + (reserveFu << 112).unsafeDiv(reserveWeth) * elapsed;
         }
 
         timestampLast = block.timestamp;
@@ -175,11 +178,11 @@ contract Buyback is TwoStepOwnable, Context {
             // `pair.price?CumulativeLast()` is up-to-date. we don't need to handle any
             // counterfactual values.
             uint256 wethFuPrice =
-                uint224((pair.fastPriceCumulativeLast(!_sortTokens) - priceWethFuCumulativeLast) / elapsed);
+                uint224((pair.fastPriceCumulativeLast(!_sortTokens) - priceWethFuCumulativeLast).unsafeDiv(elapsed));
             // `wethFuPrice` is a slight overestimate of the mean FU/WETH ratio, under the
             // assumption that the price is a geometric process. this gives a small degree of laxity
             // in this check.
-            uint256 currentPrice = (reserveFu << 112) / reserveWeth;
+            uint256 currentPrice = (reserveFu << 112).unsafeDiv(reserveWeth);
             if (currentPrice < wethFuPrice) {
                 revert PriceTooLow(currentPrice, wethFuPrice);
             }
@@ -210,7 +213,7 @@ contract Buyback is TwoStepOwnable, Context {
         uint256 lpBalance = pair.fastBalanceOf(address(this));
         uint256 kTarget_;
         unchecked {
-            kTarget_ = kTarget * lpBalance / lastLpBalance;
+            kTarget_ = (kTarget * lpBalance).unsafeDivUp(lastLpBalance);
         }
 
         // compute the underlying liquidity
@@ -231,7 +234,7 @@ contract Buyback is TwoStepOwnable, Context {
             // slither-disable-next-line divide-before-multiply
             right = pair.fastTotalSupply() * kTarget_;
         }
-        uint256 burnLp = (left - right) / liquidity; // underflow indicates that (somehow) liquidity has decreased
+        uint256 burnLp = (left - right).unsafeDiv(liquidity); // underflow indicates that (somehow) liquidity has decreased
 
         // burn LP tokens and receive some of the underlying tokens
         pair.fastTransfer(address(pair), burnLp);
@@ -267,7 +270,7 @@ contract Buyback is TwoStepOwnable, Context {
         unchecked {
             feeWeth += _hypotheticalConstantProductSwap(
                 scaleUp(amountFu, ownerFee_),
-                uint224((pair.fastPriceCumulativeLast(_sortTokens) - priceFuWethCumulativeLast) / elapsed),
+                uint224((pair.fastPriceCumulativeLast(_sortTokens) - priceFuWethCumulativeLast).unsafeDiv(elapsed)),
                 reserveFu,
                 reserveWeth
             );
@@ -280,7 +283,7 @@ contract Buyback is TwoStepOwnable, Context {
             uint256 swapWethWithFee = BasisPoints.unwrap(BASIS - UNIV2_FEE) * swapWethIn;
             uint256 n = swapWethWithFee * reserveFu;
             uint256 d = BasisPoints.unwrap(BASIS) * reserveWeth + swapWethWithFee;
-            swapFuOut = n / d;
+            swapFuOut = n.unsafeDiv(d);
         }
         WETH.fastTransfer(address(pair), swapWethIn);
         {
@@ -290,7 +293,7 @@ contract Buyback is TwoStepOwnable, Context {
 
         // the last step is to pay the WETH fee to the owner and to `deliver` the balance of this
         // contract to the other tokenholders (increasing not only the price of their holdings, but
-        // the actual number of tokens)
+        // also the actual number of tokens)
         token.fastDeliver(token.fastBalanceOf(address(this)));
         WETH.fastTransfer(owner_, WETH.fastBalanceOf(address(this)));
 
