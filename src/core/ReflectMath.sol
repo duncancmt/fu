@@ -45,7 +45,7 @@ library ReflectMath {
         Shares totalShares,
         Shares fromShares,
         Shares toShares
-    ) internal view freeMemory returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
+    ) internal pure freeMemory returns (Shares newFromShares, Shares newToShares, Shares newTotalShares) {
         Shares uninvolvedShares = totalShares - fromShares - toShares;
         TokensXBasisPointsXShares2 n0 = allocTS().omul(fromShares, totalSupply).isub(tmpTS().omul(amount, totalShares))
             .imul(scale(uninvolvedShares, BASIS));
@@ -56,7 +56,7 @@ library ReflectMath {
             tmpTBpS().omul(scale(toShares, BASIS), totalSupply)
         ).imul(uninvolvedShares);
 
-        (newFromShares, newToShares) = n0.divMulti(n1, d);
+        (newFromShares, newToShares) = (n0.div(d), n1.div(d));
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
     }
 
@@ -84,7 +84,7 @@ library ReflectMath {
         Shares toShares
     )
         internal
-        view
+        pure
         freeMemory
         returns (Shares newFromShares, Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
@@ -99,7 +99,7 @@ library ReflectMath {
             uninvolvedShares.mul(Settings.ANTI_WHALE_DIVISOR)
         );
 
-        (newToShares, newFromShares) = n0.divMulti(n1, d);
+        (newToShares, newFromShares) = (n0.div(d), n1.div(d));
         newToShares = newToShares.div(Settings.ANTI_WHALE_DIVISOR) - ONE_SHARE;
         newTotalShares = totalShares - (fromShares + toShares - newFromShares - newToShares);
         counterfactualToShares = tmpTBpS().omul(
@@ -124,7 +124,7 @@ library ReflectMath {
         Shares totalShares,
         Tokens amount,
         Shares toShares
-    ) internal view freeMemory returns (Shares newToShares, Shares newTotalShares, Tokens newTotalSupply) {
+    ) internal pure freeMemory returns (Shares newToShares, Shares newTotalShares, Tokens newTotalSupply) {
         TokensXBasisPointsXShares d = allocTBpS().omul(scale(totalSupply, BASIS), totalShares).iadd(
             tmpTBpS().omul(scale(amount, taxRate), totalShares)
         );
@@ -147,7 +147,7 @@ library ReflectMath {
         Shares fromShares
     )
         internal
-        view
+        pure
         freeMemory
         returns (Shares newFromShares, Shares newTotalShares, Tokens transferTokens, Tokens newTotalSupply)
     {
@@ -167,7 +167,7 @@ library ReflectMath {
 
     function getDeliverShares(Tokens amount, Tokens totalSupply, Shares totalShares, Shares fromShares)
         internal
-        view
+        pure
         freeMemory
         returns (Shares newFromShares, Shares newTotalShares)
     {

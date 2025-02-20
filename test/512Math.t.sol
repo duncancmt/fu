@@ -141,7 +141,7 @@ contract Lib512MathTest is Test {
         assertEq(r_lo, e_lo);
     }
 
-    function test512Math_divNative(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo) external view {
+    function test512Math_divNative(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo) external pure {
         vm.assume(y_hi != 0);
         uint512 x = alloc().from(x_hi, x_lo);
         uint512 y = alloc().from(y_hi, y_lo);
@@ -169,7 +169,7 @@ contract Lib512MathTest is Test {
         assertEq(r_lo, e_lo);
     }
 
-    function test512Math_odivNative(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo) external view {
+    function test512Math_odivNative(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo) external pure {
         vm.assume(y_hi != 0);
 
         uint512 x = alloc().from(x_hi, x_lo);
@@ -182,7 +182,7 @@ contract Lib512MathTest is Test {
         assertTrue((r_hi == 0 && r_lo == 0 && x < y) || e > tmp().osub(x, y));
     }
 
-    function test512Math_idivNative(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo) external view {
+    function test512Math_idivNative(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo) external pure {
         vm.assume(y_hi != 0);
 
         uint512 x = alloc().from(x_hi, x_lo);
@@ -193,29 +193,5 @@ contract Lib512MathTest is Test {
         uint512 e = alloc().from(e_hi, e_lo);
         assertTrue(e <= x);
         assertTrue((r_hi == 0 && r_lo == 0 && x < y) || e > tmp().osub(x, y));
-    }
-
-    function test512Math_odivAlt(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo) external pure {
-        vm.assume(y_hi != 0);
-
-        uint512 x = alloc().from(x_hi, x_lo);
-        uint512 y = alloc().from(y_hi, y_lo);
-        (uint256 r_hi, uint256 r_lo) = tmp().odivAlt(x, y).into();
-
-        (uint256 e_lo, uint256 e_hi) = SlowMath.fullMul(y_lo, y_hi, r_lo, r_hi);
-        uint512 e = alloc().from(e_hi, e_lo);
-        assertTrue(e <= x);
-        assertTrue((r_hi == 0 && r_lo == 0 && x < y) || e > tmp().osub(x, y));
-    }
-
-    function test512Math_omodAlt(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo) external view {
-        vm.assume(y_hi != 0);
-
-        uint512 x = alloc().from(x_hi, x_lo);
-        uint512 y = alloc().from(y_hi, y_lo);
-        uint512 r = alloc().omodAlt(x, y);
-        uint512 e = alloc().omod(x, y);
-
-        assertTrue(r == e);
     }
 }

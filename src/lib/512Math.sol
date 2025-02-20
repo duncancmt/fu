@@ -53,8 +53,8 @@ WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING
 /// non-commutative operations), the semantics of the input arguments are
 /// flipped (i.e. `irsub(foo, bar)` is semantically equivalent to `foo = bar -
 /// foo`); the first argument is still the output location. Only `irsub`,
-/// `irmod`, `irdiv`, `irmodAlt`, and `irdivAlt` exist. Unless otherwise noted,
-/// the return value of each function is the output location. This supports
+/// `irmod`, `irdiv`, `irmod`, and `irdiv` exist. Unless otherwise noted, the
+/// return value of each function is the output location. This supports
 /// chaining/pipeline/tacit-style programming.
 ///
 /// All provided arithmetic operations behave as if they were inside an
@@ -68,13 +68,6 @@ WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING
 /// `div`. These are provided for use when it is known that the result of the
 /// operation will fit into 256 bits. This fact is not checked, but more
 /// efficient algorithms are employed assuming this. The result is a `uint256`.
-///
-/// The operations `*mod` and `*div` with 512-bit denominator are `view` instead
-/// of `pure` because they make use of the MODEXP (5) precompile. Some EVM L2s
-/// and sidechains do not support MODEXP with 512-bit arguments. On those
-/// chains, the `*modAlt` and `*divAlt` functions are provided. These functions
-/// are truly `pure` and do not rely on MODEXP at all. The downside is that they
-/// consume slightly (really only *slightly*) more gas.
 ///
 /// ## Full list of provided functions
 ///
@@ -137,9 +130,6 @@ WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING
 /// * omod(uint512,uint512,uint512)
 /// * imod(uint512,uint512)
 /// * irmod(uint512,uint512)
-/// * omodAlt(uint512,uint512,uint512)
-/// * imodAlt(uint512,uint512)
-/// * irmodAlt(uint512,uint512)
 ///
 /// ### Division
 ///
@@ -150,15 +140,10 @@ WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING
 /// * odiv(uint512,uint512,uint512)
 /// * idiv(uint512,uint512)
 /// * irdiv(uint512,uint512)
-/// * divAlt(uint512,uint512) returns (uint256) -- divAlt(uint512,uint256) is not provided because div(uint512,uint256) is suitable for chains without MODEXP
-/// * odivAlt(uint512,uint512,uint512)
-/// * idivAlt(uint512,uint512)
-/// * irdivAlt(uint512,uint512)
 ///
 /// ### Multi-division
 ///
 /// * divMulti(uint512,uint512,uint256) returns (uint256,uint256) -- the last argument is the denominator
-/// * divMulti(uint512,uint512,uint512) returns (uint256,uint256) -- the last argument is the denominator
 ///
 /// The implementation of other variants of multi-division is left as an
 /// exercise for the reader.
@@ -511,44 +496,6 @@ library Lib512MathArithmetic {
         }
     }
 
-    function omod(uint512 r, uint512 x, uint512 y) internal view returns (uint512) {
-        (uint256 x_hi, uint256 x_lo) = x.into();
-        (uint256 y_hi, uint256 y_lo) = y.into();
-        assembly ("memory-safe") {
-            // We use the MODEXP (5) precompile with an exponent of 1. We encode
-            // the arguments to the precompile at the beginning of free memory
-            // without allocating. Arguments are encoded as:
-            //     [64 32 64 x_hi x_lo 1 y_hi y_lo]
-            let ptr := mload(0x40)
-            mstore(ptr, 0x40)
-            mstore(add(0x20, ptr), 0x20)
-            mstore(add(0x40, ptr), 0x40)
-            // See comment in `from` about why `mstore` is more efficient than `mcopy`
-            mstore(add(0x60, ptr), x_hi)
-            mstore(add(0x80, ptr), x_lo)
-            mstore(add(0xa0, ptr), 0x01)
-            mstore(add(0xc0, ptr), y_hi)
-            mstore(add(0xe0, ptr), y_lo)
-
-            // We write the result of MODEXP directly into the output space r.
-            pop(staticcall(gas(), 0x05, ptr, 0x100, r, 0x40))
-            // The MODEXP precompile can only fail due to out-of-gas. This call
-            // consumes only 200 gas, so if it failed, there is only 4 gas
-            // remaining in this context. Therefore, we will out-of-gas
-            // immediately when we attempt to read the result. We don't bother
-            // to check for failure.
-        }
-        return r;
-    }
-
-    function imod(uint512 r, uint512 y) internal view returns (uint512) {
-        return omod(r, r, y);
-    }
-
-    function irmod(uint512 r, uint512 y) internal view returns (uint512) {
-        return omod(r, y, r);
-    }
-
     /// Multiply 512-bit [x_hi x_lo] by 256-bit [y] giving 768-bit [r_ex r_hi r_lo]
     function _mul768(uint256 x_hi, uint256 x_lo, uint256 y)
         private
@@ -584,92 +531,6 @@ library Lib512MathArithmetic {
             r_hi := sub(x_hi, gt(rem, x_lo))
             r_lo := sub(x_lo, rem)
         }
-    }
-
-    function _roundDown(uint256 x_hi, uint256 x_lo, uint256 d_hi, uint256 d_lo)
-        private
-        view
-        returns (uint256 r_hi, uint256 r_lo)
-    {
-        uint512 r;
-        assembly ("memory-safe") {
-            // We point `r` to the beginning of free memory WITHOUT allocating.
-            // This is not technically "memory-safe" because solc might use that
-            // memory for something in between the end of this assembly block
-            // and the beginning of the call to `into()`, but empirically and
-            // practically speaking that won't and doesn't happen. We save some
-            // gas by not bumping the free pointer.
-            r := mload(0x40)
-
-            // Get the remainder [x_hi x_lo] % [d_hi d_lo] (< 2⁵¹² - 1) We use
-            // the MODEXP (5) precompile with an exponent of 1. We encode the
-            // arguments to the precompile at the beginning of free memory
-            // without allocating. Conveniently, `r` already points to this
-            // region. Arguments are encoded as:
-            //     [64 32 64 x_hi x_lo 1 d_hi d_lo]
-            mstore(r, 0x40)
-            mstore(add(0x20, r), 0x20)
-            mstore(add(0x40, r), 0x40)
-            mstore(add(0x60, r), x_hi)
-            mstore(add(0x80, r), x_lo)
-            mstore(add(0xa0, r), 0x01)
-            mstore(add(0xc0, r), d_hi)
-            mstore(add(0xe0, r), d_lo)
-
-            // The MODEXP precompile can only fail due to out-of-gas. This call
-            // consumes only 200 gas, so if it failed, there is only 4 gas
-            // remaining in this context. Therefore, we will out-of-gas
-            // immediately when we attempt to read the result. We don't bother
-            // to check for failure.
-            pop(staticcall(gas(), 0x05, r, 0x100, r, 0x40))
-        }
-        (uint256 rem_hi, uint256 rem_lo) = r.into();
-        // Round down by subtracting the remainder from the numerator
-        (r_hi, r_lo) = _sub(x_hi, x_lo, rem_hi, rem_lo);
-    }
-
-    function _roundDownMulti(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo, uint256 d_hi, uint256 d_lo)
-        private
-        view
-        returns (uint256 rx_hi, uint256 rx_lo, uint256 ry_hi, uint256 ry_lo)
-    {
-        assembly ("memory-safe") {
-            let ptr := mload(0x40)
-
-            // Get the remainder [x_hi x_lo] % [d_hi d_lo] (< 2⁵¹² - 1) We use
-            // the MODEXP (5) precompile with an exponent of 1. We encode the
-            // arguments to the precompile at the beginning of free memory
-            // without allocating. Arguments are encoded as:
-            //     [64 32 64 x_hi x_lo 1 d_hi d_lo]
-            mstore(ptr, 0x40)
-            mstore(add(0x20, ptr), 0x20)
-            mstore(add(0x40, ptr), 0x40)
-            mstore(add(0x60, ptr), x_hi)
-            mstore(add(0x80, ptr), x_lo)
-            mstore(add(0xa0, ptr), 0x01)
-            mstore(add(0xc0, ptr), d_hi)
-            mstore(add(0xe0, ptr), d_lo)
-
-            // The MODEXP precompile can only fail due to out-of-gas. This call
-            // consumes only 200 gas, so if it failed, there is only 4 gas
-            // remaining in this context. Therefore, we will out-of-gas
-            // immediately when we attempt to read the result. We don't bother
-            // to check for failure.
-            pop(staticcall(gas(), 0x05, ptr, 0x100, add(0x60, ptr), 0x40))
-            rx_hi := mload(add(0x60, ptr))
-            rx_lo := mload(add(0x80, ptr))
-
-            // Reuse the already-prepared calldata area and repeat with [y_hi
-            // y_lo]
-            mstore(add(0x60, ptr), y_hi)
-            mstore(add(0x80, ptr), y_lo)
-            pop(staticcall(gas(), 0x05, ptr, 0x100, add(0x60, ptr), 0x40))
-            ry_hi := mload(add(0x60, ptr))
-            ry_lo := mload(add(0x80, ptr))
-        }
-        // Round down by subtracting the remainder from the numerator
-        (rx_hi, rx_lo) = _sub(x_hi, x_lo, rx_hi, rx_lo);
-        (ry_hi, ry_lo) = _sub(y_hi, y_lo, ry_hi, ry_lo);
     }
 
     function _twos(uint256 x) private pure returns (uint256 twos, uint256 twosInv) {
@@ -721,45 +582,6 @@ library Lib512MathArithmetic {
         }
     }
 
-    function _toOdd256(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo)
-        private
-        pure
-        returns (uint256 rx_lo, uint256 ry_lo)
-    {
-        // Factor powers of two out of `y_lo` and apply the same shift to [x_hi
-        // x_lo]
-        (uint256 twos, uint256 twosInv) = _twos(y_lo);
-
-        assembly ("memory-safe") {
-            // Divide [y_hi y_lo] by the power of two, returning only the low limb
-            ry_lo := or(div(y_lo, twos), mul(y_hi, twosInv))
-
-            // Divide [x_hi x_lo] by the power of two, returning only the low limb
-            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
-        }
-    }
-
-    function _toOdd256Multi(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo, uint256 d_hi, uint256 d_lo)
-        private
-        pure
-        returns (uint256 rx, uint256 ry, uint256 rd)
-    {
-        // Factor powers of two out of `d_lo` and apply the same shift to [x_hi
-        // x_lo] and [y_hi y_lo]
-        (uint256 twos, uint256 twosInv) = _twos(d_lo);
-
-        assembly ("memory-safe") {
-            // Divide [d_hi d_lo] by the power of two, returning only the low limb
-            rd := or(div(d_lo, twos), mul(d_hi, twosInv))
-
-            // Divide [x_hi x_lo] by the power of two, returning only the low limb
-            rx := or(div(x_lo, twos), mul(x_hi, twosInv))
-
-            // Divide [y_hi y_lo] by the power of two, returning only the low limb
-            ry := or(div(y_lo, twos), mul(y_hi, twosInv))
-        }
-    }
-
     function _toOdd512(uint256 x_hi, uint256 x_lo, uint256 y)
         private
         pure
@@ -776,73 +598,6 @@ library Lib512MathArithmetic {
             // Divide [x_hi x_lo] by the power of two
             rx_hi := div(x_hi, twos)
             rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
-        }
-    }
-
-    function _toOdd512Multi(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo, uint256 d)
-        private
-        pure
-        returns (uint256 rx_hi, uint256 rx_lo, uint256 ry_hi, uint256 ry_lo, uint256 rd)
-    {
-        // Factor powers of two out of `d` and apply the same shift to [x_hi
-        // x_lo] and [y_hi y_lo]
-        (uint256 twos, uint256 twosInv) = _twos(d);
-
-        assembly ("memory-safe") {
-            // Divide `d` by the power of two
-            rd := div(d, twos)
-
-            // Divide [x_hi x_lo] by the power of two
-            rx_hi := div(x_hi, twos)
-            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
-
-            // Divide [y_hi y_lo] by the power of two
-            ry_hi := div(y_hi, twos)
-            ry_lo := or(div(y_lo, twos), mul(y_hi, twosInv))
-        }
-    }
-
-    function _toOdd512(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo)
-        private
-        pure
-        returns (uint256 rx_hi, uint256 rx_lo, uint256 ry_hi, uint256 ry_lo)
-    {
-        // Factor powers of two out of [y_hi y_lo] and apply the same shift to
-        // [x_hi x_lo] and [y_hi y_lo]
-        (uint256 twos, uint256 twosInv) = _twos(y_lo);
-
-        assembly ("memory-safe") {
-            // Divide [y_hi y_lo] by the power of two
-            ry_hi := div(y_hi, twos)
-            ry_lo := or(div(y_lo, twos), mul(y_hi, twosInv))
-
-            // Divide [x_hi x_lo] by the power of two
-            rx_hi := div(x_hi, twos)
-            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
-        }
-    }
-
-    function _toOdd512Multi(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo, uint256 d_hi, uint256 d_lo)
-        private
-        pure
-        returns (uint256 rx_hi, uint256 rx_lo, uint256 ry_hi, uint256 ry_lo, uint256 rd_hi, uint256 rd_lo)
-    {
-        // Factor powers of two out of [d_hi d_lo] and apply the same shift to
-        // [x_hi x_lo] and [d_hi d_lo]
-        (uint256 twos, uint256 twosInv) = _twos(d_lo);
-
-        assembly ("memory-safe") {
-            // Divide [d_hi d_lo] by the power of two
-            rd_hi := div(d_hi, twos)
-            rd_lo := or(div(d_lo, twos), mul(d_hi, twosInv))
-
-            // Divide [x_hi x_lo] by the power of two
-            rx_hi := div(x_hi, twos)
-            rx_lo := or(div(x_lo, twos), mul(x_hi, twosInv))
-
-            // Divide [y_hi y_lo] by the power of two
-            ry_hi := div(y_hi, twos)
-            ry_lo := or(div(y_lo, twos), mul(y_hi, twosInv))
         }
     }
 
@@ -882,25 +637,6 @@ library Lib512MathArithmetic {
 
         // tmp = d * inv_lo % 2**512
         (uint256 tmp_hi, uint256 tmp_lo) = _mul(d, inv_lo);
-        // tmp = 2 - tmp % 2**512
-        (tmp_hi, tmp_lo) = _sub(0, 2, tmp_hi, tmp_lo);
-
-        assembly ("memory-safe") {
-            // inv_hi = inv_lo * tmp / 2**256 % 2**256
-            let mm := mulmod(inv_lo, tmp_lo, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
-            inv_hi := add(mul(inv_lo, tmp_hi), sub(sub(mm, inv_lo), lt(mm, inv_lo)))
-        }
-    }
-
-    function _invert512(uint256 d_hi, uint256 d_lo) private pure returns (uint256 inv_hi, uint256 inv_lo) {
-        // First, we get the inverse of `d` mod 2²⁵⁶
-        inv_lo = _invert256(d_lo);
-
-        // To extend this to the inverse mod 2⁵¹², we perform a more elaborate
-        // 7th Newton-Raphson-Hensel iteration with 512 bits of precision.
-
-        // tmp = d * inv_lo % 2**512
-        (uint256 tmp_hi, uint256 tmp_lo) = _mul(d_hi, d_lo, inv_lo);
         // tmp = 2 - tmp % 2**512
         (tmp_hi, tmp_lo) = _sub(0, 2, tmp_hi, tmp_lo);
 
@@ -989,72 +725,6 @@ library Lib512MathArithmetic {
         }
     }
 
-    function div(uint512 n, uint512 d) internal view returns (uint256) {
-        (uint256 d_hi, uint256 d_lo) = d.into();
-        if (d_hi == 0) {
-            return div(n, d_lo);
-        }
-        (uint256 n_hi, uint256 n_lo) = n.into();
-        if (d_lo == 0) {
-            return n_hi.unsafeDiv(d_hi);
-        }
-
-        // Round the numerator down to a multiple of the denominator. This makes
-        // the division exact without affecting the result.
-        (n_hi, n_lo) = _roundDown(n_hi, n_lo, d_hi, d_lo);
-
-        // Make `d_lo` odd so that it has a multiplicative inverse mod 2²⁵⁶
-        // After this we can discard `n_hi` and `d_hi` because our result is
-        // only 256 bits
-        (n_lo, d_lo) = _toOdd256(n_hi, n_lo, d_hi, d_lo);
-
-        // We perform division by multiplying by the multiplicative inverse of
-        // the denominator mod 2²⁵⁶. Since `d_lo` is odd, this inverse
-        // exists. Compute that inverse
-        d_lo = _invert256(d_lo);
-
-        unchecked {
-            // Because the division is now exact (we rounded `n` down to a
-            // multiple of `d`), we perform it by multiplying with the modular
-            // inverse of the denominator. This is the correct result mod 2²⁵⁶.
-            return n_lo * d_lo;
-        }
-    }
-
-    function divMulti(uint512 n0, uint512 n1, uint512 d) internal view returns (uint256, uint256) {
-        (uint256 d_hi, uint256 d_lo) = d.into();
-        if (d_hi == 0) {
-            return divMulti(n0, n1, d_lo);
-        }
-        (uint256 n0_hi, uint256 n0_lo) = n0.into();
-        (uint256 n1_hi, uint256 n1_lo) = n1.into();
-        if (d_lo == 0) {
-            return (n0_hi.unsafeDiv(d_hi), n1_hi.unsafeDiv(d_hi));
-        }
-
-        // Round the numerators down to multiples of the denominator. This makes
-        // division exact without affecting the result.
-        (n0_hi, n0_lo, n1_hi, n1_lo) = _roundDownMulti(n0_hi, n0_lo, n1_hi, n1_lo, d_hi, d_lo);
-
-        // Make `d_lo` odd so that it has a multiplicative inverse mod 2²⁵⁶
-        // After this we can discard `n0_hi`, `n1_hi`, and `d_hi` because our
-        // result is only 256 bits
-        (n0_lo, n1_lo, d_lo) = _toOdd256Multi(n0_hi, n0_lo, n1_hi, n1_lo, d_hi, d_lo);
-
-        // We perform division by multiplying by the multiplicative inverse of
-        // the denominator mod 2²⁵⁶. Since `d_lo` is odd, this inverse
-        // exists. Compute that inverse
-        d_lo = _invert256(d_lo);
-
-        unchecked {
-            // Because the divisions are now exact (we rounded `n0` and `n1`
-            // down to multiples of `d`), we perform them by multiplying with
-            // the modular inverse of the denominator. These are the correct
-            // results mod 2²⁵⁶.
-            return (n0_lo * d_lo, n1_lo * d_lo);
-        }
-    }
-
     function odiv(uint512 r, uint512 x, uint256 y) internal pure returns (uint512) {
         if (y == 0) {
             Panic.panic(Panic.DIVISION_BY_ZERO);
@@ -1086,43 +756,6 @@ library Lib512MathArithmetic {
 
     function idiv(uint512 r, uint256 y) internal pure returns (uint512) {
         return odiv(r, r, y);
-    }
-
-    function odiv(uint512 r, uint512 x, uint512 y) internal view returns (uint512) {
-        (uint256 y_hi, uint256 y_lo) = y.into();
-        if (y_hi == 0) {
-            return odiv(r, x, y_lo);
-        }
-        (uint256 x_hi, uint256 x_lo) = x.into();
-        if (y_lo == 0) {
-            return r.from(0, x_hi.unsafeDiv(y_hi));
-        }
-
-        // Round the numerator down to a multiple of the denominator. This makes
-        // the division exact without affecting the result.
-        (x_hi, x_lo) = _roundDown(x_hi, x_lo, y_hi, y_lo);
-
-        // Make `y` odd so that it has a multiplicative inverse mod 2⁵¹²
-        (x_hi, x_lo, y_hi, y_lo) = _toOdd512(x_hi, x_lo, y_hi, y_lo);
-
-        // We perform division by multiplying by the multiplicative inverse of
-        // the denominator mod 2⁵¹². Since `y` is odd, this inverse
-        // exists. Compute that inverse
-        (y_hi, y_lo) = _invert512(y_hi, y_lo);
-
-        // Because the division is now exact (we rounded `x` down to a multiple
-        // of `y`), we perform it by multiplying with the modular inverse of the
-        // denominator.
-        (uint256 r_hi, uint256 r_lo) = _mul(x_hi, x_lo, y_hi, y_lo);
-        return r.from(r_hi, r_lo);
-    }
-
-    function idiv(uint512 r, uint512 y) internal view returns (uint512) {
-        return odiv(r, r, y);
-    }
-
-    function irdiv(uint512 r, uint512 y) internal view returns (uint512) {
-        return odiv(r, y, r);
     }
 
     function _gt(uint256 x_ex, uint256 x_hi, uint256 x_lo, uint256 y_ex, uint256 y_hi, uint256 y_lo)
@@ -1558,7 +1191,7 @@ library Lib512MathArithmetic {
         return _shr(x_hi, x_lo, s);
     }
 
-    function odivAlt(uint512 r, uint512 x, uint512 y) internal pure returns (uint512) {
+    function odiv(uint512 r, uint512 x, uint512 y) internal pure returns (uint512) {
         (uint256 y_hi, uint256 y_lo) = y.into();
         if (y_hi == 0) {
             // This is the only case where we can have a 2-word quotient
@@ -1582,15 +1215,15 @@ library Lib512MathArithmetic {
         }
     }
 
-    function idivAlt(uint512 r, uint512 y) internal pure returns (uint512) {
-        return odivAlt(r, r, y);
+    function idiv(uint512 r, uint512 y) internal pure returns (uint512) {
+        return odiv(r, r, y);
     }
 
-    function irdivAlt(uint512 r, uint512 y) internal pure returns (uint512) {
-        return odivAlt(r, y, r);
+    function irdiv(uint512 r, uint512 y) internal pure returns (uint512) {
+        return odiv(r, y, r);
     }
 
-    function divAlt(uint512 x, uint512 y) internal pure returns (uint256) {
+    function div(uint512 x, uint512 y) internal pure returns (uint256) {
         (uint256 y_hi, uint256 y_lo) = y.into();
         if (y_hi == 0) {
             return div(x, y_lo);
@@ -1609,7 +1242,7 @@ library Lib512MathArithmetic {
         return _algorithmD(x_hi, x_lo, y_hi, y_lo);
     }
 
-    function omodAlt(uint512 r, uint512 x, uint512 y) internal pure returns (uint512) {
+    function omod(uint512 r, uint512 x, uint512 y) internal pure returns (uint512) {
         (uint256 y_hi, uint256 y_lo) = y.into();
         if (y_hi == 0) {
             uint256 r_lo = mod(x, y_lo);
@@ -1633,12 +1266,12 @@ library Lib512MathArithmetic {
         }
     }
 
-    function imodAlt(uint512 r, uint512 y) internal pure returns (uint512) {
-        return omodAlt(r, r, y);
+    function imod(uint512 r, uint512 y) internal pure returns (uint512) {
+        return omod(r, r, y);
     }
 
-    function irmodAlt(uint512 r, uint512 y) internal pure returns (uint512) {
-        return omodAlt(r, y, r);
+    function irmod(uint512 r, uint512 y) internal pure returns (uint512) {
+        return omod(r, y, r);
     }
 }
 
@@ -1652,24 +1285,6 @@ library Lib512MathUserDefinedHelpers {
                 mstore(0x20, 0x01) // code for "assertion failure"
             }
         }
-    }
-
-    function smuggleToPure(function (uint512, uint512, uint512) internal view returns (uint512) f)
-        internal
-        pure
-        returns (function (uint512, uint512, uint512) internal pure returns (uint512) r)
-    {
-        assembly ("memory-safe") {
-            r := f
-        }
-    }
-
-    function omod(uint512 r, uint512 x, uint512 y) internal view returns (uint512) {
-        return r.omod(x, y);
-    }
-
-    function odiv(uint512 r, uint512 x, uint512 y) internal view returns (uint512) {
-        return r.odiv(x, y);
     }
 }
 
@@ -1690,12 +1305,12 @@ function __mul(uint512 x, uint512 y) pure returns (uint512 r) {
 
 function __mod(uint512 x, uint512 y) pure returns (uint512 r) {
     Lib512MathUserDefinedHelpers.checkNull(x, y);
-    Lib512MathUserDefinedHelpers.smuggleToPure(Lib512MathUserDefinedHelpers.omod)(r, x, y);
+    r.omod(x, y);
 }
 
 function __div(uint512 x, uint512 y) pure returns (uint512 r) {
     Lib512MathUserDefinedHelpers.checkNull(x, y);
-    Lib512MathUserDefinedHelpers.smuggleToPure(Lib512MathUserDefinedHelpers.odiv)(r, x, y);
+    r.odiv(x, y);
 }
 
 using {__add as +, __sub as -, __mul as *, __mod as %, __div as / } for uint512 global;

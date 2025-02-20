@@ -120,7 +120,7 @@ contract MedusaFUTest is MedusaBoilerplate, FUTest {
 */
 
 contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
-    function testTransferSome(Tokens, Shares, Shares, Shares, Tokens, BasisPoints, uint256) public view override {
+    function testTransferSome(Tokens, Shares, Shares, Shares, Tokens, BasisPoints, uint256) public pure override {
         return;
     }
 
@@ -128,7 +128,7 @@ contract MedusaReflectMathTest is ReflectMathTest, MedusaBoilerplate {
         return;
     }
 
-    function testDeliver(Tokens, Shares, Shares, Tokens, uint256) public view override {
+    function testDeliver(Tokens, Shares, Shares, Tokens, uint256) public pure override {
         return;
     }
 
