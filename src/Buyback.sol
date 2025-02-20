@@ -15,7 +15,6 @@ import {Settings} from "./core/Settings.sol";
 
 import {FastTransferLib} from "./lib/FastTransferLib.sol";
 import {uint512, tmp, alloc} from "./lib/512Math.sol";
-import {UnsafeMath} from "./lib/UnsafeMath.sol";
 import {Math} from "./lib/Math.sol";
 import {FastLogic} from "./lib/FastLogic.sol";
 import {Ternary} from "./lib/Ternary.sol";
@@ -53,7 +52,6 @@ contract Buyback is TwoStepOwnable, Context {
     using FastFu for IFU;
     using FastUniswapV2PairLib for IUniswapV2Pair;
     using Math for uint256;
-    using UnsafeMath for uint256;
     using FastLogic for bool;
     using Ternary for bool;
 
@@ -203,12 +201,8 @@ contract Buyback is TwoStepOwnable, Context {
             // side of giving `owner()` a too-favorable price during this hypothetical swap.
             uint256 reserveFu = tmp().omul(liquiditySquared, 1 << 112).div(fuWethPriceQ112).sqrt();
             uint512 n = alloc().omul(liquiditySquared, amountFu);
-            // `reserveFu` is rounded down above, and we take the floor of the square root. that
-            // makes this quotient slightly too high (in favor of `owner()`)
             uint256 d = reserveFu * (reserveFu + amountFu);
-            uint256 q = n.div(d);
-            // round up (in favor of `owner()`)
-            return q.unsafeInc(tmp().omul(q, d) < n);
+            return n.div(d);
         }
     }
 

@@ -59,12 +59,9 @@ library Math {
             z := shr(1, add(z, div(x, z)))
             z := shr(1, add(z, div(x, z)))
 
-            // If x+1 is a perfect square, the Babylonian method cycles between
-            // floor(sqrt(x)) and ceil(sqrt(x)). This statement ensures we return floor.
-            // See: https://en.wikipedia.org/wiki/Integer_square_root#Using_only_integer_division
-            // Since the ceil is rare, we save gas on the assignment and repeat division in the rare case.
-            // If you don't care whether the floor or ceil square root is returned, you can remove this statement.
-            z := sub(z, lt(div(x, z), z))
+            // If x+1 is a perfect square, the Babylonian method cycles between floor(sqrt(x)) and
+            // ceil(sqrt(x)). Therefore, we may rarely return ceil(sqrt(x)) instead of the expected value.
+            // This error is not corrected because in our practical usage it doesn't matter and it saves some gas.
         }
     }
 }
