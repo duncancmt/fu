@@ -609,7 +609,7 @@ library Lib512MathArithmetic {
             // We use Newton-Raphson iterations compute inv. Thanks to Hensel's
             // lifting lemma, this also works in modular arithmetic, doubling
             // the correct bits in each step. The Newton-Raphson-Hensel step is:
-            //    inv_{n+1} = inv_n * (2 - d*inv_n) % 2**512
+            //    inv_{n+1} = inv_n * (2 - d*inv_n) % 2**256
 
             // To kick off Newton-Raphson-Hensel iterations, we start with a
             // seed of the inverse that is correct correct for four bits.
