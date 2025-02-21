@@ -60,13 +60,12 @@ library ReflectMath {
         newTotalShares = totalShares + (newToShares - toShares) - (fromShares - newFromShares);
     }
 
-    function getTransferShares(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
+    function getTransferAllShares(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
         internal
         pure
         freeMemory
         returns (Shares newToShares, Shares newTotalShares)
     {
-        // Called when `from` is sending their entire balance
         Shares uninvolvedShares = totalShares - fromShares - toShares;
         Shares2XBasisPoints n = allocS2Bp().omul(scale(uninvolvedShares, BASIS), totalShares);
         SharesXBasisPoints d = scale(uninvolvedShares, BASIS) + scale(fromShares, taxRate);
@@ -88,7 +87,6 @@ library ReflectMath {
         freeMemory
         returns (Shares newFromShares, Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
-        // Called when `to`'s final shares will be the whale limit
         TokensXShares d = allocTS().omul(totalShares.mul(Settings.ANTI_WHALE_DIVISOR), totalSupply + amount).isub(
             tmpTS().omul(fromShares.mul(Settings.ANTI_WHALE_DIVISOR) + totalShares, totalSupply)
         );
@@ -107,12 +105,11 @@ library ReflectMath {
         ).div(scale(totalSupply, BASIS));
     }
 
-    function getTransferSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
+    function getTransferAllSharesToWhale(BasisPoints taxRate, Shares totalShares, Shares fromShares, Shares toShares)
         internal
         pure
         returns (Shares counterfactualToShares, Shares newToShares, Shares newTotalShares)
     {
-        // Called when `to`'s final shares will be the whale limit and `from` is sending their entire balance
         (newToShares, newTotalShares) = whaleLimit(toShares, totalShares - fromShares);
         counterfactualToShares =
             cast(scale(totalShares, BASIS.div(Settings.ANTI_WHALE_DIVISOR)) - scale(fromShares, BASIS - taxRate));

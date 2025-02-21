@@ -547,11 +547,11 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
         Shares newTotalShares;
         if (amount == fromBalance) {
             (newToShares, newTotalShares) =
-                ReflectMath.getTransferShares(taxRate, cachedTotalShares, cachedFromShares, cachedToShares);
+                ReflectMath.getTransferAllShares(taxRate, cachedTotalShares, cachedFromShares, cachedToShares);
             newFromShares = ZERO_SHARES;
             if (newToShares >= (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE)) {
                 (cachedToShares, newToShares, newTotalShares) =
-                    ReflectMath.getTransferSharesToWhale(taxRate, cachedTotalShares, cachedFromShares, cachedToShares);
+                    ReflectMath.getTransferAllSharesToWhale(taxRate, cachedTotalShares, cachedFromShares, cachedToShares);
                 // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
                 // requirement that the sum of all accounts' shares equal the total shares.
             }

@@ -140,7 +140,7 @@ contract ReflectMathTest is Boilerplate, Test {
         Tokens toBalance = toShares.toTokens(totalSupply, totalShares);
 
         (Shares newToShares, Shares newTotalShares) =
-            ReflectMath.getTransferShares(taxRate, totalShares, fromShares, toShares);
+            ReflectMath.getTransferAllShares(taxRate, totalShares, fromShares, toShares);
 
         assertGe(Shares.unwrap(newToShares), Shares.unwrap(toShares), "to shares decreased");
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
@@ -262,13 +262,13 @@ contract ReflectMathTest is Boilerplate, Test {
             Shares.wrap(bound(Shares.unwrap(toShares), 0, Shares.unwrap(totalShares.div(Settings.ANTI_WHALE_DIVISOR))));
 
         (Shares newToShares, Shares newTotalShares) =
-            ReflectMath.getTransferShares(taxRate, totalShares, fromShares, toShares);
+            ReflectMath.getTransferAllShares(taxRate, totalShares, fromShares, toShares);
 
         assume(newToShares >= newTotalShares.div(Settings.ANTI_WHALE_DIVISOR));
 
         Shares counterfactualToShares;
         (counterfactualToShares, newToShares, newTotalShares) =
-            ReflectMath.getTransferSharesToWhale(taxRate, totalShares, fromShares, toShares);
+            ReflectMath.getTransferAllSharesToWhale(taxRate, totalShares, fromShares, toShares);
 
         assertLe(Shares.unwrap(newTotalShares), Shares.unwrap(totalShares), "total shares increased");
         Shares whaleLimit = (newTotalShares - newToShares).div(Settings.ANTI_WHALE_DIVISOR_MINUS_ONE) - ONE_SHARE;
