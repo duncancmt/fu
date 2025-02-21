@@ -521,7 +521,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             if (!toIsWhale) {
                 assertGe(
                     (afterBalanceTo - beforeBalanceTo + 1) * (Settings.CRAZY_BALANCE_BASIS * 10_000)
-                        + (Settings.CRAZY_BALANCE_BASIS * 10_000 / Settings.MIN_SHARES_RATIO - 1),
+                        + (Settings.CRAZY_BALANCE_BASIS * 10_000 / (Settings.MIN_SHARES_RATIO * 2) - 1),
                     balanceDeltaLo,
                     "to delta lower"
                 );
