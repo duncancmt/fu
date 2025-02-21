@@ -132,11 +132,7 @@ contract BuybackTest is FUDeploy, Test {
             wethBalanceSlot(),
             bytes32(uint256(load(address(WETH), wethBalanceSlot())) * wethIncrease / 10_000)
         );
-        store(
-            address(fu),
-            fuBalanceSlot(),
-            bytes32(uint256(load(address(fu), fuBalanceSlot())) * fuIncrease / 10_000)
-        );
+        store(address(fu), fuBalanceSlot(), bytes32(uint256(load(address(fu), fuBalanceSlot())) * fuIncrease / 10_000));
 
         IUniswapV2Pair pair = IUniswapV2Pair(fu.pair());
         assume(fu.balanceOf(address(pair)) <= type(uint112).max);
@@ -285,14 +281,16 @@ contract BuybackTest is FUDeploy, Test {
     function testBuybackFeeToSuccess() public {
         address factoryOwner;
         {
-            (bool success, bytes memory returndata) = address(FACTORY).staticcall(abi.encodeWithSignature("feeToSetter()"));
+            (bool success, bytes memory returndata) =
+                address(FACTORY).staticcall(abi.encodeWithSignature("feeToSetter()"));
             require(success);
             factoryOwner = abi.decode(returndata, (address));
         }
 
         prank(factoryOwner);
         {
-            (bool success, bytes memory returndata) = address(FACTORY).call(abi.encodeWithSignature("setFeeTo(address)", address(this)));
+            (bool success, bytes memory returndata) =
+                address(FACTORY).call(abi.encodeWithSignature("setFeeTo(address)", address(this)));
             require(success);
             require(returndata.length == 0);
         }

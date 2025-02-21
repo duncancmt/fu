@@ -22,9 +22,7 @@ library FastUniswapV2FactoryLib {
             }
 
             r := mload(0x00)
-            if shr(0xa0, r) {
-                revert(0x00, 0x00)
-            }
+            if shr(0xa0, r) { revert(0x00, 0x00) }
         }
     }
 }
