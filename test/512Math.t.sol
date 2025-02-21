@@ -131,8 +131,31 @@ contract Lib512MathTest is Test {
         assertEq(e_hi, 0);
     }
 
-    // omod and imod don't have test cases because I don't have a way to derive
-    // a reference implementation without using 512Math's division routines
+    function test512Math_omod(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo) external pure {
+        vm.assume(y_hi != 0);
+        uint512 x = alloc().from(x_hi, x_lo);
+        uint512 y = alloc().from(y_hi, y_lo);
+        uint512 q = alloc().odiv(x, y);
+        uint512 r = alloc().omod(x, y);
+        assertTrue(r < y);
+        uint512 z = alloc().omul(q, y).iadd(r);
+        (uint256 z_hi, uint256 z_lo) = z.into();
+        assertEq(z_hi, x_hi);
+        assertEq(z_lo, x_lo);
+    }
+
+    function test512Math_imod(uint256 x_hi, uint256 x_lo, uint256 y_hi, uint256 y_lo) external pure {
+        vm.assume(y_hi != 0);
+        uint512 x = alloc().from(x_hi, x_lo);
+        uint512 y = alloc().from(y_hi, y_lo);
+        uint512 q = alloc().odiv(x, y);
+        uint512 r = alloc().from(x_hi, x_lo).imod(y);
+        assertTrue(r < y);
+        uint512 z = alloc().omul(q, y).iadd(r);
+        (uint256 z_hi, uint256 z_lo) = z.into();
+        assertEq(z_hi, x_hi);
+        assertEq(z_lo, x_lo);
+    }
 
     function test512Math_divForeign(uint256 x_hi, uint256 x_lo, uint256 y) external pure {
         vm.assume(y != 0);
