@@ -1022,7 +1022,7 @@ library Lib512MathArithmetic {
             // y is 4 limbs, x is 4 limbs
 
             // Normalize. Ensure the uppermost limb of y ≥ 2¹²⁷ (equivalently
-            // y_hi >= 2**255). This is step D1 of Algorithm D Unlike the
+            // y_hi >= 2**255). This is step D1 of Algorithm D. Unlike the
             // preceeding implementation of Algorithm D, we use a binary shift
             // instead of a multiply to normalize. This performs a costly "count
             // leading zeroes" operation, but it lets us transform an
@@ -1038,7 +1038,7 @@ library Lib512MathArithmetic {
             // normalization
             uint256 n_approx = (x_ex << 128) | (x_hi >> 128); // TODO: this can probably be optimized (combined with `_shl`)
             // `d_approx` is the most significant limb of y, after normalization
-            uint256 d_approx = y_hi >> 128; // TODO: this can probably be optimized (combined with `_shl`)
+            uint256 d_approx = y_hi >> 128;
             // Normalization ensures that result of this division is an
             // approximation of the most significant (and only) limb of the
             // quotient and is too high by at most 3. This is the "Calculate
