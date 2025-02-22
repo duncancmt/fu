@@ -458,7 +458,16 @@ contract FUApprovalsTest is FUDeploy, Test {
         );
     }
 
-    function testPermit(uint256 privKey, address spender, uint256 value, uint256 nonce, uint256 deadline, uint256 blockTimestamp, bool expired, bool fakeSig) external {
+    function testPermit(
+        uint256 privKey,
+        address spender,
+        uint256 value,
+        uint256 nonce,
+        uint256 deadline,
+        uint256 blockTimestamp,
+        bool expired,
+        bool fakeSig
+    ) external {
         address owner;
         if (fakeSig) {
             owner = address(uint160(bound(privKey, 0, type(uint160).max)));
@@ -484,9 +493,25 @@ contract FUApprovalsTest is FUDeploy, Test {
         }
         warp(blockTimestamp);
 
-        bytes32 domainSep = keccak256(abi.encode(keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"), keccak256("Fuck You!"), 1, fu));
+        bytes32 domainSep = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"),
+                keccak256("Fuck You!"),
+                1,
+                fu
+            )
+        );
         assertEq(domainSep, fu.DOMAIN_SEPARATOR());
-        bytes32 structHash = keccak256(abi.encode(keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"), owner, spender, value, nonce, deadline));
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                owner,
+                spender,
+                value,
+                nonce,
+                deadline
+            )
+        );
         bytes32 signingHash = keccak256(abi.encodePacked(hex"1901", domainSep, structHash));
 
         bool shouldFail = expired || owner == address(0);
@@ -518,7 +543,9 @@ contract FUApprovalsTest is FUDeploy, Test {
             unchecked {
                 assertEq(newNonce, nonce + 1);
             }
-            uint256 newAllowance = uint256(load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(owner, uint256(BASE_SLOT) + 8))))));
+            uint256 newAllowance = uint256(
+                load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(owner, uint256(BASE_SLOT) + 8)))))
+            );
             if (spender == PERMIT2) {
                 assertEq(newAllowance, 0);
                 if (owner == pair) {
