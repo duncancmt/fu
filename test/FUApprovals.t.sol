@@ -165,8 +165,9 @@ contract FUApprovalsTest is FUDeploy, Test {
         uint256 beforeBalance = fu.balanceOf(actor);
 
         bool expectedSuccess = !_transferFromShouldFail(actor, to, amount, beforeBalance, beforeAllowance);
+        bool expectedEvent = expectedSuccess && amount != 0 && beforeTransientAllowance < amount && ~beforePersistentAllowance != 0;
 
-        if (expectedSuccess && amount != 0 && ~beforeAllowance != 0 && beforeTransientAllowance < amount) {
+        if (expectedEvent) {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Approval(actor, spender, beforePersistentAllowance - (amount - beforeTransientAllowance));
         }
@@ -191,7 +192,7 @@ contract FUApprovalsTest is FUDeploy, Test {
             return;
         }
 
-        if (amount == 0 || ~beforeAllowance == 0 || beforeTransientAllowance >= amount) {
+        if (!expectedEvent) {
             for (uint256 i; i < logs.length; i++) {
                 VmSafe.Log memory log = logs[i];
                 assertNotEq(log.topics[0], IERC20.Approval.selector, "approve event");
