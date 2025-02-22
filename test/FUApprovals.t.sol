@@ -624,13 +624,10 @@ contract FUApprovalsTest is FUDeploy, Test {
         assertEq(domainSep, fu.DOMAIN_SEPARATOR());
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256("delegateBySig(address delegatee,uint256 nonce,uint256 expiry,uint8 v,bytes32 r,bytes32 s)"),
+                keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"),
                 delegatee,
                 nonce,
-                expiry,
-                v,
-                r,
-                s
+                expiry
             )
         );
         bytes32 signingHash = keccak256(abi.encodePacked(hex"1901", domainSep, structHash));
@@ -673,7 +670,6 @@ contract FUApprovalsTest is FUDeploy, Test {
             uint256 newDelegatee = uint256(
                 load(address(fu), keccak256(abi.encode(delegator, keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 9)))))
             );
-
             assertEq(delegatee, newDelegatee, "Delegatee addresses don't match");
         }
     }
