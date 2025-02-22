@@ -392,9 +392,10 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 break;
             }
         }
-        assertGe(logAmountTransfer + logAmountBurn + 1, amount, "log amount upper");
-        assertLe(logAmountTransfer + logAmountBurn, amount + 1, "log amount lower");
-        // TODO: check that the ratio of burn to total is approximately the tax
+        assertGe(logAmountTransfer + logAmountBurn + 1, amount, "log amount lower");
+        assertLe(logAmountTransfer + logAmountBurn, amount + 1, "log amount upper");
+        assertGe((logAmountTransfer * 10_000).unsafeDivUp(logAmountTransfer + logAmountBurn) + 1, tax, "log transfer tax ratio lower")
+        assertLe((logAmountTransfer * 10_000).unsafeDivUp(logAmountTransfer + logAmountBurn), tax + 1, "log transfer tax ratio upper")
 
         // TODO: check for "rebase queue" events
         // 0-8 transfer events?
