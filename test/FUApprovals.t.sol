@@ -241,6 +241,22 @@ contract FUApprovalsTest is FUDeploy, Test {
                 assertEq(afterPersistentAllowance, beforePersistentAllowance);
             }
         }
+
+        if (expectedEvent) {
+            assertEq((beforePersistentAllowance - afterPersistentAllowance) + (beforeTransientAllowance - afterTransientAllowance), amount);
+            assertEq(fu.allowance(actor, spender), saturatingAdd(afterPersistentAllowance, afterTransientAllowance));
+        } else if (spender != PERMIT2) {
+            if (afterTransientAllowance == 0) {
+                if (actor != pair) {
+                    assertEq(fu.allowance(actor, spender), afterPersistentAllowance);
+                    if (beforeTransientAllowance != amount) {
+                        assertEq(afterPersistentAllowance, type(uint256).max);
+                    }
+                }
+            } else if (~beforeTransientAllowance != 0) {
+                assertEq(afterTransientAllowance, beforeTransientAllowance - amount);
+            }
+        }
     }
 
     function testBurnFrom(address spender, uint256 actorIndex, uint256 amount, bool boundAmount) external {
