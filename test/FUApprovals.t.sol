@@ -648,10 +648,10 @@ contract FUApprovalsTest is FUDeploy, Test {
             (v, r, s) = vm.sign(privKey, signingHash);
         }
 
-        if (delegator == address(0)) {
-            vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidSignature()"));
-        } else if (expired) {
+        if (expired) {
             vm.expectRevert(abi.encodeWithSignature("ERC5805ExpiredSignature(uint256)", expiry));
+        } else if (delegator == address(0)) {
+            vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidSignature()"));
         } else if (badSig) {
             r = keccak256(bytes.concat(r));
             s = keccak256(bytes.concat(s));
@@ -664,7 +664,6 @@ contract FUApprovalsTest is FUDeploy, Test {
         } else {
             expectEmit(true, true, true, true, address(fu));
             emit IERC5805.DelegateChanged(delegator, address(0), delegatee);
-            //vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidNonce(uint256)", nonce));
         }
 
         fu.delegateBySig(delegatee, nonce, expiry, v, r, s);
