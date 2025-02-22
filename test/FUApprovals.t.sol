@@ -10,7 +10,7 @@ import {IERC7674} from "src/interfaces/IERC7674.sol";
 import {IERC5805} from "src/interfaces/IERC5805.sol";
 
 import {Test} from "@forge-std/Test.sol";
-import {Vm, VmSafe} from "@forge-std/Vm.sol";
+import {VmSafe} from "@forge-std/Vm.sol";
 import {StdCheats} from "@forge-std/StdCheats.sol";
 
 import {console} from "@forge-std/console.sol";
@@ -477,8 +477,7 @@ contract FUApprovalsTest is FUDeploy, Test {
             owner = address(uint160(bound(privKey, 0, type(uint160).max)));
         } else {
             privKey = boundPrivateKey(privKey);
-            Vm.Wallet memory wallet = vm.createWallet(privKey);
-            owner = wallet.addr;
+            owner = vm.addr(privKey);
         }
 
         deadline = bound(deadline, getBlockTimestamp(), type(uint256).max);
@@ -593,8 +592,7 @@ contract FUApprovalsTest is FUDeploy, Test {
             delegator = address(uint160(bound(privKey, 0, type(uint160).max)));
         } else {
             privKey = boundPrivateKey(privKey);
-            Vm.Wallet memory wallet = vm.createWallet(privKey);
-            delegator = wallet.addr;
+            delegator = vm.addr(privKey);
         }
 
         expiry = bound(expiry, getBlockTimestamp(), type(uint256).max);
