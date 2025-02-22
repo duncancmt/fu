@@ -466,7 +466,8 @@ contract FUApprovalsTest is FUDeploy, Test {
         uint256 deadline,
         uint256 blockTimestamp,
         bool expired,
-        bool fakeSig
+        bool fakeSig,
+        bool badSig
     ) external {
         address owner;
         if (fakeSig) {
@@ -514,7 +515,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         );
         bytes32 signingHash = keccak256(abi.encodePacked(hex"1901", domainSep, structHash));
 
-        bool shouldFail = expired || owner == address(0);
+        bool shouldFail = expired || owner == address(0) || badSig;
 
         uint8 v;
         bytes32 r;
@@ -534,6 +535,10 @@ contract FUApprovalsTest is FUDeploy, Test {
             vm.expectRevert(abi.encodeWithSignature("ERC20InvalidApprover(address)", owner));
         } else if (expired) {
             vm.expectRevert(abi.encodeWithSignature("ERC2612ExpiredSignature(uint256)", deadline));
+        } else if (badSig) {
+            r = keccak256(bytes.concat(r));
+            s = keccak256(bytes.concat(s));
+            vm.expectRevert(abi.encodeWithSignature("ERC2612InvalidSigner(address,address)", ecrecover(signingHash, v, r, s), owner));
         }
 
         fu.permit(owner, spender, value, deadline, v, r, s);
