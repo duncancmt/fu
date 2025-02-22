@@ -544,6 +544,9 @@ contract FUApprovalsTest is FUDeploy, Test {
             r = keccak256(bytes.concat(r));
             s = keccak256(bytes.concat(s));
             vm.expectRevert(abi.encodeWithSignature("ERC2612InvalidSigner(address,address)", ecrecover(signingHash, v, r, s), owner));
+        } else {
+            expectEmit(true, true, true, true, address(fu));
+            emit IERC20.Approval(owner, spender, value);
         }
 
         fu.permit(owner, spender, value, deadline, v, r, s);
