@@ -340,7 +340,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         uint256 beforeTotalShares = getTotalShares();
         uint256 tax = fu.tax();
 
-        // TODO: expect events
         if (!_transferShouldFail(actor, to, amount, beforeBalance)) {
             expectEmit(true, true, true, false, address(fu));
             emit IERC20.Transfer(actor, to, type(uint256).max);
