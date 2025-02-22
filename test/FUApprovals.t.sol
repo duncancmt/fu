@@ -458,10 +458,15 @@ contract FUApprovalsTest is FUDeploy, Test {
         );
     }
 
-    function testPermit(uint256 privKey, address spender, uint256 value, uint256 nonce, uint256 deadline, uint256 blockTimestamp, bool expired) external {
-        privKey = boundPrivateKey(privKey);
-        Vm.Wallet memory wallet = vm.createWallet(privKey);
-        address owner = wallet.addr;
+    function testPermit(uint256 privKey, address spender, uint256 value, uint256 nonce, uint256 deadline, uint256 blockTimestamp, bool expired, bool fakeSig) external {
+        address owner;
+        if (fakeSig) {
+            owner = address(uint160(bound(privKey, 0, type(uint160).max)));
+        } else {
+            privKey = boundPrivateKey(privKey);
+            Vm.Wallet memory wallet = vm.createWallet(privKey);
+            owner = wallet.addr;
+        }
 
         deadline = bound(deadline, getBlockTimestamp(), type(uint256).max);
 
@@ -484,15 +489,31 @@ contract FUApprovalsTest is FUDeploy, Test {
         bytes32 structHash = keccak256(abi.encode(keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"), owner, spender, value, nonce, deadline));
         bytes32 signingHash = keccak256(abi.encodePacked(hex"1901", domainSep, structHash));
 
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(wallet, signingHash);
+        bool shouldFail = expired || owner == address(0);
 
-        if (expired) {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        if (fakeSig) {
+            r = keccak256(abi.encodePacked("r", owner));
+            s = keccak256(abi.encodePacked("s", owner));
+            if (!shouldFail) {
+                vm.mockCall(address(1), abi.encode(signingHash, v, r, s), abi.encode(owner));
+                vm.expectCall(address(1), abi.encode(signingHash, v, r, s));
+            }
+        } else {
+            (v, r, s) = vm.sign(privKey, signingHash);
+        }
+
+        if (owner == address(0)) {
+            vm.expectRevert(abi.encodeWithSignature("ERC20InvalidApprover(address)", owner));
+        } else if (expired) {
             vm.expectRevert(abi.encodeWithSignature("ERC2612ExpiredSignature(uint256)", deadline));
         }
 
         fu.permit(owner, spender, value, deadline, v, r, s);
 
-        if (!expired) {
+        if (!shouldFail) {
             uint256 newNonce = uint256(load(address(fu), nonceSlot));
             unchecked {
                 assertEq(newNonce, nonce + 1);
@@ -500,10 +521,18 @@ contract FUApprovalsTest is FUDeploy, Test {
             uint256 newAllowance = uint256(load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(owner, uint256(BASE_SLOT) + 8))))));
             if (spender == PERMIT2) {
                 assertEq(newAllowance, 0);
-                assertEq(fu.allowance(owner, spender), type(uint256).max);
+                if (owner == pair) {
+                    assertEq(fu.allowance(owner, spender), 0);
+                } else {
+                    assertEq(fu.allowance(owner, spender), type(uint256).max);
+                }
             } else {
                 assertEq(newAllowance, value);
-                assertEq(fu.allowance(owner, spender), value);
+                if (owner == pair) {
+                    assertEq(fu.allowance(owner, spender), 0);
+                } else {
+                    assertEq(fu.allowance(owner, spender), value);
+                }
             }
         }
     }
