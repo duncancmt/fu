@@ -777,7 +777,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         }
     }
 
-    // TODO: permit
     // TODO: delegateBySig
     // TODO: checkpointing logic
 
