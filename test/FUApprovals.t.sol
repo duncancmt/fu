@@ -347,9 +347,6 @@ contract FUApprovalsTest is FUDeploy, Test {
         } else {
             console.log("amount", amount);
         }
-        if (actor == pair) {
-            assume(amount < fu.balanceOf(actor));
-        }
 
         (uint256 beforePersistentAllowance, uint256 beforeTransientAllowance, uint256 beforeAllowance) =
         _setupAllowances(
@@ -393,7 +390,24 @@ contract FUApprovalsTest is FUDeploy, Test {
         );
     }
 
-    function testDeliverFrom(address spender, uint256 actorIndex, uint256 amount, bool boundAmount) external {
+    function _deliverFromShouldFail(address from, uint256 amount, uint256 balance, uint256 allowance)
+        internal
+        view
+        returns (bool)
+    {
+        return from == DEAD || amount > balance || amount > allowance;
+    }
+
+    function testDeliverFrom(
+        address spender,
+        uint256 actorIndex,
+        uint256 amount,
+        uint256 totalAllowance,
+        uint256 persistentAllowance,
+        uint256 transientAllowance,
+        bool boundAmount,
+        uint256 boundAllowance
+    ) external {
         address actor = getActor(actorIndex);
 
         if (boundAmount) {
@@ -401,33 +415,46 @@ contract FUApprovalsTest is FUDeploy, Test {
         } else {
             console.log("amount", amount);
         }
-        if (actor == pair) {
-            assume(amount < fu.balanceOf(actor));
-        }
 
-        uint256 beforePersistentAllowance = uint256(
-            vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8)))))
+        (uint256 beforePersistentAllowance, uint256 beforeTransientAllowance, uint256 beforeAllowance) =
+        _setupAllowances(
+            actor, spender, amount, totalAllowance, persistentAllowance, transientAllowance, boundAllowance
         );
+        assertEq(beforeAllowance, fu.allowance(actor, spender), "allowance mismatch");
         uint256 beforeBalance = fu.balanceOf(actor);
+
+        bool expectedSuccess = !_burnFromShouldFail(actor, amount, beforeBalance, beforeAllowance);
+        bool expectedEvent = expectedSuccess && spender != PERMIT2 && amount != 0 && beforeTransientAllowance < amount
+            && ~beforePersistentAllowance != 0;
+
+        if (expectedEvent) {
+            expectEmit(true, true, true, true, address(fu));
+            emit IERC20.Approval(actor, spender, beforePersistentAllowance - (amount - beforeTransientAllowance));
+        }
 
         vm.recordLogs();
         vm.startStateDiffRecording();
-        prank(actor);
+        prank(spender);
 
-        (bool success,) = callOptionalReturn(abi.encodeCall(IFU.deliverFrom, (actor, amount)));
+        (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(IFU.deliverFrom, (actor, amount)));
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(success, expectedSuccess, "unexpected failure");
 
-        uint256 afterPersistentAllowance = uint256(
-            vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8)))))
-        );
-        uint256 afterBalance = fu.balanceOf(actor);
+        if (!success) {
+            assert(
+                keccak256(returndata)
+                    != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001")
+            );
+            assertNoMutation(accountAccesses, logs);
+            return;
+        }
 
-        assertEq(
-            (beforeBalance - afterBalance),
-            (beforePersistentAllowance - afterPersistentAllowance),
-            "change in balances and allowances don't match"
+        saveActor(actor);
+
+        _checkAllowances(
+            actor, spender, amount, beforePersistentAllowance, beforeTransientAllowance, beforeAllowance, expectedEvent
         );
     }
 
