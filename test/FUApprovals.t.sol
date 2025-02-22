@@ -483,6 +483,7 @@ contract FUApprovalsTest is FUDeploy, Test {
 
         bytes32 nonceSlot = keccak256(abi.encode(owner, uint256(BASE_SLOT) + 10));
         store(address(fu), nonceSlot, bytes32(nonce));
+        assertEq(fu.nonces(owner), nonce);
         if (expired) {
             if (~deadline == 0) {
                 expired = false;
@@ -550,6 +551,7 @@ contract FUApprovalsTest is FUDeploy, Test {
             uint256 newNonce = uint256(load(address(fu), nonceSlot));
             unchecked {
                 assertEq(newNonce, nonce + 1);
+                assertEq(fu.nonces(owner), nonce + 1);
             }
             uint256 newAllowance = uint256(
                 load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(owner, uint256(BASE_SLOT) + 8)))))
