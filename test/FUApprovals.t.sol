@@ -543,7 +543,9 @@ contract FUApprovalsTest is FUDeploy, Test {
         } else if (badSig) {
             r = keccak256(bytes.concat(r));
             s = keccak256(bytes.concat(s));
-            vm.expectRevert(abi.encodeWithSignature("ERC2612InvalidSigner(address,address)", ecrecover(signingHash, v, r, s), owner));
+            vm.expectRevert(
+                abi.encodeWithSignature("ERC2612InvalidSigner(address,address)", ecrecover(signingHash, v, r, s), owner)
+            );
         } else {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Approval(owner, spender, value);
@@ -626,10 +628,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         assertEq(domainSep, fu.DOMAIN_SEPARATOR());
         bytes32 structHash = keccak256(
             abi.encode(
-                keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"),
-                delegatee,
-                nonce,
-                expiry
+                keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"), delegatee, nonce, expiry
             )
         );
         bytes32 signingHash = keccak256(abi.encodePacked(hex"1901", domainSep, structHash));
