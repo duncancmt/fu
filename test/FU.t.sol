@@ -778,7 +778,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     // TODO: delegateBySig
-    // TODO: checkpointing logic
 
     function invariant_nonNegativeRebase() external view override {
         for (uint256 i; i < actors.length; i++) {
