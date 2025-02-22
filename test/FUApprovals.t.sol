@@ -658,6 +658,11 @@ contract FUApprovalsTest is FUDeploy, Test {
             address actualSigner = ecrecover(signingHash, v, r, s);
             if (actualSigner == address(0)) {
                 vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidSignature()"));
+            } else if (nonce == 0) {
+                shouldFail = false;
+                delegator = actualSigner;
+                expectEmit(true, true, true, true, address(fu));
+                emit IERC5805.DelegateChanged(delegator, address(0), delegatee);
             } else {
                 vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidNonce(uint256,uint256)", nonce, 0));
             }
