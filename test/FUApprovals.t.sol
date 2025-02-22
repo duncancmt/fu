@@ -168,7 +168,7 @@ contract FUApprovalsTest is FUDeploy, Test {
 
         if (expectedSuccess && amount != 0 && ~beforeAllowance != 0 && beforeTransientAllowance < amount) {
             expectEmit(true, true, true, true, address(fu));
-            emit IERC20.Approval(actor, spender, beforeAllowance - amount);
+            emit IERC20.Approval(actor, spender, beforePersistentAllowance - (amount - beforeTransientAllowance));
         }
 
         vm.recordLogs();
@@ -191,7 +191,7 @@ contract FUApprovalsTest is FUDeploy, Test {
             return;
         }
 
-        if (amount == 0 || ~beforeAllowance == 0) {
+        if (amount == 0 || ~beforeAllowance == 0 || beforeTransientAllowance >= amount) {
             // TODO: check that no `Approval` event was emitted
         }
 
