@@ -16,11 +16,20 @@ import {console} from "@forge-std/console.sol";
 
 address constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
 
-function saturatingAdd(uint256 x, uint256 y) pure returns (uint256 r) {
-    assembly ("memory-safe") {
-        r := add(x, y)
-        r := or(r, sub(0x00, lt(r, y)))
+function saturatingAdd(uint256 x, uint256 y) pure returns (uint256) {
+    unchecked {
+        if (x + y < x) {
+            return type(uint256).max;
+        }
     }
+    return x + y;
+}
+
+function saturatingSub(uint256 x, uint256 y) pure returns (uint256) {
+    if (y > x) {
+        return 0;
+    }
+    return x - y;
 }
 
 contract TransientSlotLoader {
@@ -162,6 +171,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         } else if (spender == PERMIT2) {
             beforeAllowance = type(uint256).max;
         }
+        assertEq(beforeAllowance, fu.allowance(actor, spender), "allowance mismatch");
         uint256 beforeBalance = fu.balanceOf(actor);
 
         bool expectedSuccess = !_transferFromShouldFail(actor, to, amount, beforeBalance, beforeAllowance);
@@ -204,6 +214,33 @@ contract FUApprovalsTest is FUDeploy, Test {
 
         uint256 afterPersistentAllowance = uint256(vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8))))));
         uint256 afterTransientAllowance = uint256(_tload(address(fu), keccak256(abi.encodePacked(actor, spender))));
+
+        if (spender == PERMIT2) {
+            assertEq(afterPersistentAllowance, 0);
+            assertEq(afterTransientAllowance, 0);
+            assertEq(afterPersistentAllowance, beforePersistentAllowance);
+            assertEq(afterTransientAllowance, beforeTransientAllowance);
+            if (actor == pair) {
+                assertEq(amount, 0);
+            }
+        } else if (actor == pair) {
+            assertEq(amount, 0);
+            assertEq(afterPersistentAllowance, beforePersistentAllowance);
+            assertEq(afterTransientAllowance, 0);
+        } else if (~beforeTransientAllowance == 0) {
+            assertEq(afterPersistentAllowance, beforePersistentAllowance);
+            assertEq(afterTransientAllowance, beforeTransientAllowance);
+        } else if (~beforePersistentAllowance == 0) {
+            assertEq(afterPersistentAllowance, beforePersistentAllowance);
+            assertEq(afterTransientAllowance, saturatingSub(beforeTransientAllowance, amount));
+        } else {
+            assertEq(afterTransientAllowance, saturatingSub(beforeTransientAllowance, amount));
+            if (beforeTransientAllowance < amount) {
+                assertEq(afterPersistentAllowance, beforePersistentAllowance - (amount - beforeTransientAllowance));
+            } else {
+                assertEq(afterPersistentAllowance, beforePersistentAllowance);
+            }
+        }
     }
 
     function testBurnFrom(address spender, uint256 actorIndex, uint256 amount, bool boundAmount) external {
