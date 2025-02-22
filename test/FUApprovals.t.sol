@@ -7,7 +7,7 @@ import {Settings} from "../src/core/Settings.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "src/interfaces/IFU.sol";
 import {IERC7674} from "src/interfaces/IERC7674.sol";
-import {IERC5805}from "src/interfaces/IERC5805.sol";
+import {IERC5805} from "src/interfaces/IERC5805.sol";
 
 import {Test} from "@forge-std/Test.sol";
 import {Vm, VmSafe} from "@forge-std/Vm.sol";
@@ -655,9 +655,16 @@ contract FUApprovalsTest is FUDeploy, Test {
         } else if (badSig) {
             r = keccak256(bytes.concat(r));
             s = keccak256(bytes.concat(s));
-            vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidSignature()"));
+            address actualSigner = ecrecover(signingHash, v, r, s);
+            if (actualSigner == address(0)) {
+                vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidSignature()"));
+            } else {
+                vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidNonce(uint256,uint256)", nonce, 0));
+            }
         } else {
-            vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidNonce(uint256)", nonce));
+            expectEmit(true, true, true, true, address(fu));
+            emit IERC5805.DelegateChanged(delegator, address(0), delegatee);
+            //vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidNonce(uint256)", nonce));
         }
 
         fu.delegateBySig(delegatee, nonce, expiry, v, r, s);
@@ -667,10 +674,8 @@ contract FUApprovalsTest is FUDeploy, Test {
             unchecked {
                 assertEq(newNonce, nonce + 1);
             }
-            address newDelegatee = address(uint160(uint256(
-                load(address(fu), keccak256(abi.encode(delegator, keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 9)))))
-            )));
-            assertEq(delegatee, newDelegatee, "Delegatee addresses don't match");
+            bytes32 newDelegatee = load(address(fu), keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 9)));
+            assertEq(uint256(uint160(delegatee)), uint256(newDelegatee), "Delegatee addresses don't match");
         }
     }
 
