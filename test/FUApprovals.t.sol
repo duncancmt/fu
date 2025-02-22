@@ -7,10 +7,10 @@ import {Settings} from "../src/core/Settings.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "src/interfaces/IFU.sol";
 import {IERC7674} from "src/interfaces/IERC7674.sol";
-import {IERC5805}from "src/interfaces/IERC5805.sol";
+import {IERC5805} from "src/interfaces/IERC5805.sol";
 
 import {Test} from "@forge-std/Test.sol";
-import {Vm, VmSafe} from "@forge-std/Vm.sol";
+import {VmSafe} from "@forge-std/Vm.sol";
 import {StdCheats} from "@forge-std/StdCheats.sol";
 
 import {console} from "@forge-std/console.sol";
@@ -477,8 +477,7 @@ contract FUApprovalsTest is FUDeploy, Test {
             owner = address(uint160(bound(privKey, 0, type(uint160).max)));
         } else {
             privKey = boundPrivateKey(privKey);
-            Vm.Wallet memory wallet = vm.createWallet(privKey);
-            owner = wallet.addr;
+            owner = vm.addr(privKey);
         }
 
         deadline = bound(deadline, getBlockTimestamp(), type(uint256).max);
@@ -545,6 +544,9 @@ contract FUApprovalsTest is FUDeploy, Test {
             r = keccak256(bytes.concat(r));
             s = keccak256(bytes.concat(s));
             vm.expectRevert(abi.encodeWithSignature("ERC2612InvalidSigner(address,address)", ecrecover(signingHash, v, r, s), owner));
+        } else {
+            expectEmit(true, true, true, true, address(fu));
+            emit IERC20.Approval(owner, spender, value);
         }
 
         fu.permit(owner, spender, value, deadline, v, r, s);
@@ -593,14 +595,12 @@ contract FUApprovalsTest is FUDeploy, Test {
             delegator = address(uint160(bound(privKey, 0, type(uint160).max)));
         } else {
             privKey = boundPrivateKey(privKey);
-            Vm.Wallet memory wallet = vm.createWallet(privKey);
-            delegator = wallet.addr;
+            delegator = vm.addr(privKey);
         }
 
         expiry = bound(expiry, getBlockTimestamp(), type(uint256).max);
 
-        bytes32 nonceSlot = keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 10));
-        store(address(fu), nonceSlot, bytes32(nonce));
+        store(address(fu), keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 10)), bytes32(nonce));
         if (expired) {
             if (~expiry == 0) {
                 expired = false;
@@ -650,29 +650,39 @@ contract FUApprovalsTest is FUDeploy, Test {
             (v, r, s) = vm.sign(privKey, signingHash);
         }
 
-        if (delegator == address(0)) {
-            vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidSignature()"));
-        } else if (expired) {
+        if (expired) {
             vm.expectRevert(abi.encodeWithSignature("ERC5805ExpiredSignature(uint256)", expiry));
+        } else if (delegator == address(0)) {
+            vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidSignature()"));
         } else if (badSig) {
             r = keccak256(bytes.concat(r));
             s = keccak256(bytes.concat(s));
-            vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidSignature()"));
+            address actualSigner = ecrecover(signingHash, v, r, s);
+            if (actualSigner == address(0)) {
+                vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidSignature()"));
+            } else if (nonce == 0) {
+                shouldFail = false;
+                delegator = actualSigner;
+                expectEmit(true, true, true, true, address(fu));
+                emit IERC5805.DelegateChanged(delegator, address(0), delegatee);
+            } else {
+                vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidNonce(uint256,uint256)", nonce, 0));
+            }
         } else {
-            vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidNonce(uint256)", nonce));
+            expectEmit(true, true, true, true, address(fu));
+            emit IERC5805.DelegateChanged(delegator, address(0), delegatee);
         }
 
         fu.delegateBySig(delegatee, nonce, expiry, v, r, s);
 
         if (!shouldFail) {
-            uint256 newNonce = uint256(load(address(fu), nonceSlot));
+            uint256 newNonce = uint256(load(address(fu), keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 10))));
             unchecked {
                 assertEq(newNonce, nonce + 1);
+                assertEq(fu.nonces(delegator), nonce + 1);
             }
-            address newDelegatee = address(uint160(uint256(
-                load(address(fu), keccak256(abi.encode(delegator, keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 9)))))
-            )));
-            assertEq(delegatee, newDelegatee, "Delegatee addresses don't match");
+            bytes32 newDelegatee = load(address(fu), keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 9)));
+            assertEq(uint256(uint160(delegatee)), uint256(newDelegatee), "Delegatee addresses don't match");
         }
     }
 
