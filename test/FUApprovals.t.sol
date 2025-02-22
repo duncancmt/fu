@@ -175,14 +175,19 @@ contract FUApprovalsTest is FUDeploy, Test {
         vm.startStateDiffRecording();
         prank(spender);
 
-        (success,) = callOptionalReturn(abi.encodeCall(IERC20.transferFrom, (actor, to, amount)));
+        bytes memory returndata;
+        (success, returndata) = callOptionalReturn(abi.encodeCall(IERC20.transferFrom, (actor, to, amount)));
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
         assertEq(success, expectedSuccess, "unexpected failure");
 
         if (!success) {
-            // TODO: assert no state modification
+            assert(
+                keccak256(returndata)
+                    != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001")
+            );
+            assertNoMutation(accountAccesses, logs);
             return;
         }
 

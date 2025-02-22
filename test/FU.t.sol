@@ -303,23 +303,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         shareRatio = newRatio;
     }
 
-    function _assertNoMutation(VmSafe.AccountAccess[] memory accountAccesses, VmSafe.Log[] memory logs) internal pure {
-        assertEq(logs.length, 0, "emitted event on failure");
-        for (uint256 i; i < accountAccesses.length; i++) {
-            VmSafe.AccountAccess memory accountAccess = accountAccesses[i];
-            assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.CallCode), "CALLCODE");
-            assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.Create), "CREATE");
-            assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.SelfDestruct), "SELFDESTRUCT");
-            assertEq(accountAccess.oldBalance, accountAccess.newBalance, "modified balance");
-            assertEq(accountAccess.value, 0, "sent ETH");
-            VmSafe.StorageAccess[] memory storageAccesses = accountAccess.storageAccesses;
-            for (uint256 j; j < storageAccesses.length; j++) {
-                VmSafe.StorageAccess memory storageAccess = storageAccesses[j];
-                assertFalse(storageAccess.isWrite, "wrote storage");
-            }
-        }
-    }
-
     function _transferShouldFail(address from, address to, uint256 amount, uint256 balance)
         internal
         view
@@ -380,7 +363,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 keccak256(returndata)
                     != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001")
             );
-            _assertNoMutation(accountAccesses, logs);
+            assertNoMutation(accountAccesses, logs);
             return;
         }
 
@@ -655,7 +638,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 keccak256(returndata)
                     != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001")
             );
-            _assertNoMutation(accountAccesses, logs);
+            assertNoMutation(accountAccesses, logs);
             return;
         }
 
@@ -762,7 +745,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 keccak256(returndata)
                     != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001")
             );
-            _assertNoMutation(accountAccesses, logs);
+            assertNoMutation(accountAccesses, logs);
             return;
         }
 

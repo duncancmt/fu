@@ -14,7 +14,7 @@ import {ChecksumAddress} from "src/lib/ChecksumAddress.sol";
 import {IUniswapV2Pair} from "src/interfaces/IUniswapV2Pair.sol";
 import {IUniswapV2Factory, FACTORY, pairFor} from "src/interfaces/IUniswapV2Factory.sol";
 
-import {Vm} from "@forge-std/Vm.sol";
+import {Vm, VmSafe} from "@forge-std/Vm.sol";
 import {StdAssertions} from "@forge-std/StdAssertions.sol";
 
 import "./EnvironmentConstants.sol";
@@ -80,6 +80,23 @@ abstract contract Common is StdAssertions {
     function callOptionalReturn(bytes memory data) internal returns (bool success, bytes memory returndata) {
         (success, returndata) = address(fu).call(data);
         success = success && (returndata.length == 0 || abi.decode(returndata, (bool)));
+    }
+
+    function assertNoMutation(VmSafe.AccountAccess[] memory accountAccesses, VmSafe.Log[] memory logs) internal pure {
+        assertEq(logs.length, 0, "emitted event on failure");
+        for (uint256 i; i < accountAccesses.length; i++) {
+            VmSafe.AccountAccess memory accountAccess = accountAccesses[i];
+            assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.CallCode), "CALLCODE");
+            assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.Create), "CREATE");
+            assertNotEq(uint8(accountAccess.kind), uint8(VmSafe.AccountAccessKind.SelfDestruct), "SELFDESTRUCT");
+            assertEq(accountAccess.oldBalance, accountAccess.newBalance, "modified balance");
+            assertEq(accountAccess.value, 0, "sent ETH");
+            VmSafe.StorageAccess[] memory storageAccesses = accountAccess.storageAccesses;
+            for (uint256 j; j < storageAccesses.length; j++) {
+                VmSafe.StorageAccess memory storageAccess = storageAccesses[j];
+                assertFalse(storageAccess.isWrite, "wrote storage");
+            }
+        }
     }
 
     function assume(bool condition) internal pure virtual {
