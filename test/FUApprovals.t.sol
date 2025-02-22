@@ -165,7 +165,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         uint256 beforeBalance = fu.balanceOf(actor);
 
         bool expectedSuccess = !_transferFromShouldFail(actor, to, amount, beforeBalance, beforeAllowance);
-        bool expectedEvent = expectedSuccess && amount != 0 && beforeTransientAllowance < amount && ~beforePersistentAllowance != 0;
+        bool expectedEvent = expectedSuccess && spender != PERMIT2 && amount != 0 && beforeTransientAllowance < amount && ~beforePersistentAllowance != 0;
 
         if (expectedEvent) {
             expectEmit(true, true, true, true, address(fu));
