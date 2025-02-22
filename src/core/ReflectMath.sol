@@ -136,6 +136,18 @@ library ReflectMath {
         newTotalSupply = totalSupply + amount;
     }
 
+    function getCounterfactualSharesFromPairToWhale(
+        BasisPoints taxRate,
+        Tokens totalSupply,
+        Shares totalShares,
+        Tokens amount
+    ) internal view returns (Shares counterfactualToShares) {
+        counterfactualToShares = tmpTBpS().omul(
+            scale(totalSupply, BASIS.div(Settings.ANTI_WHALE_DIVISOR)).saturatingSub(scale(amount, BASIS - taxRate)),
+            totalShares
+        ).div(scale(totalSupply, BASIS));
+    }
+
     function getTransferSharesToPair(
         BasisPoints taxRate,
         Tokens totalSupply,

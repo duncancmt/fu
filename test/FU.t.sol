@@ -392,10 +392,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 break;
             }
         }
-        assertGe(logAmountTransfer + logAmountBurn + 1, amount, "log amount lower");
-        assertLe(logAmountTransfer + logAmountBurn, amount + 1, "log amount upper");
-        assertGe((logAmountTransfer * 10_000).unsafeDivUp(logAmountTransfer + logAmountBurn) + 1, tax, "log transfer tax ratio lower")
-        assertLe((logAmountTransfer * 10_000).unsafeDivUp(logAmountTransfer + logAmountBurn), tax + 1, "log transfer tax ratio upper")
 
         // TODO: check for "rebase queue" events
         // 0-8 transfer events?
@@ -417,6 +413,22 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             assertLe(afterWhaleLimit, saturatingAdd(beforeWhaleLimit, 1), "actor whale limit upper");
             assertGe(saturatingAdd(afterWhaleLimitTo, 1), beforeWhaleLimitTo, "to whale limit lower");
             assertLe(afterWhaleLimitTo, saturatingAdd(beforeWhaleLimitTo, 1), "to whale limit upper");
+        }
+
+        // Check that the ratio between transferred tokens and burned tokens in the logs represents the tax rate
+        assertGe(logAmountTransfer + logAmountBurn + 1, amount, "log amount lower");
+        assertLe(logAmountTransfer + logAmountBurn, amount + 1, "log amount upper");
+        if (
+            afterCirculating < beforeCirculating
+                || (afterCirculating - beforeCirculating) * (10_000 - tax) / 10_000
+                    < beforeCirculating / Settings.ANTI_WHALE_DIVISOR
+        ) {
+            assertGe(
+                ((logAmountTransfer + logAmountBurn) * tax).unsafeDivUp(10_000) + 1,
+                logAmountBurn,
+                "log tax ratio lower"
+            );
+            assertLe((logAmountTransfer + logAmountBurn) * tax / 10_000, logAmountBurn + 1, "log tax ratio upper");
         }
 
         /*

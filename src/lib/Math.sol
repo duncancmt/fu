@@ -2,6 +2,19 @@
 pragma solidity ^0.8.28;
 
 library Math {
+    function saturatingAdd(uint256 x, uint256 y) internal pure returns (uint256 r) {
+        assembly ("memory-safe") {
+            r := add(x, y)
+            r := or(r, sub(0x00, lt(r, y)))
+        }
+    }
+
+    function saturatingSub(uint256 x, uint256 y) internal pure returns (uint256 r) {
+        assembly ("memory-safe") {
+            r := mul(sub(x, y), gt(x, y))
+        }
+    }
+
     /// Copied from Solmate (https://github.com/transmissions11/solmate/blob/eaa7041378f9a6c12f943de08a6c41b31a9870fc/src/utils/FixedPointMathLib.sol#L288)
     /// The original code was released under the MIT license.
     function sqrt(uint256 x) internal pure returns (uint256 z) {

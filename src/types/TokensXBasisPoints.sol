@@ -4,10 +4,23 @@ pragma solidity ^0.8.28;
 import {BasisPoints, BASIS} from "./BasisPoints.sol";
 import {Tokens} from "./Tokens.sol";
 
+import {Math} from "../lib/Math.sol";
 import {UnsafeMath} from "../lib/UnsafeMath.sol";
 
 /// This type is given as `uint256` for efficiency, but it is actually only 159 bits.
 type TokensXBasisPoints is uint256;
+
+library TokensXBasisPointsArithmetic {
+    function saturatingAdd(TokensXBasisPoints x, TokensXBasisPoints y) internal pure returns (TokensXBasisPoints r) {
+        return TokensXBasisPoints.wrap(Math.saturatingAdd(TokensXBasisPoints.unwrap(x), TokensXBasisPoints.unwrap(y)));
+    }
+
+    function saturatingSub(TokensXBasisPoints x, TokensXBasisPoints y) internal pure returns (TokensXBasisPoints r) {
+        return TokensXBasisPoints.wrap(Math.saturatingSub(TokensXBasisPoints.unwrap(x), TokensXBasisPoints.unwrap(y)));
+    }
+}
+
+using TokensXBasisPointsArithmetic for TokensXBasisPoints global;
 
 function scale(Tokens s, BasisPoints bp) pure returns (TokensXBasisPoints) {
     unchecked {

@@ -3,6 +3,8 @@ pragma solidity ^0.8.28;
 
 import {Settings} from "../core/Settings.sol";
 
+import {Math} from "../lib/Math.sol";
+
 import {Shares} from "./Shares.sol";
 import {Tokens} from "./Tokens.sol";
 import {tmp, SharesToTokens} from "./TokensXShares.sol";
@@ -64,16 +66,11 @@ library CrazyBalanceArithmetic {
     using SharesToTokens for Shares;
 
     function saturatingAdd(CrazyBalance x, CrazyBalance y) internal pure returns (CrazyBalance r) {
-        assembly ("memory-safe") {
-            r := add(x, y)
-            r := or(r, sub(0x00, lt(r, y)))
-        }
+        return CrazyBalance.wrap(Math.saturatingAdd(CrazyBalance.unwrap(x), CrazyBalance.unwrap(y)));
     }
 
     function saturatingSub(CrazyBalance x, CrazyBalance y) internal pure returns (CrazyBalance r) {
-        assembly ("memory-safe") {
-            r := mul(sub(x, y), gt(x, y))
-        }
+        return CrazyBalance.wrap(Math.saturatingSub(CrazyBalance.unwrap(x), CrazyBalance.unwrap(y)));
     }
 
     function toCrazyBalance(Shares shares, address account, Tokens totalSupply, Shares totalShares)

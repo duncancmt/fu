@@ -143,7 +143,6 @@ library LibRebaseQueue {
         }
         for (;; i = i.unsafeDec()) {
             (Shares shares, Shares totalSharesLimited) = applyWhaleLimit(sharesOf[cursor].load(), totalShares);
-
             elem.lastTokens = _rebaseFor(elem, cursor, shares, totalSupply, totalSharesLimited);
             cursor = elem.next;
             if (i == 0) {
