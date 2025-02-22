@@ -465,6 +465,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         uint256 nonce,
         uint256 deadline,
         uint256 blockTimestamp,
+        uint64 chainId,
         bool expired,
         bool fakeSig,
         bool badSig
@@ -493,12 +494,14 @@ contract FUApprovalsTest is FUDeploy, Test {
             blockTimestamp = bound(blockTimestamp, getBlockTimestamp(), deadline);
         }
         warp(blockTimestamp);
+        chainId = uint64(bound(chainId, 1, type(uint64).max - 1));
+        vm.chainId(chainId);
 
         bytes32 domainSep = keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"),
                 keccak256("Fuck You!"),
-                1,
+                chainId,
                 fu
             )
         );
