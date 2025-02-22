@@ -2,8 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {FUDeploy, Common} from "./Deploy.t.sol";
-import {ERC20Base} from "../src/core/ERC20Base.sol";
 import {Settings} from "../src/core/Settings.sol";
+
+import {IERC20} from "@forge-std/interfaces/IERC20.sol";
+import {IFU} from "src/interfaces/IFU.sol";
 
 import {Test} from "@forge-std/Test.sol";
 import {VmSafe} from "@forge-std/Vm.sol";
@@ -20,11 +22,40 @@ function saturatingAdd(uint256 x, uint256 y) pure returns (uint256 r) {
     }
 }
 
+contract TransientSlotLoader {
+    fallback() external {
+        assembly ("memory-safe") {
+            mstore(0x00, tload(calldataload(0x00)))
+            return(0x00, 0x20)
+        }
+    }
+}
+
 contract FUApprovalsTest is FUDeploy, Test {
     function setUp() public override {
         super.setUp();
         actors.push(pair);
         isActor[pair] = true;
+    }
+
+    function _tloadContraband(address target, bytes32 slot) private returns (bytes32 slotValue) {
+        bytes memory code = target.code;
+        vm.etch(target, type(TransientSlotLoader).runtimeCode); // TODO: Commmon.etch
+        (bool success, bytes memory returndata) = target.staticcall(bytes.concat(slot));
+        assertTrue(success);
+        assertEq(returndata.length, 32);
+        slotValue = bytes32(returndata);
+        vm.etch(target, code);
+    }
+
+    function _smuggle(function (address, bytes32) internal returns (bytes32) f) private pure returns (function (address, bytes32) internal view returns (bytes32) r) {
+        assembly ("memory-safe") {
+            r := f
+        }
+    }
+
+    function _tload(address target, bytes32 slot) internal view returns (bytes32) {
+        return _smuggle(_tloadContraband)(target, slot);
     }
 
     function _transferFromShouldFail(address from, address to, uint256 amount, uint256 balance, uint256 allowance)
@@ -63,6 +94,8 @@ contract FUApprovalsTest is FUDeploy, Test {
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
 
+        assertEq(logs.length, 0, "temporaryApprove does not emit events");
+
         uint256 afterPersistentAllowance = uint256(
             vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8)))))
         );
@@ -72,7 +105,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         }
     }
 
-    function testTransferFrom(address actorIndex, address to, uint256 amount, bool boundTo, bool boundAmount) external {
+    function testTransferFrom(address actorIndex, address to, uint256 amount, uint256 allowance, bool boundTo, bool boundAmount, bool boundAllowance) external {
         address actor = getActor(actorIndex);
         address spender = msg.sender;
 
@@ -89,37 +122,46 @@ contract FUApprovalsTest is FUDeploy, Test {
         } else {
             maybeCreateActor(to);
         }
+        if (boundAllowance) {
+            allowance = bound(allowance, amount, type(uint256).max);
+        }
+
+        prank(actor);
+        (bool success,) = callOptionalReturn(abi.encodeCall(IERC20.approve, (spender, allowance)));
+        assertTrue(success);
+
+        // TODO: make variants that test transient allowances as well as persistent + transient allowances
 
         uint256 beforePersistentAllowance = uint256(vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8))))));
-        uint256 beforeTransientAllowance = ~beforePersistentAllowance == 0 ? 0 : fu.allowance(actor, spender) - beforePersistentAllowance; // TODO: we probably need to get more advanced here to actually get the transient allowance
+        assertEq(beforePersistentAllowance, allowance, "setting persistent allowance failed");
+        uint256 beforeTransientAllowance = uint256(_tload(address(fu), keccak256(abi.encodePacked(actor, spender))));
         uint256 beforeBalance = fu.balanceOf(actor);
-        uint256 beforeBalanceTo = fu.balanceOf(to);
 
-        // TODO: we don't need to record logs. we can get by with just `expectEmit`
+        if (!_transferFromShouldFail(actor, to, amount, beforeBalance, saturatingAdd(beforePersistentAllowance, beforeTransientAllowance))) {
+            expectEmit(true, true, true, true, address(fu));
+            emit IERC20.Approval(actor, spender, amount);
+        }
+
         vm.recordLogs();
         vm.startStateDiffRecording();
-        prank(actor);
+        prank(spender);
 
-        (bool success,) = callOptionalReturn(abi.encodeCall(ERC20Base.transferFrom, (actor, to, amount)));
-        assertEq(success, !_transferFromShouldFail(actor, to, amount, beforeBalance, saturatingAdd(beforePersistentAllowance, beforeTransientAllowance)), "unexpected failure");
-
-        if (!success) {
-            return;
-        }
+        (success,) = callOptionalReturn(abi.encodeCall(IERC20.transferFrom, (actor, to, amount)));
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
-        //TODO: stuff with these logs
+        assertEq(success, !_transferFromShouldFail(actor, to, amount, beforeBalance, saturatingAdd(beforePersistentAllowance, beforeTransientAllowance)), "unexpected failure");
+
+        if (!success) {
+            // TODO: assert no state modification
+            return;
+        }
 
         saveActor(actor);
         saveActor(to);
 
         uint256 afterPersistentAllowance = uint256(vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8))))));
-        uint256 afterBalance = fu.balanceOf(actor);
-        uint256 afterBalanceTo = fu.balanceOf(to);
-
-        assertEq((beforeBalance - afterBalance), (beforePersistentAllowance - afterPersistentAllowance), "change in balances and allowances don't match");
-        assertEq((beforeBalance - afterBalance), (afterBalanceTo - beforeBalanceTo), "changes in `from` and `to` balances don't match");
+        uint256 afterTransientAllowance = uint256(_tload(address(fu), keccak256(abi.encodePacked(actor, spender))));
     }
 
     function testBurnFrom(address actorIndex, uint256 amount, bool boundAmount) external {
@@ -143,7 +185,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         vm.startStateDiffRecording();
         prank(actor);
 
-        (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(ERC20Base.burnFrom, (actor, amount)));
+        (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(IFU.burnFrom, (actor, amount)));
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
@@ -154,7 +196,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         assertEq((beforeBalance - afterBalance), (beforePersistentAllowance - afterPersistentAllowance), "change in balances and allowances don't match");
     }
 
-        function testDeliverFrom(address actorIndex, uint256 amount, bool boundAmount) external {
+    function testDeliverFrom(address actorIndex, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
         address spender = msg.sender;
 
@@ -174,7 +216,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         vm.startStateDiffRecording();
         prank(actor);
 
-        (bool success,) = callOptionalReturn(abi.encodeCall(ERC20Base.deliverFrom, (actor, amount)));
+        (bool success,) = callOptionalReturn(abi.encodeCall(IFU.deliverFrom, (actor, amount)));
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
