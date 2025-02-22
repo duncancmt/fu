@@ -135,11 +135,18 @@ contract FUApprovalsTest is FUDeploy, Test {
         uint256 beforePersistentAllowance = uint256(vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8))))));
         assertEq(beforePersistentAllowance, allowance, "setting persistent allowance failed");
         uint256 beforeTransientAllowance = uint256(_tload(address(fu), keccak256(abi.encodePacked(actor, spender))));
+        uint256 beforeAllowance = saturatingAdd(beforePersistentAllowance, beforeTransientAllowance);
+        if (actor == pair) {
+            beforeAllowance = 0;
+        }
         uint256 beforeBalance = fu.balanceOf(actor);
 
-        if (!_transferFromShouldFail(actor, to, amount, beforeBalance, saturatingAdd(beforePersistentAllowance, beforeTransientAllowance))) {
+        bool expectedSuccess = !_transferFromShouldFail(actor, to, amount, beforeBalance, beforeAllowance);
+
+        if (expectedSuccess && amount != 0 && ~beforeAllowance != 0) {
             expectEmit(true, true, true, true, address(fu));
-            emit IERC20.Approval(actor, spender, amount);
+            // TODO: this will fail when we start testing transient approvals
+            emit IERC20.Approval(actor, spender, beforeAllowance - amount);
         }
 
         vm.recordLogs();
@@ -150,11 +157,15 @@ contract FUApprovalsTest is FUDeploy, Test {
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
         VmSafe.Log[] memory logs = vm.getRecordedLogs();
-        assertEq(success, !_transferFromShouldFail(actor, to, amount, beforeBalance, saturatingAdd(beforePersistentAllowance, beforeTransientAllowance)), "unexpected failure");
+        assertEq(success, expectedSuccess, "unexpected failure");
 
         if (!success) {
             // TODO: assert no state modification
             return;
+        }
+
+        if (amount == 0 || ~beforeAllowance == 0) {
+            // TODO: check that no `Approval` event was emitted
         }
 
         saveActor(actor);
