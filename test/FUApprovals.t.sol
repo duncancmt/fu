@@ -9,7 +9,7 @@ import {IFU} from "src/interfaces/IFU.sol";
 import {IERC7674} from "src/interfaces/IERC7674.sol";
 
 import {Test} from "@forge-std/Test.sol";
-import {VmSafe} from "@forge-std/Vm.sol";
+import {Vm, VmSafe} from "@forge-std/Vm.sol";
 import {StdCheats} from "@forge-std/StdCheats.sol";
 
 import {console} from "@forge-std/console.sol";
@@ -93,7 +93,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         }
 
         uint256 beforePersistentAllowance = uint256(
-            vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8)))))
+            load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8)))))
         ); //allowance mapping offset is 8, see https://github.com/duncancmt/fu/blob/c64c7b7fbafd1ea362c056e4fecef44ed4ac5688/src/FUStorage.sol#L16-L26
 
         vm.recordLogs();
@@ -108,7 +108,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         assertEq(logs.length, 0, "temporaryApprove does not emit events");
 
         uint256 afterPersistentAllowance = uint256(
-            vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8)))))
+            load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8)))))
         );
 
         if (spender == PERMIT2) {
@@ -150,7 +150,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         assertTrue(success);
 
         beforePersistentAllowance = uint256(
-            vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8)))))
+            load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8)))))
         );
         if (spender == PERMIT2) {
             assertEq(beforePersistentAllowance, 0, "PERMIT2 persistent allowance failed");
@@ -182,7 +182,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         bool expectedEvent
     ) internal returns (uint256 afterPersistentAllowance, uint256 afterTransientAllowance) {
         afterPersistentAllowance = uint256(
-            vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8)))))
+            load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8)))))
         );
         afterTransientAllowance = uint256(_tload(address(fu), keccak256(abi.encodePacked(actor, spender))));
 
@@ -456,6 +456,56 @@ contract FUApprovalsTest is FUDeploy, Test {
         _checkAllowances(
             actor, spender, amount, beforePersistentAllowance, beforeTransientAllowance, beforeAllowance, expectedEvent
         );
+    }
+
+    function testPermit(uint256 privKey, address spender, uint256 value, uint256 nonce, uint256 deadline, uint256 blockTimestamp, bool expired) external {
+        privKey = boundPrivateKey(privKey);
+        Vm.Wallet memory wallet = vm.createWallet(privKey);
+        address owner = wallet.addr;
+
+        deadline = bound(deadline, getBlockTimestamp(), type(uint256).max);
+
+        bytes32 nonceSlot = keccak256(abi.encode(owner, uint256(BASE_SLOT) + 10));
+        store(address(fu), nonceSlot, bytes32(nonce));
+        if (expired) {
+            if (~deadline == 0) {
+                expired = false;
+                blockTimestamp = getBlockTimestamp();
+            } else {
+                blockTimestamp = bound(blockTimestamp, deadline + 1, type(uint256).max);
+            }
+        } else {
+            blockTimestamp = bound(blockTimestamp, getBlockTimestamp(), deadline);
+        }
+        warp(blockTimestamp);
+
+        bytes32 domainSep = keccak256(abi.encode(keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"), keccak256("Fuck You!"), 1, fu));
+        assertEq(domainSep, fu.DOMAIN_SEPARATOR());
+        bytes32 structHash = keccak256(abi.encode(keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"), owner, spender, value, nonce, deadline));
+        bytes32 signingHash = keccak256(abi.encodePacked(hex"1901", domainSep, structHash));
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(wallet, signingHash);
+
+        if (expired) {
+            vm.expectRevert(abi.encodeWithSignature("ERC2612ExpiredSignature(uint256)", deadline));
+        }
+
+        fu.permit(owner, spender, value, deadline, v, r, s);
+
+        if (!expired) {
+            uint256 newNonce = uint256(load(address(fu), nonceSlot));
+            unchecked {
+                assertEq(newNonce, nonce + 1);
+            }
+            uint256 newAllowance = uint256(load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(owner, uint256(BASE_SLOT) + 8))))));
+            if (spender == PERMIT2) {
+                assertEq(newAllowance, 0);
+                assertEq(fu.allowance(owner, spender), type(uint256).max);
+            } else {
+                assertEq(newAllowance, value);
+                assertEq(fu.allowance(owner, spender), value);
+            }
+        }
     }
 
     // Solidity inheritance is dumb
