@@ -6,6 +6,7 @@ import {Settings} from "../src/core/Settings.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "src/interfaces/IFU.sol";
+import {IERC7674} from "src/interfaces/IERC7674.sol";
 
 import {Test} from "@forge-std/Test.sol";
 import {VmSafe} from "@forge-std/Vm.sol";
@@ -105,7 +106,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         }
     }
 
-    function testTransferFrom(address spender, uint256 actorIndex, address to, uint256 amount, uint256 allowance, bool boundTo, bool boundAmount, bool boundAllowance) external {
+    function testTransferFrom(address spender, uint256 actorIndex, address to, uint256 amount, uint256 totalAllowance, uint256 persistentAllowance, uint256 transientAllowance, bool boundTo, bool boundAmount, uint256 boundAllowance) external {
         address actor = getActor(actorIndex);
 
         if (boundAmount) {
@@ -121,21 +122,40 @@ contract FUApprovalsTest is FUDeploy, Test {
         } else {
             maybeCreateActor(to);
         }
-        if (boundAllowance) {
-            allowance = bound(allowance, amount, type(uint256).max);
+
+        boundAllowance = bound(boundAllowance, 0, 4);
+        if (boundAllowance >= 2) {
+            totalAllowance = bound(totalAllowance, amount, type(uint256).max);
+        }
+        if (boundAllowance & 1 == 0) {
+            persistentAllowance = bound(persistentAllowance, 0, totalAllowance);
+            transientAllowance = bound(transientAllowance, 0, totalAllowance - persistentAllowance);
+        } else {
+            transientAllowance = bound(transientAllowance, 0, totalAllowance);
+            persistentAllowance = bound(persistentAllowance, 0, totalAllowance - transientAllowance);
         }
 
         prank(actor);
-        (bool success,) = callOptionalReturn(abi.encodeCall(IERC20.approve, (spender, allowance)));
+        (bool success,) = callOptionalReturn(abi.encodeCall(IERC20.approve, (spender, persistentAllowance)));
         assertTrue(success);
 
-        // TODO: make variants that test transient allowances as well as persistent + transient allowances
+        prank(actor);
+        (success,) = callOptionalReturn(abi.encodeCall(IERC7674.temporaryApprove, (spender, transientAllowance)));
+        assertTrue(success);
 
         uint256 beforePersistentAllowance = uint256(vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8))))));
-        if (spender != PERMIT2) {
-            assertEq(beforePersistentAllowance, allowance, "setting persistent allowance failed");
+        if (spender == PERMIT2) {
+            assertEq(beforePersistentAllowance, 0, "PERMIT2 persistent allowance failed");
+        } else {
+            assertEq(beforePersistentAllowance, persistentAllowance, "setting persistent allowance failed");
         }
         uint256 beforeTransientAllowance = uint256(_tload(address(fu), keccak256(abi.encodePacked(actor, spender))));
+        if (spender == PERMIT2) {
+            assertEq(beforeTransientAllowance, 0, "PERMIT2 transient allowance failed");
+        } else {
+            assertEq(beforeTransientAllowance, transientAllowance, "setting transient allowance failed");
+        }
+
         uint256 beforeAllowance = saturatingAdd(beforePersistentAllowance, beforeTransientAllowance);
         if (actor == pair) {
             beforeAllowance = 0;
@@ -146,9 +166,8 @@ contract FUApprovalsTest is FUDeploy, Test {
 
         bool expectedSuccess = !_transferFromShouldFail(actor, to, amount, beforeBalance, beforeAllowance);
 
-        if (expectedSuccess && amount != 0 && ~beforeAllowance != 0) {
+        if (expectedSuccess && amount != 0 && ~beforeAllowance != 0 && beforeTransientAllowance < amount) {
             expectEmit(true, true, true, true, address(fu));
-            // TODO: this will fail when we start testing transient approvals
             emit IERC20.Approval(actor, spender, beforeAllowance - amount);
         }
 
