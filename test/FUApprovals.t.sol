@@ -192,7 +192,10 @@ contract FUApprovalsTest is FUDeploy, Test {
         }
 
         if (amount == 0 || ~beforeAllowance == 0 || beforeTransientAllowance >= amount) {
-            // TODO: check that no `Approval` event was emitted
+            for (uint256 i; i < logs.length; i++) {
+                VmSafe.Log memory log = logs[i];
+                assertNotEq(log.topics[0], IERC20.Approval.selector, "approve event");
+            }
         }
 
         saveActor(actor);
