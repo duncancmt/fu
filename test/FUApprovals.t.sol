@@ -7,6 +7,7 @@ import {Settings} from "../src/core/Settings.sol";
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "src/interfaces/IFU.sol";
 import {IERC7674} from "src/interfaces/IERC7674.sol";
+import {IERC5805} from "src/interfaces/IERC5805.sol";
 
 import {Test} from "@forge-std/Test.sol";
 import {Vm, VmSafe} from "@forge-std/Vm.sol";
@@ -472,6 +473,7 @@ contract FUApprovalsTest is FUDeploy, Test {
     ) external {
         address owner;
         if (fakeSig) {
+            //Convert private keys directly into addresses for fuzzing
             owner = address(uint160(bound(privKey, 0, type(uint160).max)));
         } else {
             privKey = boundPrivateKey(privKey);
@@ -571,6 +573,111 @@ contract FUApprovalsTest is FUDeploy, Test {
                     assertEq(fu.allowance(owner, spender), value);
                 }
             }
+        }
+    }
+
+    function testDelegateBySig(
+        uint256 privKey,
+        address delegatee,
+        uint256 nonce,
+        uint256 expiry,
+        uint256 blockTimestamp,
+        uint64 chainId,
+        bool expired,
+        bool fakeSig,
+        bool badSig
+    ) external {
+        address delegator;
+        if (fakeSig) {
+            //Convert private keys directly into addresses for fuzzing
+            delegator = address(uint160(bound(privKey, 0, type(uint160).max)));
+        } else {
+            privKey = boundPrivateKey(privKey);
+            Vm.Wallet memory wallet = vm.createWallet(privKey);
+            delegator = wallet.addr;
+        }
+
+        expiry = bound(expiry, getBlockTimestamp(), type(uint256).max);
+
+        bytes32 nonceSlot = keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 10));
+        store(address(fu), nonceSlot, bytes32(nonce));
+        if (expired) {
+            if (~expiry == 0) {
+                expired = false;
+                blockTimestamp = getBlockTimestamp();
+            } else {
+                blockTimestamp = bound(blockTimestamp, expiry + 1, type(uint256).max);
+            }
+        } else {
+            blockTimestamp = bound(blockTimestamp, getBlockTimestamp(), expiry);
+        }
+        warp(blockTimestamp);
+        chainId = uint64(bound(chainId, 1, type(uint64).max - 1));
+        vm.chainId(chainId);
+
+        bytes32 domainSep = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)"),
+                keccak256("Fuck You!"),
+                chainId,
+                fu
+            )
+        );
+        assertEq(domainSep, fu.DOMAIN_SEPARATOR());
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)"),
+                delegatee,
+                nonce,
+                expiry
+            )
+        );
+        bytes32 signingHash = keccak256(abi.encodePacked(hex"1901", domainSep, structHash));
+
+        bool shouldFail = expired || delegator == address(0) || badSig;
+
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        if (fakeSig) {
+            r = keccak256(abi.encodePacked("r", delegator));
+            s = keccak256(abi.encodePacked("s", delegator));
+            if (!shouldFail) {
+                vm.mockCall(address(1), abi.encode(signingHash, v, r, s), abi.encode(delegator));
+                vm.expectCall(address(1), abi.encode(signingHash, v, r, s));
+            }
+        } else {
+            (v, r, s) = vm.sign(privKey, signingHash);
+        }
+
+        if (delegator == address(0)) {
+            vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidSignature()"));
+        } else if (expired) {
+            vm.expectRevert(abi.encodeWithSignature("ERC5805ExpiredSignature(uint256)", expiry));
+        } else if (badSig) {
+            r = keccak256(bytes.concat(r));
+            s = keccak256(bytes.concat(s));
+            address actualSigner = ecrecover(signingHash, v, r, s);
+            if (actualSigner == address(0)) {
+                vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidSignature()"));
+            } else {
+                vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidNonce(uint256,uint256)", nonce, 0));
+            }
+        } else {
+            expectEmit(true, true, true, true, address(fu));
+            emit IERC5805.DelegateChanged(delegator, address(0), delegatee);
+            //vm.expectRevert(abi.encodeWithSignature("ERC5805InvalidNonce(uint256)", nonce));
+        }
+
+        fu.delegateBySig(delegatee, nonce, expiry, v, r, s);
+
+        if (!shouldFail) {
+            uint256 newNonce = uint256(load(address(fu), nonceSlot));
+            unchecked {
+                assertEq(newNonce, nonce + 1);
+            }
+            bytes32 newDelegatee = load(address(fu), keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 9)));
+            assertEq(uint256(uint160(delegatee)), uint256(newDelegatee), "Delegatee addresses don't match");
         }
     }
 
