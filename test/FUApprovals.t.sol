@@ -597,8 +597,7 @@ contract FUApprovalsTest is FUDeploy, Test {
 
         expiry = bound(expiry, getBlockTimestamp(), type(uint256).max);
 
-        bytes32 nonceSlot = keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 10));
-        store(address(fu), nonceSlot, bytes32(nonce));
+        store(address(fu), keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 10)), bytes32(nonce));
         if (expired) {
             if (~expiry == 0) {
                 expired = false;
@@ -674,9 +673,10 @@ contract FUApprovalsTest is FUDeploy, Test {
         fu.delegateBySig(delegatee, nonce, expiry, v, r, s);
 
         if (!shouldFail) {
-            uint256 newNonce = uint256(load(address(fu), nonceSlot));
+            uint256 newNonce = uint256(load(address(fu), keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 10))));
             unchecked {
                 assertEq(newNonce, nonce + 1);
+                assertEq(fu.nonces(delegator), nonce + 1);
             }
             bytes32 newDelegatee = load(address(fu), keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 9)));
             assertEq(uint256(uint160(delegatee)), uint256(newDelegatee), "Delegatee addresses don't match");
