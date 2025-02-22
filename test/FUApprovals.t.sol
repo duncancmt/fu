@@ -105,9 +105,8 @@ contract FUApprovalsTest is FUDeploy, Test {
         }
     }
 
-    function testTransferFrom(address actorIndex, address to, uint256 amount, uint256 allowance, bool boundTo, bool boundAmount, bool boundAllowance) external {
+    function testTransferFrom(address spender, uint256 actorIndex, address to, uint256 amount, uint256 allowance, bool boundTo, bool boundAmount, bool boundAllowance) external {
         address actor = getActor(actorIndex);
-        address spender = msg.sender;
 
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor));
@@ -133,11 +132,15 @@ contract FUApprovalsTest is FUDeploy, Test {
         // TODO: make variants that test transient allowances as well as persistent + transient allowances
 
         uint256 beforePersistentAllowance = uint256(vm.load(address(fu), keccak256(abi.encode(spender, keccak256(abi.encode(actor, uint256(BASE_SLOT) + 8))))));
-        assertEq(beforePersistentAllowance, allowance, "setting persistent allowance failed");
+        if (spender != PERMIT2) {
+            assertEq(beforePersistentAllowance, allowance, "setting persistent allowance failed");
+        }
         uint256 beforeTransientAllowance = uint256(_tload(address(fu), keccak256(abi.encodePacked(actor, spender))));
         uint256 beforeAllowance = saturatingAdd(beforePersistentAllowance, beforeTransientAllowance);
         if (actor == pair) {
             beforeAllowance = 0;
+        } else if (spender == PERMIT2) {
+            beforeAllowance = type(uint256).max;
         }
         uint256 beforeBalance = fu.balanceOf(actor);
 
@@ -175,9 +178,8 @@ contract FUApprovalsTest is FUDeploy, Test {
         uint256 afterTransientAllowance = uint256(_tload(address(fu), keccak256(abi.encodePacked(actor, spender))));
     }
 
-    function testBurnFrom(address actorIndex, uint256 amount, bool boundAmount) external {
+    function testBurnFrom(address spender, uint256 actorIndex, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
-        address spender = msg.sender;
 
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor));
@@ -207,9 +209,8 @@ contract FUApprovalsTest is FUDeploy, Test {
         assertEq((beforeBalance - afterBalance), (beforePersistentAllowance - afterPersistentAllowance), "change in balances and allowances don't match");
     }
 
-    function testDeliverFrom(address actorIndex, uint256 amount, bool boundAmount) external {
+    function testDeliverFrom(address spender, uint256 actorIndex, uint256 amount, bool boundAmount) external {
         address actor = getActor(actorIndex);
-        address spender = msg.sender;
 
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor));
