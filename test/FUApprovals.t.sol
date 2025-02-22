@@ -667,7 +667,7 @@ contract FUApprovalsTest is FUDeploy, Test {
             unchecked {
                 assertEq(newNonce, nonce + 1);
             }
-            uint256 newDelegatee = uint256(
+            uint256 newDelegatee = address(
                 load(address(fu), keccak256(abi.encode(delegator, keccak256(abi.encode(delegator, uint256(BASE_SLOT) + 9)))))
             );
             assertEq(delegatee, newDelegatee, "Delegatee addresses don't match");
