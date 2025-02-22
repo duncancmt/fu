@@ -777,8 +777,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         }
     }
 
-    // TODO: delegateBySig
-
     function invariant_nonNegativeRebase() external view override {
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
