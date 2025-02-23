@@ -287,6 +287,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         warp(getBlockTimestamp() + incr);
     }
 
+    /*
     function setSharesRatio(uint32 newRatio) external {
         uint32 oldRatio = shareRatio;
         uint256 fudge = 2; // TODO: decrease
@@ -351,6 +352,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
 
         shareRatio = newRatio;
     }
+    */
 
     function _transferShouldFail(address from, address to, uint256 amount, uint256 balance)
         internal
@@ -563,7 +565,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 uint256 rebaseBalanceDelta = rebaseNewBalance - rebaseOriginalBalance;
                 console.log("rebaseBalanceDelta", rebaseBalanceDelta);
                 console.log("rebaseAmountBalance", rebaseAmountBalance);
-                console.log("whaleLimit", fu.whaleLimit(rebaseTo));
+                //console.log("whaleLimit", fu.whaleLimit(rebaseTo));
                 uint256 fudge = 1000; // TODO: decrease
                 if (!((rebaseTo == actor && toIsWhaleBefore) || (rebaseTo == to && actorIsWhale))) {
                     assertGe(
