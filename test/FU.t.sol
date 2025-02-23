@@ -288,6 +288,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         warp(getBlockTimestamp() + incr);
     }
 
+    /*
     function setSharesRatio(uint32 newRatio) external {
         uint32 oldRatio = shareRatio;
         uint256 fudge = 2; // TODO: decrease
@@ -340,6 +341,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
 
         shareRatio = newRatio;
     }
+    */
 
     function _transferShouldFail(address from, address to, uint256 amount, uint256 balance)
         internal
@@ -696,6 +698,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         }
     }
 
+    /*
     function delegate(uint256 actorIndex, address delegatee) external {
         (address actor, ) = getActor(actorIndex);
         assume(actor != pair);
@@ -710,6 +713,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             saveActor(delegatee);
         }
     }
+    */
 
     function _burnShouldFail(address from, uint256 amount, uint256 balance) internal pure returns (bool) {
         return from == DEAD || amount > balance;
