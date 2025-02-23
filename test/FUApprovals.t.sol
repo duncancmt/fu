@@ -80,7 +80,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         bool boundSpender,
         bool boundAmount
     ) external {
-        address actor = getActor(actorIndex);
+        (address actor,) = getActor(actorIndex);
         if (boundAmount) {
             amount = bound(amount, 0, type(uint256).max);
         }
@@ -88,7 +88,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         console.log("spender", spender);
 
         if (boundSpender) {
-            spender = getActor(spender);
+            (spender,) = getActor(spender);
         } else {
             maybeCreateActor(spender);
         }
@@ -256,7 +256,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         bool boundAmount,
         uint256 boundAllowance
     ) external {
-        address actor = getActor(actorIndex);
+        (address actor,) = getActor(actorIndex);
 
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor));
@@ -267,7 +267,7 @@ contract FUApprovalsTest is FUDeploy, Test {
             assume(amount < fu.balanceOf(actor));
         }
         if (boundTo) {
-            to = getActor(to);
+            (to,) = getActor(to);
         } else {
             maybeCreateActor(to);
         }
@@ -341,7 +341,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         bool boundAmount,
         uint256 boundAllowance
     ) external {
-        address actor = getActor(actorIndex);
+        (address actor,) = getActor(actorIndex);
 
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor));
@@ -409,7 +409,7 @@ contract FUApprovalsTest is FUDeploy, Test {
         bool boundAmount,
         uint256 boundAllowance
     ) external {
-        address actor = getActor(actorIndex);
+        (address actor,) = getActor(actorIndex);
 
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor));
