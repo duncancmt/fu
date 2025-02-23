@@ -233,8 +233,8 @@ contract FUDeploy is Common {
 
         deployFuDependencies();
 
-        bytes32 fuSalt = 0x0000000000000000000000000000000000000000000000000000000160b54f9c;
-        bytes32 buybackSalt = 0x00000000000000000000000000000000000000000000000000000001d615672b;
+        bytes32 fuSalt = 0x000000000000000000000000000000000000000000000000000000005ea5fec7;
+        bytes32 buybackSalt = 0x0000000000000000000000000000000000000000000000000000000126ec71ed;
         bytes memory fuInitcode = bytes.concat(
             type(FU).creationCode,
             abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)
