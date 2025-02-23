@@ -996,6 +996,10 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 tstore(actor, 0x00)
             }
 
+            if (actor == pair) {
+                assertTrue(condition, "pair is not allowed on rebase queue");
+            }
+
             if (condition) {
                 length++;
                 assertEq(
