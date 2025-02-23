@@ -34,8 +34,8 @@ contract BuybackTest is FUDeploy, Test {
         //   ownerFee = 50% (our chosen initialFee)
         //   lastLpBalance & liquidityTarget to the pair's balanceOf(buyback)
         assertEq(buyback.ownerFee(), 5000, "ownerFee mismatch");
-        assertEq(buyback.lastLpBalance(), 72057594037927935999998999, "lastLpBalance mismatch");
-        assertEq(buyback.liquidityTarget(), 72057594037927935999998999, "liquidityTarget mismatch");
+        assertEq(buyback.lastLpBalance(), 78935139388245797625704050, "lastLpBalance mismatch");
+        assertEq(buyback.liquidityTarget(), 78935139388245797625704050, "liquidityTarget mismatch");
         assertEq(buyback.owner(), address(uint160(uint256(keccak256("Buyback owner")))), "owner mismatch");
         assertEq(buyback.pendingOwner(), address(0), "pending owner mismatch");
     }
@@ -108,8 +108,8 @@ contract BuybackTest is FUDeploy, Test {
         // Advance time to ensure consult won't revert with "PriceTooFresh"
         warp(getBlockTimestamp() + elapsed);
 
-        uint256 expectedFuWeth = (5 ether << 112) / (type(uint112).max / 5) * (EPOCH - deployTime + elapsed);
-        uint256 expectedWethFu = (uint256(type(uint112).max / 5) << 112) / 5 ether * (EPOCH - deployTime + elapsed);
+        uint256 expectedFuWeth = (6 ether << 112) / (type(uint112).max / 5) * (EPOCH - deployTime + elapsed);
+        uint256 expectedWethFu = (uint256(type(uint112).max / 5) << 112) / 6 ether * (EPOCH - deployTime + elapsed);
 
         // Expect event
         expectEmit(true, true, true, true, address(buyback));
