@@ -225,7 +225,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function getActor(uint256 actorIndex) internal override returns (address actor, uint256 originalBalance) {
-        (actor, ) = super.getActor(actorIndex);
+        (actor,) = super.getActor(actorIndex);
         originalBalance = lastBalance[actor];
         lastBalance[actor] = fu.balanceOf(actor);
     }
@@ -544,7 +544,8 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 // `to`)
 
                 uint256 rebaseAmountTokens = uint256(bytes32(log.data));
-                uint256 rebaseAmountBalance = rebaseAmountTokens * (uint160(rebaseTo) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS;
+                uint256 rebaseAmountBalance =
+                    rebaseAmountTokens * (uint160(rebaseTo) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS;
                 uint256 rebaseOriginalBalance;
                 uint256 rebaseNewBalance;
                 if (rebaseTo == actor) {
@@ -565,10 +566,18 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 console.log("whaleLimit", fu.whaleLimit(rebaseTo));
                 uint256 fudge = 1000; // TODO: decrease
                 if (!((rebaseTo == actor && toIsWhaleBefore) || (rebaseTo == to && actorIsWhale))) {
-                    assertGe(rebaseBalanceDelta + fudge, rebaseAmountBalance, string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress()));
+                    assertGe(
+                        rebaseBalanceDelta + fudge,
+                        rebaseAmountBalance,
+                        string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress())
+                    );
                 }
                 if (!(rebaseTo == to && toIsWhale)) {
-                    assertLe(rebaseBalanceDelta, rebaseAmountBalance + fudge, string.concat("rebase delta upper: ", rebaseTo.toChecksumAddress()));
+                    assertLe(
+                        rebaseBalanceDelta,
+                        rebaseAmountBalance + fudge,
+                        string.concat("rebase delta upper: ", rebaseTo.toChecksumAddress())
+                    );
                 }
             }
         }
@@ -712,7 +721,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function delegate(uint256 actorIndex, address delegatee) external {
-        (address actor, ) = super.getActor(actorIndex);
+        (address actor,) = super.getActor(actorIndex);
         assume(actor != pair);
         super.maybeCreateActor(delegatee);
 
