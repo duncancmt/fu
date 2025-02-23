@@ -1015,12 +1015,54 @@ contract FUGuide is Common, Bound, ListOfInvariants {
 
         saveActor(actor);
 
-        // TODO: check for "rebase queue" events
-
         uint256 afterWhaleLimit = fu.whaleLimit(actor);
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
 
+        for (uint256 i; i < logs.length; i++) {
+            VmSafe.Log memory log = logs[i];
+            if (log.topics[0] == IERC20.Transfer.selector && log.topics[1] == bytes32(0)) {
+                assertEq(log.emitter, address(fu), "wrong log emitter");
+                assertEq(log.topics.length, 3, "wrong topics");
+                assertEq(log.data.length, 32, "wrong Transfer data length (amount)");
+                assertLe(uint256(log.topics[2]), type(uint160).max, "dirty `to` topic");
+                address rebaseTo = address(uint160(uint256(log.topics[2])));
+
+                // TODO: see TODO in similar block in `transfer`
+
+                uint256 rebaseAmountTokens = uint256(bytes32(log.data));
+                uint256 rebaseAmountBalance =
+                    rebaseAmountTokens * (uint160(rebaseTo) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS;
+                uint256 rebaseOriginalBalance;
+                uint256 rebaseNewBalance;
+                if (rebaseTo == actor) {
+                    rebaseOriginalBalance = originalBalance;
+                    rebaseNewBalance = beforeBalance;
+                } else {
+                    rebaseOriginalBalance = lastBalance[rebaseTo];
+                    rebaseNewBalance = fu.balanceOf(rebaseTo);
+                }
+                console.log("original balance", rebaseOriginalBalance);
+                console.log("new balance", rebaseNewBalance);
+                uint256 rebaseBalanceDelta = rebaseNewBalance - rebaseOriginalBalance;
+                console.log("rebaseBalanceDelta", rebaseBalanceDelta);
+                console.log("rebaseAmountBalance", rebaseAmountBalance);
+                //console.log("whaleLimit", fu.whaleLimit(rebaseTo));
+                uint256 fudge = 2; // TODO: decrease
+                assertGe(
+                    rebaseBalanceDelta + fudge,
+                    rebaseAmountBalance,
+                    string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress())
+                );
+                if (rebaseNewBalance != fu.whaleLimit(rebaseTo)) {
+                    assertLe(
+                        rebaseBalanceDelta,
+                        rebaseAmountBalance + fudge,
+                        string.concat("rebase delta upper: ", rebaseTo.toChecksumAddress())
+                    );
+                }
+            }
+        }
         updateLastBalanceForRebaseQueue(logs, actor);
 
         assertGe(saturatingAdd(afterWhaleLimit, 1), beforeWhaleLimit, "whale limit lower");
