@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "src/interfaces/IFU.sol";
+import {IERC5805} from "src/interfaces/IERC5805.sol";
 import {FU} from "src/FU.sol";
 import {Buyback} from "src/Buyback.sol";
 import {Settings} from "src/core/Settings.sol";
@@ -396,6 +397,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             emit IERC20.Transfer(actor, to, type(uint256).max);
             expectEmit(true, true, true, false, address(fu));
             emit IERC20.Transfer(actor, address(0), type(uint256).max);
+            // TODO: delegation events
         }
 
         vm.recordLogs();
@@ -454,8 +456,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 break;
             }
         }
-
-        // TODO: delegation events
 
         uint256 afterBalance = lastBalance[actor];
         uint256 afterBalanceTo = lastBalance[to];
@@ -725,9 +725,27 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         assume(actor != pair);
         super.maybeCreateActor(delegatee);
 
+        address oldDelegatee = shadowDelegates[actor];
+        uint256 oldVotes = fu.getVotes(oldDelegatee);
+        uint256 newVotes = fu.getVotes(delegatee);
+        uint256 shares = getShares(actor);
+        expectEmit(true, true, true, true, address(fu));
+        emit IERC5805.DelegateChanged(actor, oldDelegatee, delegatee);
+        if (shares != 0) {
+            if (oldDelegatee != address(0)) {
+                expectEmit(true, true, true, true, address(fu));
+                emit IERC5805.DelegateVotesChanged(oldDelegatee, oldVotes, oldVotes - shares / Settings.SHARES_TO_VOTES_DIVISOR);
+            }
+            if (delegatee != address(0)) {
+                expectEmit(true, true, true, true, address(fu));
+                emit IERC5805.DelegateVotesChanged(delegatee, newVotes, newVotes + shares / Settings.SHARES_TO_VOTES_DIVISOR);
+            }
+        }
+
         prank(actor);
-        // TODO: expect events
         fu.delegate(delegatee); // ERC5805 requires that this function return nothing or revert
+
+        assertEq(fu.delegates(actor), delegatee);
 
         super.saveActor(actor);
         shadowDelegates[actor] = fu.delegates(actor);
@@ -762,6 +780,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         if (!_burnShouldFail(actor, amount, beforeBalance)) {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Transfer(actor, address(0), amount);
+            // TODO: delegation events
         }
 
         vm.recordLogs();
@@ -872,6 +891,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         if (!_burnShouldFail(actor, amount, beforeBalance)) {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Transfer(actor, address(0), amount);
+            // TODO: delegation events
         }
 
         vm.recordLogs();
