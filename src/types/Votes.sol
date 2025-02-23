@@ -12,7 +12,7 @@ type Votes is uint256;
 Votes constant ZERO = Votes.wrap(0);
 
 function toVotes(Shares s) pure returns (Votes) {
-    return Votes.wrap(Shares.unwrap(s.div(Settings.SHARES_TO_VOTES_DIVISOR)));
+    return Votes.wrap(Shares.unwrap(s) >> Settings.SHARES_TO_VOTES_SHIFT);
 }
 
 function toExternal(Votes v) pure returns (uint256) {

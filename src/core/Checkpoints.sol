@@ -111,52 +111,74 @@ library LibCheckpoints {
         }
     }
 
-    function _mint(Checkpoints storage checkpoints, Votes incr, uint256 clock) private {
-        if (incr == ZERO_VOTES) {
-            return;
-        }
+    function _mintUpdateState(Checkpoints storage checkpoints, Votes incr, uint256 clock) private {
         Checkpoint[] storage arr = checkpoints.total;
         (Votes oldValue, uint256 len) = _get(arr, clock);
         _set(arr, clock, oldValue + incr, len);
     }
 
-    function _mint(Checkpoint[] storage array, address to, Votes incr, uint256 clock) private {
+    function _mint(Checkpoints storage checkpoints, Votes incr, uint256 clock) private {
         if (incr == ZERO_VOTES) {
             return;
         }
+        _mintUpdateState(checkpoints, incr, clock);
+    }
+
+    function _mintUpdateState(Checkpoint[] storage array, address to, Votes incr, uint256 clock) private {
         (Votes oldValue, uint256 len) = _get(array, clock);
         Votes newValue = oldValue + incr;
         _set(array, clock, newValue, len);
         emit IERC5805.DelegateVotesChanged(to, oldValue.toExternal(), newValue.toExternal());
     }
 
+    function _mint(Checkpoint[] storage array, address to, Votes incr, uint256 clock) private {
+        if (incr == ZERO_VOTES) {
+            return;
+        }
+        _mintUpdateState(array, to, incr, clock);
+    }
+
     function _mint(Checkpoints storage checkpoints, address to, Votes incr, uint256 clock) private {
-        _mint(checkpoints, incr, clock);
-        _mint(checkpoints.each[to], to, incr, clock);
+        if (incr == ZERO_VOTES) {
+            return;
+        }
+        _mintUpdateState(checkpoints, incr, clock);
+        _mintUpdateState(checkpoints.each[to], to, incr, clock);
+    }
+
+    function _burnUpdateState(Checkpoints storage checkpoints, Votes decr, uint256 clock) private {
+        Checkpoint[] storage arr = checkpoints.total;
+        (Votes oldValue, uint256 len) = _get(arr, clock);
+        _set(arr, clock, oldValue - decr, len);
     }
 
     function _burn(Checkpoints storage checkpoints, Votes decr, uint256 clock) private {
         if (decr == ZERO_VOTES) {
             return;
         }
-        Checkpoint[] storage arr = checkpoints.total;
-        (Votes oldValue, uint256 len) = _get(arr, clock);
-        _set(arr, clock, oldValue - decr, len);
+        _burnUpdateState(checkpoints, decr, clock);
     }
 
-    function _burn(Checkpoint[] storage array, address from, Votes decr, uint256 clock) private {
-        if (decr == ZERO_VOTES) {
-            return;
-        }
+    function _burnUpdateState(Checkpoint[] storage array, address from, Votes decr, uint256 clock) private {
         (Votes oldValue, uint256 len) = _get(array, clock);
         Votes newValue = oldValue - decr;
         _set(array, clock, newValue, len);
         emit IERC5805.DelegateVotesChanged(from, oldValue.toExternal(), newValue.toExternal());
     }
 
+    function _burn(Checkpoint[] storage array, address from, Votes decr, uint256 clock) private {
+        if (decr == ZERO_VOTES) {
+            return;
+        }
+        _burnUpdateState(array, from, decr, clock);
+    }
+
     function _burn(Checkpoints storage checkpoints, address from, Votes decr, uint256 clock) private {
-        _burn(checkpoints, decr, clock);
-        _burn(checkpoints.each[from], from, decr, clock);
+        if (decr == ZERO_VOTES) {
+            return;
+        }
+        _burnUpdateState(checkpoints, decr, clock);
+        _burnUpdateState(checkpoints.each[from], from, decr, clock);
     }
 
     function _burn(
@@ -167,7 +189,11 @@ library LibCheckpoints {
         Votes decr1,
         uint256 clock
     ) private {
-        _burn(checkpoints, decr0 + decr1, clock);
+        Votes decr = decr0 + decr1;
+        if (decr == ZERO_VOTES) {
+            return;
+        }
+        _burnUpdateState(checkpoints, decr, clock);
         _burn(checkpoints.each[from0], from0, decr0, clock);
         _burn(checkpoints.each[from1], from1, decr1, clock);
     }
