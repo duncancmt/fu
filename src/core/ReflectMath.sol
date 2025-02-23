@@ -141,7 +141,7 @@ library ReflectMath {
         Tokens totalSupply,
         Shares totalShares,
         Tokens amount
-    ) internal view returns (Shares counterfactualToShares) {
+    ) internal pure returns (Shares counterfactualToShares) {
         TokensXBasisPoints left = scale(totalSupply + amount, BASIS);
         TokensXBasisPoints right = scale(amount.mul(Settings.ANTI_WHALE_DIVISOR), BASIS - taxRate);
         counterfactualToShares = tmpTBpS().omul(left.saturatingSub(right), totalShares).div(
