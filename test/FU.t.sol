@@ -231,8 +231,8 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function maybeCreateActor(address newActor) internal override returns (uint256 originalBalance) {
+        originalBalance = lastBalance[newActor];
         if (isActor[newActor]) {
-            originalBalance = lastBalance[newActor];
             lastBalance[newActor] = fu.balanceOf(newActor);
         }
         super.maybeCreateActor(newActor);
