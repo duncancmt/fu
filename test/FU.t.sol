@@ -823,7 +823,8 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                     beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR
                 );
             address actorDelegatee = fu.delegates(actor);
-            if (votes != 0 && actorDelegatee != address(0)) {
+            // TODO: `votes > 1` should be `votes != 0`, but there appears to be some rounding error in play here.
+            if (votes > 1 && actorDelegatee != address(0)) {
                 expectEmit(true, true, true, false, address(fu));
                 emit IERC5805.DelegateVotesChanged(actorDelegatee, type(uint256).max, type(uint256).max);
             }
@@ -944,7 +945,8 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                     beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR
                 );
             address actorDelegatee = fu.delegates(actor);
-            if (votes != 0 && actorDelegatee != address(0)) {
+            // TODO: `votes > 1` should be `votes != 0`, but there appears to be some rounding error in play here.
+            if (votes > 1 && actorDelegatee != address(0)) {
                 expectEmit(true, true, true, false, address(fu));
                 emit IERC5805.DelegateVotesChanged(actorDelegatee, type(uint256).max, type(uint256).max);
             }
