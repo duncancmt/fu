@@ -244,6 +244,32 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         shadowDelegates[actor] = fu.delegates(actor);
     }
 
+    function updateLastBalanceForRebaseQueue(VmSafe.Log[] memory logs, address skip0, address skip1) internal {
+        for (uint256 i; i < logs.length; i++) {
+            VmSafe.Log memory log = logs[i];
+            if (log.topics[0] == IERC20.Transfer.selector && log.topics[1] == bytes32(0)) {
+                address acct = address(uint160(uint256(log.topics[2])));
+                if (acct == skip0 || acct == skip1) {
+                    continue;
+                }
+                lastBalance[acct] = fu.balanceOf(acct);
+            }
+        }
+    }
+
+    function updateLastBalanceForRebaseQueue(VmSafe.Log[] memory logs, address skip) internal {
+        for (uint256 i; i < logs.length; i++) {
+            VmSafe.Log memory log = logs[i];
+            if (log.topics[0] == IERC20.Transfer.selector && log.topics[1] == bytes32(0)) {
+                address acct = address(uint160(uint256(log.topics[2])));
+                if (acct == skip) {
+                    continue;
+                }
+                lastBalance[acct] = fu.balanceOf(acct);
+            }
+        }
+    }
+
     function addActor(address newActor) external {
         assume(newActor != address(0));
         assume(newActor != DEAD);
@@ -515,6 +541,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 assertLe(rebaseBalanceDelta, rebaseAmountBalance + 1, "rebase delta upper");
             }
         }
+        updateLastBalanceForRebaseQueue(logs, actor, to);
 
         // Check that the balance decrease of `actor` is the expected value
         if (!toIsWhaleBefore) {
@@ -725,6 +752,8 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         uint256 afterVotingPower = fu.getVotes(delegatee);
         uint256 afterShares = getShares(actor);
 
+        updateLastBalanceForRebaseQueue(logs, actor);
+
         if (beforeShares == 0) {
             assertTrue(
                 alloc().omul(beforeTotalShares, afterCirculating) == tmp().omul(afterTotalShares, beforeCirculating),
@@ -828,6 +857,8 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         uint256 afterWhaleLimit = fu.whaleLimit(actor);
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
+
+        updateLastBalanceForRebaseQueue(logs, actor);
 
         assertGe(saturatingAdd(afterWhaleLimit, 1), beforeWhaleLimit, "whale limit lower");
         assertLe(afterWhaleLimit, saturatingAdd(beforeWhaleLimit, 1), "whale limit upper");
