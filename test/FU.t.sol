@@ -902,7 +902,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
 
-        if (!_burnShouldFail(actor, amount, beforeBalance)) {
+        if (!_deliverShouldFail(actor, amount, beforeBalance)) {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Transfer(actor, address(0), amount);
             // TODO: delegation events
