@@ -41,27 +41,27 @@ abstract contract Common is StdAssertions {
         }
     }
 
-    function getActor(uint256 actorIndex) internal virtual returns (address actor) {
+    function getActor(uint256 actorIndex) internal virtual returns (address actor, uint256) {
         actor = actors[actorIndex % actors.length];
         console.log("actor", actor);
     }
 
-    function getActor(address seed) internal returns (address) {
+    function getActor(address seed) internal returns (address, uint256) {
         return getActor(uint160(seed));
     }
 
-    function maybeCreateActor(address newActor) internal virtual {
+    function maybeCreateActor(address newActor) internal virtual returns (uint256) {
         if (newActor == address(0)) {
-            return;
+            return 0;
         }
         if (newActor == DEAD) {
-            return;
+            return 0;
         }
         if (newActor == address(fu)) {
-            return;
+            return 0;
         }
         if (isActor[newActor]) {
-            return;
+            return 0;
         }
 
         isActor[newActor] = true;

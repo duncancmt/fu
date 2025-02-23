@@ -225,7 +225,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function getActor(uint256 actorIndex) internal override returns (address actor, uint256 originalBalance) {
-        actor = super.getActor(actorIndex);
+        (actor, ) = super.getActor(actorIndex);
         originalBalance = lastBalance[actor];
         lastBalance[actor] = fu.balanceOf(actor);
     }
@@ -654,7 +654,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function delegate(uint256 actorIndex, address delegatee) external {
-        address actor = getActor(actorIndex);
+        (address actor, ) = getActor(actorIndex);
         assume(actor != pair);
         maybeCreateActor(delegatee);
 
@@ -673,7 +673,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function burn(uint256 actorIndex, uint256 amount, bool boundAmount) external {
-        address actor = getActor(actorIndex);
+        (address actor, ) = getActor(actorIndex);
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         } else {
@@ -783,7 +783,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function deliver(uint256 actorIndex, uint256 amount, bool boundAmount) external {
-        address actor = getActor(actorIndex);
+        (address actor, ) = getActor(actorIndex);
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         } else {
