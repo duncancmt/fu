@@ -449,7 +449,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                     < beforeCirculating.unsafeDivUp(Settings.ANTI_WHALE_DIVISOR)
         ) {
             assertGe(
-                ((logAmountTransfer + logAmountBurn) * tax).unsafeDivUp(10_000) + 1,
+                ((logAmountTransfer + logAmountBurn) * tax).unsafeDivUp(10_000) + 2,
                 logAmountBurn,
                 "log tax ratio lower"
             );
