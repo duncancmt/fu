@@ -496,7 +496,8 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 // the queue may be reordered (if the head pointed at `actor` or
                 // `to`)
 
-                uint256 rebaseAmount = uint256(bytes32(log.data));
+                uint256 rebaseAmountTokens = uint256(bytes32(log.data));
+                uint256 rebaseAmountBalance = rebaseAmountTokens * (uint160(rebaseTo) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS;
                 uint256 rebaseOriginalBalance;
                 uint256 rebaseNewBalance;
                 if (rebaseTo == actor) {
@@ -510,9 +511,8 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                     rebaseNewBalance = fu.balanceOf(rebaseTo);
                 }
                 uint256 rebaseBalanceDelta = rebaseNewBalance - rebaseOriginalBalance;
-                uint256 rebaseTokensDelta = rebaseBalanceDelta * Settings.CRAZY_BALANCE_BASIS / (uint160(rebaseTo) / Settings.ADDRESS_DIVISOR);
-                assertGe(rebaseTokensDelta + 1, rebaseAmount, "rebase delta lower");
-                assertLe(rebaseTokensDelta, rebaseAmount + 1, "rebase delta upper");
+                assertGe(rebaseBalanceDelta + 1, rebaseAmountBalance, "rebase delta lower");
+                assertLe(rebaseBalanceDelta, rebaseAmountBalance + 1, "rebase delta upper");
             }
         }
 
