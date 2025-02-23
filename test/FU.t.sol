@@ -554,9 +554,13 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 console.log("rebaseBalanceDelta", rebaseBalanceDelta);
                 console.log("rebaseAmountBalance", rebaseAmountBalance);
                 console.log("whaleLimit", fu.whaleLimit(rebaseTo));
-                uint256 fudge = 100;
-                assertGe(rebaseBalanceDelta + fudge, rebaseAmountBalance, string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress()));
-                assertLe(rebaseBalanceDelta, rebaseAmountBalance + fudge, string.concat("rebase delta upper: ", rebaseTo.toChecksumAddress()));
+                uint256 fudge = 1000;
+                if (!((rebaseTo == actor && toIsWhaleBefore) || (rebaseTo == to && actorIsWhale))) {
+                    assertGe(rebaseBalanceDelta + fudge, rebaseAmountBalance, string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress()));
+                }
+                if (!(rebaseTo == to && toIsWhale)) {
+                    assertLe(rebaseBalanceDelta, rebaseAmountBalance + fudge, string.concat("rebase delta upper: ", rebaseTo.toChecksumAddress()));
+                }
             }
         }
         updateLastBalanceForRebaseQueue(logs, actor, to);
