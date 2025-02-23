@@ -574,7 +574,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                         string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress())
                     );
                 }
-                if (!(rebaseTo == to && toIsWhale)) {
+                if (rebaseTo == to ? !toIsWhale : rebaseNewBalance != fu.whaleLimit(rebaseTo)) {
                     assertLe(
                         rebaseBalanceDelta,
                         rebaseAmountBalance + fudge,
