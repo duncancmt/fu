@@ -406,30 +406,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
 
-        // Check that the whale limit for each account "doesn't" change
-        if (actor != pair && to != pair) {
-            assertGe(saturatingAdd(afterWhaleLimit, 1), beforeWhaleLimit, "actor whale limit lower");
-            assertLe(afterWhaleLimit, saturatingAdd(beforeWhaleLimit, 1), "actor whale limit upper");
-            assertGe(saturatingAdd(afterWhaleLimitTo, 1), beforeWhaleLimitTo, "to whale limit lower");
-            assertLe(afterWhaleLimitTo, saturatingAdd(beforeWhaleLimitTo, 1), "to whale limit upper");
-        }
-
-        // Check that the ratio between transferred tokens and burned tokens in the logs represents the tax rate
-        assertGe(logAmountTransfer + logAmountBurn + 1, amount, "log amount lower");
-        assertLe(logAmountTransfer + logAmountBurn, amount + 1, "log amount upper");
-        if (
-            afterCirculating < beforeCirculating
-                || (afterCirculating - beforeCirculating) * (10_000 - tax) / 10_000
-                    < beforeCirculating / Settings.ANTI_WHALE_DIVISOR
-        ) {
-            assertGe(
-                ((logAmountTransfer + logAmountBurn) * tax).unsafeDivUp(10_000) + 1,
-                logAmountBurn,
-                "log tax ratio lower"
-            );
-            assertLe((logAmountTransfer + logAmountBurn) * tax / 10_000, logAmountBurn + 1, "log tax ratio upper");
-        }
-
         /*
         console.log(
             string.concat(
@@ -455,6 +431,30 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             )
         );
         */
+
+        // Check that the whale limit for each account "doesn't" change
+        if (actor != pair && to != pair) {
+            assertGe(saturatingAdd(afterWhaleLimit, 1), beforeWhaleLimit, "actor whale limit lower");
+            assertLe(afterWhaleLimit, saturatingAdd(beforeWhaleLimit, 1), "actor whale limit upper");
+            assertGe(saturatingAdd(afterWhaleLimitTo, 1), beforeWhaleLimitTo, "to whale limit lower");
+            assertLe(afterWhaleLimitTo, saturatingAdd(beforeWhaleLimitTo, 1), "to whale limit upper");
+        }
+
+        // Check that the ratio between transferred tokens and burned tokens in the logs represents the tax rate
+        assertGe(logAmountTransfer + logAmountBurn + 1, amount, "log amount lower");
+        assertLe(logAmountTransfer + logAmountBurn, amount + 1, "log amount upper");
+        if (
+            afterCirculating < beforeCirculating
+                || (afterCirculating - beforeCirculating) * (10_000 - tax) / 10_000
+                    < beforeCirculating.unsafeDivUp(Settings.ANTI_WHALE_DIVISOR)
+        ) {
+            assertGe(
+                ((logAmountTransfer + logAmountBurn) * tax).unsafeDivUp(10_000) + 1,
+                logAmountBurn,
+                "log tax ratio lower"
+            );
+            assertLe((logAmountTransfer + logAmountBurn) * tax / 10_000, logAmountBurn + 1, "log tax ratio upper");
+        }
 
         // Check that the balance decrease of `actor` is the expected value
         if (!toIsWhaleBefore) {

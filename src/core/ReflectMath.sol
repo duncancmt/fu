@@ -142,10 +142,11 @@ library ReflectMath {
         Shares totalShares,
         Tokens amount
     ) internal view returns (Shares counterfactualToShares) {
-        counterfactualToShares = tmpTBpS().omul(
-            scale(totalSupply, BASIS.div(Settings.ANTI_WHALE_DIVISOR)).saturatingSub(scale(amount, BASIS - taxRate)),
-            totalShares
-        ).div(scale(totalSupply, BASIS));
+        TokensXBasisPoints left = scale(totalSupply + amount, BASIS);
+        TokensXBasisPoints right = scale(amount.mul(Settings.ANTI_WHALE_DIVISOR), BASIS - taxRate);
+        counterfactualToShares = tmpTBpS().omul(left.saturatingSub(right), totalShares).div(
+            scale(totalSupply.mul(Settings.ANTI_WHALE_DIVISOR), BASIS)
+        );
     }
 
     function getTransferSharesToPair(
