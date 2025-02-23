@@ -287,7 +287,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         warp(getBlockTimestamp() + incr);
     }
 
-    /*
     function setSharesRatio(uint32 newRatio) external {
         uint32 oldRatio = shareRatio;
         uint256 fudge = 2; // TODO: decrease
@@ -333,14 +332,25 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         }
         setTotalShares(total);
 
+        // Make the rebase queue consistent
+        {
+            bytes memory deliverCall = abi.encodeCall(fu.deliver, (0));
+            vm.startPrank(address(0));
+            for (uint256 i; i < actors.length; i++) {
+                (bool success,) = callOptionalReturn(deliverCall);
+                assertTrue(success);
+            }
+            vm.stopPrank();
+        }
+        // Update the shadow of the rebase queue
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
             lastBalance[actor] = fu.balanceOf(actor);
         }
+        lastBalance[DEAD] = fu.balanceOf(DEAD);
 
         shareRatio = newRatio;
     }
-    */
 
     function _transferShouldFail(address from, address to, uint256 amount, uint256 balance)
         internal
@@ -553,7 +563,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 console.log("rebaseBalanceDelta", rebaseBalanceDelta);
                 console.log("rebaseAmountBalance", rebaseAmountBalance);
                 console.log("whaleLimit", fu.whaleLimit(rebaseTo));
-                uint256 fudge = 1000;
+                uint256 fudge = 1000; // TODO: decrease
                 if (!((rebaseTo == actor && toIsWhaleBefore) || (rebaseTo == to && actorIsWhale))) {
                     assertGe(rebaseBalanceDelta + fudge, rebaseAmountBalance, string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress()));
                 }
