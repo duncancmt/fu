@@ -142,6 +142,8 @@ contract Buyback is TwoStepOwnable, Context {
         unchecked {
             // slither-disable-next-line timestamp
             uint256 elapsed = uint32(block.timestamp) - timestampLast_; // masking and underflow is desired
+            // `_sortTokens == false` means that WETH is token1 and FU is token0
+            // `_sortTokens == true`  means that WETH is token0 and FU is token1
             // slither-disable-next-line divide-before-multiply
             priceFuWethCumulativeLast =
                 pair.fastPriceCumulativeLast(_sortTokens) + (reserveWeth << 112).unsafeDiv(reserveFu) * elapsed;
@@ -260,6 +262,8 @@ contract Buyback is TwoStepOwnable, Context {
         // get the reserves again. we have to get them _again_ because there may be excess tokens in
         // the pair before calling `burn`. calling `burn` implicitly synchronizes the pair with its
         // balances.
+        // `_sortTokens == false` means that WETH is token1 and FU is token0
+        // `_sortTokens == true`  means that WETH is token0 and FU is token1
         (amountFu, amountWeth) = _sortTokens.maybeSwap(amountFu, amountWeth);
         address owner_ = owner();
         BasisPoints ownerFee_ = BasisPoints.wrap(ownerFee);
