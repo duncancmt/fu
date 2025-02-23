@@ -794,7 +794,13 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         if (!_burnShouldFail(actor, amount, beforeBalance)) {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Transfer(actor, address(0), amount);
-            // TODO: delegation events
+            uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
+            uint256 votes = divisor == 0 ? 0 : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR);
+            address actorDelegatee = fu.delegates(actor);
+            if (votes != 0 && actorDelegatee != address(0)) {
+                expectEmit(true, true, true, false, address(fu));
+                emit IERC5805.DelegateVotesChanged(actorDelegatee, type(uint256).max, type(uint256).max);
+            }
         }
 
         vm.recordLogs();
@@ -905,7 +911,13 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         if (!_deliverShouldFail(actor, amount, beforeBalance)) {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Transfer(actor, address(0), amount);
-            // TODO: delegation events
+            uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
+            uint256 votes = divisor == 0 ? 0 : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR);
+            address actorDelegatee = fu.delegates(actor);
+            if (votes != 0 && actorDelegatee != address(0)) {
+                expectEmit(true, true, true, false, address(fu));
+                emit IERC5805.DelegateVotesChanged(actorDelegatee, type(uint256).max, type(uint256).max);
+            }
         }
 
         vm.recordLogs();
