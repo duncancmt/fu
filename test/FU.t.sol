@@ -728,17 +728,17 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         address oldDelegatee = shadowDelegates[actor];
         uint256 oldVotes = fu.getVotes(oldDelegatee);
         uint256 newVotes = fu.getVotes(delegatee);
-        uint256 shares = getShares(actor);
+        uint256 votes = getShares(actor) / Settings.SHARES_TO_VOTES_DIVISOR;
         expectEmit(true, true, true, true, address(fu));
         emit IERC5805.DelegateChanged(actor, oldDelegatee, delegatee);
-        if (shares != 0) {
+        if (votes != 0) {
             if (oldDelegatee != address(0)) {
                 expectEmit(true, true, true, true, address(fu));
-                emit IERC5805.DelegateVotesChanged(oldDelegatee, oldVotes, oldVotes - shares / Settings.SHARES_TO_VOTES_DIVISOR);
+                emit IERC5805.DelegateVotesChanged(oldDelegatee, oldVotes, oldVotes - votes);
             }
             if (delegatee != address(0)) {
                 expectEmit(true, true, true, true, address(fu));
-                emit IERC5805.DelegateVotesChanged(delegatee, newVotes, newVotes + shares / Settings.SHARES_TO_VOTES_DIVISOR);
+                emit IERC5805.DelegateVotesChanged(delegatee, newVotes, newVotes + votes);
             }
         }
 
