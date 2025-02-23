@@ -9,6 +9,8 @@ import {Shares} from "./Shares.sol";
 // need to do as much masking.
 type Votes is uint256;
 
+Votes constant ZERO = Votes.wrap(0);
+
 function toVotes(Shares s) pure returns (Votes) {
     return Votes.wrap(Shares.unwrap(s.div(Settings.SHARES_TO_VOTES_DIVISOR)));
 }

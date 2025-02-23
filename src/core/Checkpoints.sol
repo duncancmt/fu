@@ -5,7 +5,7 @@ import {IERC5805} from "../interfaces/IERC5805.sol";
 
 import {Settings} from "./Settings.sol";
 
-import {Votes} from "../types/Votes.sol";
+import {Votes, ZERO as ZERO_VOTES} from "../types/Votes.sol";
 
 struct Checkpoint {
     uint48 key;
@@ -112,12 +112,18 @@ library LibCheckpoints {
     }
 
     function _mint(Checkpoints storage checkpoints, Votes incr, uint256 clock) private {
+        if (incr == ZERO_VOTES) {
+            return;
+        }
         Checkpoint[] storage arr = checkpoints.total;
         (Votes oldValue, uint256 len) = _get(arr, clock);
         _set(arr, clock, oldValue + incr, len);
     }
 
     function _mint(Checkpoint[] storage array, address to, Votes incr, uint256 clock) private {
+        if (incr == ZERO_VOTES) {
+            return;
+        }
         (Votes oldValue, uint256 len) = _get(array, clock);
         Votes newValue = oldValue + incr;
         _set(array, clock, newValue, len);
@@ -130,12 +136,18 @@ library LibCheckpoints {
     }
 
     function _burn(Checkpoints storage checkpoints, Votes decr, uint256 clock) private {
+        if (decr == ZERO_VOTES) {
+            return;
+        }
         Checkpoint[] storage arr = checkpoints.total;
         (Votes oldValue, uint256 len) = _get(arr, clock);
         _set(arr, clock, oldValue - decr, len);
     }
 
     function _burn(Checkpoint[] storage array, address from, Votes decr, uint256 clock) private {
+        if (decr == ZERO_VOTES) {
+            return;
+        }
         (Votes oldValue, uint256 len) = _get(array, clock);
         Votes newValue = oldValue - decr;
         _set(array, clock, newValue, len);
