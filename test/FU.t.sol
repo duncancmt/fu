@@ -454,6 +454,14 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 "log tax ratio lower"
             );
             assertLe((logAmountTransfer + logAmountBurn) * tax / 10_000, logAmountBurn + 1, "log tax ratio upper");
+        } else if (
+            afterCirculating >= beforeCirculating
+                && (afterCirculating - beforeCirculating) * (10_000 - tax) / 10_000
+                    >= beforeCirculating.unsafeDivUp(Settings.ANTI_WHALE_DIVISOR)
+        ) {
+            assertLe(
+                (logAmountTransfer + logAmountBurn) * tax / 10_000, logAmountBurn, "log tax ratio upper (insane whale)"
+            );
         }
 
         // Check that the balance decrease of `actor` is the expected value
