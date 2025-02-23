@@ -115,6 +115,15 @@ function applyWhaleLimit(uint256 shares0, uint256 shares1, uint256 totalShares)
     return (Shares.unwrap(shares0_), Shares.unwrap(shares1_), Shares.unwrap(totalShares_));
 }
 
+function applyWhaleLimit(uint256 shares, uint256 totalShares)
+    pure
+    returns (uint256, uint256)
+{
+    (Shares shares_, Shares totalShares_) =
+        applyWhaleLimit(Shares.wrap(shares), Shares.wrap(totalShares));
+    return (Shares.unwrap(shares_), Shares.unwrap(totalShares_));
+}
+
 interface ListOfInvariants {
     function invariant_nonNegativeRebase() external;
     function invariant_delegatesNotChanged() external;
@@ -233,6 +242,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
 
     function updateRebaseQueueLastTokens(address account, uint256 circulatingTokens, uint256 totalShares) internal {
         uint256 shares = getShares(account);
+        (shares, totalShares) = applyWhaleLimit(shares, totalShares);
         uint256 tokens = tmp().omul(shares, circulatingTokens).div(totalShares);
         return store(address(fu), _rebaseQueueLastTokensSlot(account), bytes32(tokens));
     }
