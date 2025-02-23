@@ -397,7 +397,21 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             emit IERC20.Transfer(actor, to, type(uint256).max);
             expectEmit(true, true, true, false, address(fu));
             emit IERC20.Transfer(actor, address(0), type(uint256).max);
-            // TODO: delegation events
+            uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
+            uint256 votes = divisor == 0 ? 0 : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR);
+            address actorDelegatee = fu.delegates(actor);
+            address toDelegatee = fu.delegates(actor);
+            console.log("votes", votes);
+            if (votes != 0 && actorDelegatee != toDelegatee) {
+                if (actorDelegatee != address(0)) {
+                    expectEmit(true, true, true, false, address(fu));
+                    emit IERC5805.DelegateVotesChanged(actorDelegatee, type(uint256).max, type(uint256).max);
+                }
+                if (toDelegatee != address(0)) {
+                    expectEmit(true, true, true, false, address(fu));
+                    emit IERC5805.DelegateVotesChanged(toDelegatee, type(uint256).max, type(uint256).max);
+                }
+            }
         }
 
         vm.recordLogs();
