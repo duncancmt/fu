@@ -174,6 +174,12 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         }
     }
 
+    function _rebaseQueueLastTokensSlot(address account) internal pure returns (bytes32 r) {
+        unchecked {
+            return bytes32(uint256(_rebaseQueuePrevSlot(account)) + 2);
+        }
+    }
+
     function getShares(address account) internal view returns (uint256) {
         uint256 value = uint256(load(address(fu), _sharesSlot(account)));
         assertEq(
@@ -223,6 +229,12 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         uint256 slotValue = uint256(load(address(fu), _rebaseQueueNextSlot(account)));
         assertLe(slotValue, type(uint160).max, "dirty rebase queue next slot");
         return address(uint160(slotValue));
+    }
+
+    function updateRebaseQueueLastTokens(address account, uint256 circulatingTokens, uint256 totalShares) internal {
+        uint256 shares = getShares(account);
+        uint256 tokens = tmp().omul(shares, circulatingTokens).div(totalShares);
+        return store(address(fu), _rebaseQueueLastTokensSlot(account), bytes32(tokens));
     }
 
     function getActor(uint256 actorIndex) internal override returns (address actor, uint256 originalBalance) {
@@ -310,6 +322,10 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
 
+            if (actor == pair) {
+                continue;
+            }
+
             address delegatee = shadowDelegates[actor];
             if (delegatee != address(0)) {
                 prank(actor);
@@ -335,13 +351,15 @@ contract FUGuide is Common, Bound, ListOfInvariants {
 
         // Make the rebase queue consistent
         {
-            bytes memory deliverCall = abi.encodeCall(fu.deliver, (0));
-            vm.startPrank(address(0));
+            uint256 circulating = getCirculatingTokens();
             for (uint256 i; i < actors.length; i++) {
-                (bool success,) = callOptionalReturn(deliverCall);
-                assertTrue(success);
+                address actor = actors[i];
+                if (actor == pair) {
+                    continue;
+                }
+                updateRebaseQueueLastTokens(actors[i], circulating, total);
             }
-            vm.stopPrank();
+            updateRebaseQueueLastTokens(DEAD, circulating, total);
         }
         // Update the shadow of the rebase queue
         for (uint256 i; i < actors.length; i++) {
