@@ -206,6 +206,12 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         return value;
     }
 
+    function getRebaseQueueHead() internal view returns (address) {
+        uint256 slotValue = uint256(load(address(fu), bytes32(uint256(BASE_SLOT) + 4)));
+        assertLe(slotValue, type(uint160).max, "dirty rebase queue head slot");
+        return address(uint160(slotValue));
+    }
+
     function getRebaseQueuePrev(address account) internal view returns (address) {
         uint256 slotValue = uint256(load(address(fu), _rebaseQueuePrevSlot(account)));
         assertLe(slotValue, type(uint160).max, "dirty rebase queue prev slot");
@@ -218,13 +224,15 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         return address(uint160(slotValue));
     }
 
-    function getActor(uint256 actorIndex) internal override returns (address actor) {
+    function getActor(uint256 actorIndex) internal override returns (address actor, uint256 originalBalance) {
         actor = super.getActor(actorIndex);
+        originalBalance = lastBalance[actor];
         lastBalance[actor] = fu.balanceOf(actor);
     }
 
-    function maybeCreateActor(address newActor) internal override {
+    function maybeCreateActor(address newActor) internal override returns (uint256 originalBalance) {
         if (isActor[newActor]) {
+            originalBalance = lastBalance[newActor];
             lastBalance[newActor] = fu.balanceOf(newActor);
         }
         super.maybeCreateActor(newActor);
@@ -313,7 +321,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function transfer(uint256 actorIndex, address to, uint256 amount, bool boundTo, bool boundAmount) external {
-        address actor = getActor(actorIndex);
+        (address actor, uint256 originalBalance) = getActor(actorIndex);
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         } else {
@@ -322,10 +330,11 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         if (actor == pair) {
             assume(amount < fu.balanceOf(actor));
         }
+        uint256 originalBalanceTo;
         if (boundTo) {
-            to = getActor(to);
+            (to, originalBalanceTo) = getActor(to);
         } else {
-            maybeCreateActor(to);
+            originalBalanceTo = maybeCreateActor(to);
         }
 
         uint256 beforeBalance = lastBalance[actor];
@@ -339,6 +348,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
         uint256 tax = fu.tax();
+        address rebaseQueueHead = getRebaseQueueHead();
 
         if (!_transferShouldFail(actor, to, amount, beforeBalance)) {
             expectEmit(true, true, true, false, address(fu));
@@ -388,13 +398,19 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 assertEq(log.emitter, address(fu), "wrong log emitter");
                 assertEq(log.data.length, 32, "wrong burn Transfer data length (amount)");
                 logAmountBurn = uint256(bytes32(log.data));
+
+                // delete both the entries we just looked at from `logs`
+                assembly ("memory-safe") {
+                    let length := sub(mload(logs), 0x02)
+                    let start := add(0x20, add(shl(0x05, i), logs))
+                    mcopy(start, add(0x40, start), shl(0x05, sub(length, i)))
+                    mstore(logs, length)
+                }
                 break;
             }
         }
 
-        // TODO: check for "rebase queue" events
-        // 0-8 transfer events?
-        // delegation events?
+        // TODO: delegation events
 
         uint256 afterBalance = lastBalance[actor];
         uint256 afterBalanceTo = lastBalance[to];
@@ -462,6 +478,42 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             assertLe(
                 (logAmountTransfer + logAmountBurn) * tax / 10_000, logAmountBurn, "log tax ratio upper (insane whale)"
             );
+        }
+
+        for (uint256 i; i < logs.length; i++) {
+            VmSafe.Log memory log = logs[i];
+            if (log.topics[0] == IERC20.Transfer.selector) {
+                assertEq(log.emitter, address(fu), "wrong log emitter");
+                assertEq(log.topics.length, 3, "wrong topics");
+                assertEq(log.data.length, 32, "wrong Transfer data length (amount)");
+                assertEq(log.topics[1], bytes32(0), "wrong from address");
+                assertLe(uint256(log.topics[2]), type(uint160).max, "dirty `to` topic");
+                address rebaseTo = address(uint160(uint256(log.topics[2])));
+
+                // TODO: we need to check the consistency of the queue with the
+                // head, but this is complex because some elements of the queue
+                // may be skipped (if their balances are nonincreasing) and also
+                // the queue may be reordered (if the head pointed at `actor` or
+                // `to`)
+
+                uint256 rebaseAmount = uint256(bytes32(log.data));
+                uint256 rebaseOriginalBalance;
+                uint256 rebaseNewBalance;
+                if (rebaseTo == actor) {
+                    rebaseOriginalBalance = originalBalance;
+                    rebaseNewBalance = beforeBalance;
+                } else if (rebaseTo == to) {
+                    rebaseOriginalBalance = originalBalanceTo;
+                    rebaseNewBalance = beforeBalanceTo;
+                } else {
+                    rebaseOriginalBalance = lastBalance[rebaseTo];
+                    rebaseNewBalance = fu.balanceOf(rebaseTo);
+                }
+                uint256 rebaseBalanceDelta = rebaseNewBalance - rebaseOriginalBalance;
+                uint256 rebaseTokensDelta = rebaseBalanceDelta * Settings.CRAZY_BALANCE_BASIS / (uint160(rebaseTo) / Settings.ADDRESS_DIVISOR);
+                assertGe(rebaseTokensDelta + 1, rebaseAmount, "rebase delta lower");
+                assertLe(rebaseTokensDelta, rebaseAmount, "rebase delta upper");
+            }
         }
 
         // Check that the balance decrease of `actor` is the expected value
