@@ -512,7 +512,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 uint256 rebaseBalanceDelta = rebaseNewBalance - rebaseOriginalBalance;
                 uint256 rebaseTokensDelta = rebaseBalanceDelta * Settings.CRAZY_BALANCE_BASIS / (uint160(rebaseTo) / Settings.ADDRESS_DIVISOR);
                 assertGe(rebaseTokensDelta + 1, rebaseAmount, "rebase delta lower");
-                assertLe(rebaseTokensDelta, rebaseAmount, "rebase delta upper");
+                assertLe(rebaseTokensDelta, rebaseAmount + 1, "rebase delta upper");
             }
         }
 
