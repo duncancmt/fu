@@ -48,7 +48,7 @@ contract DeployFU is Script {
         address[] memory initialHolders =
             abi.decode(vm.readFile(string.concat(vm.projectRoot(), "/airdrop.json")).parseRaw("$"), (address[]));
         initialHolders.quickSort();
-        string memory image = vm.readFile(string.concat(vm.projectRoot(), "/image.svg"));
+        string memory image = vm.readFile(string.concat(vm.projectRoot(), "/ipfs/image.svg"));
         string memory imageUri = IPFS.CIDv0(IPFS.dagPbUnixFsHash(image));
         console.log("image URI", imageUri);
         assert(keccak256(bytes(imageUri)) == keccak256("ipfs://QmWH4FgvCpXdaZZ9zj5Zn2jvNYMgsLJ9YdG7YWD72p6wmP"));
