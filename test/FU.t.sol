@@ -398,7 +398,11 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             expectEmit(true, true, true, false, address(fu));
             emit IERC20.Transfer(actor, address(0), type(uint256).max);
             uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
-            uint256 votes = divisor == 0 ? 0 : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR);
+            uint256 votes = divisor == 0
+                ? 0
+                : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(
+                    beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR
+                );
             address actorDelegatee = fu.delegates(actor);
             address toDelegatee = fu.delegates(actor);
             console.log("votes", votes);
@@ -795,7 +799,11 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Transfer(actor, address(0), amount);
             uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
-            uint256 votes = divisor == 0 ? 0 : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR);
+            uint256 votes = divisor == 0
+                ? 0
+                : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(
+                    beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR
+                );
             address actorDelegatee = fu.delegates(actor);
             if (votes != 0 && actorDelegatee != address(0)) {
                 expectEmit(true, true, true, false, address(fu));
@@ -912,7 +920,11 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Transfer(actor, address(0), amount);
             uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
-            uint256 votes = divisor == 0 ? 0 : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR);
+            uint256 votes = divisor == 0
+                ? 0
+                : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(
+                    beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR
+                );
             address actorDelegatee = fu.delegates(actor);
             if (votes != 0 && actorDelegatee != address(0)) {
                 expectEmit(true, true, true, false, address(fu));
