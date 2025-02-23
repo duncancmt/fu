@@ -241,7 +241,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     function saveActor(address actor) internal override {
         super.saveActor(actor);
         lastBalance[actor] = fu.balanceOf(actor);
-        shadowDelegates[actor] = fu.delegates(actor);
     }
 
     function restoreActor(address actor, uint256 originalBalance) internal {
@@ -702,22 +701,21 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         }
     }
 
-    /*
     function delegate(uint256 actorIndex, address delegatee) external {
-        (address actor, ) = getActor(actorIndex);
+        (address actor, ) = super.getActor(actorIndex);
         assume(actor != pair);
-        maybeCreateActor(delegatee);
+        super.maybeCreateActor(delegatee);
 
         prank(actor);
         // TODO: expect events
         fu.delegate(delegatee); // ERC5805 requires that this function return nothing or revert
 
-        saveActor(actor);
+        super.saveActor(actor);
+        shadowDelegates[actor] = fu.delegates(actor);
         if (delegatee != address(0) && delegatee != DEAD && delegatee != address(fu)) {
-            saveActor(delegatee);
+            super.saveActor(delegatee);
         }
     }
-    */
 
     function _burnShouldFail(address from, uint256 amount, uint256 balance) internal pure returns (bool) {
         return from == DEAD || amount > balance;
