@@ -13,7 +13,7 @@ yul = true
 
 [profile.deploy]
 ffi = true
-fs_permissions = [{ access = "read", path = "./airdrop.json"}, { access = "read", path = "./image.svg"}]
+fs_permissions = [{ access = "read", path = "./airdrop.json"}, { access = "read", path = "./ipfs/image.svg"}]
 
 [fuzz]
 runs = 50_000_000
