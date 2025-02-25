@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "src/interfaces/IFU.sol";
+import {IERC5805} from "src/interfaces/IERC5805.sol";
 import {FU} from "src/FU.sol";
 import {Buyback} from "src/Buyback.sol";
 import {Settings} from "src/core/Settings.sol";
@@ -114,6 +115,15 @@ function applyWhaleLimit(uint256 shares0, uint256 shares1, uint256 totalShares)
     return (Shares.unwrap(shares0_), Shares.unwrap(shares1_), Shares.unwrap(totalShares_));
 }
 
+function applyWhaleLimit(uint256 shares, uint256 totalShares)
+    pure
+    returns (uint256, uint256)
+{
+    (Shares shares_, Shares totalShares_) =
+        applyWhaleLimit(Shares.wrap(shares), Shares.wrap(totalShares));
+    return (Shares.unwrap(shares_), Shares.unwrap(totalShares_));
+}
+
 interface ListOfInvariants {
     function invariant_nonNegativeRebase() external;
     function invariant_delegatesNotChanged() external;
@@ -173,6 +183,12 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         }
     }
 
+    function _rebaseQueueLastTokensSlot(address account) internal pure returns (bytes32 r) {
+        unchecked {
+            return bytes32(uint256(_rebaseQueuePrevSlot(account)) + 2);
+        }
+    }
+
     function getShares(address account) internal view returns (uint256) {
         uint256 value = uint256(load(address(fu), _sharesSlot(account)));
         assertEq(
@@ -206,6 +222,12 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         return value;
     }
 
+    function getRebaseQueueHead() internal view returns (address) {
+        uint256 slotValue = uint256(load(address(fu), bytes32(uint256(BASE_SLOT) + 4)));
+        assertLe(slotValue, type(uint160).max, "dirty rebase queue head slot");
+        return address(uint160(slotValue));
+    }
+
     function getRebaseQueuePrev(address account) internal view returns (address) {
         uint256 slotValue = uint256(load(address(fu), _rebaseQueuePrevSlot(account)));
         assertLe(slotValue, type(uint160).max, "dirty rebase queue prev slot");
@@ -218,12 +240,21 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         return address(uint160(slotValue));
     }
 
-    function getActor(uint256 actorIndex) internal override returns (address actor) {
-        actor = super.getActor(actorIndex);
+    function updateRebaseQueueLastTokens(address account, uint256 circulatingTokens, uint256 totalShares) internal {
+        uint256 shares = getShares(account);
+        (shares, totalShares) = applyWhaleLimit(shares, totalShares);
+        uint256 tokens = tmp().omul(shares, circulatingTokens).div(totalShares);
+        return store(address(fu), _rebaseQueueLastTokensSlot(account), bytes32(tokens));
+    }
+
+    function getActor(uint256 actorIndex) internal override returns (address actor, uint256 originalBalance) {
+        (actor,) = super.getActor(actorIndex);
+        originalBalance = lastBalance[actor];
         lastBalance[actor] = fu.balanceOf(actor);
     }
 
-    function maybeCreateActor(address newActor) internal override {
+    function maybeCreateActor(address newActor) internal override returns (uint256 originalBalance) {
+        originalBalance = lastBalance[newActor];
         if (isActor[newActor]) {
             lastBalance[newActor] = fu.balanceOf(newActor);
         }
@@ -233,7 +264,36 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     function saveActor(address actor) internal override {
         super.saveActor(actor);
         lastBalance[actor] = fu.balanceOf(actor);
-        shadowDelegates[actor] = fu.delegates(actor);
+    }
+
+    function restoreActor(address actor, uint256 originalBalance) internal {
+        lastBalance[actor] = originalBalance;
+    }
+
+    function updateLastBalanceForRebaseQueue(VmSafe.Log[] memory logs, address skip0, address skip1) internal {
+        for (uint256 i; i < logs.length; i++) {
+            VmSafe.Log memory log = logs[i];
+            if (log.topics[0] == IERC20.Transfer.selector && log.topics[1] == bytes32(0)) {
+                address acct = address(uint160(uint256(log.topics[2])));
+                if (acct == skip0 || acct == skip1) {
+                    continue;
+                }
+                lastBalance[acct] = fu.balanceOf(acct);
+            }
+        }
+    }
+
+    function updateLastBalanceForRebaseQueue(VmSafe.Log[] memory logs, address skip) internal {
+        for (uint256 i; i < logs.length; i++) {
+            VmSafe.Log memory log = logs[i];
+            if (log.topics[0] == IERC20.Transfer.selector && log.topics[1] == bytes32(0)) {
+                address acct = address(uint160(uint256(log.topics[2])));
+                if (acct == skip) {
+                    continue;
+                }
+                lastBalance[acct] = fu.balanceOf(acct);
+            }
+        }
     }
 
     function addActor(address newActor) external {
@@ -272,6 +332,10 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
 
+            if (actor == pair) {
+                continue;
+            }
+
             address delegatee = shadowDelegates[actor];
             if (delegatee != address(0)) {
                 prank(actor);
@@ -295,10 +359,24 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         }
         setTotalShares(total);
 
+        // Make the rebase queue consistent
+        {
+            uint256 circulating = getCirculatingTokens();
+            for (uint256 i; i < actors.length; i++) {
+                address actor = actors[i];
+                if (actor == pair) {
+                    continue;
+                }
+                updateRebaseQueueLastTokens(actors[i], circulating, total);
+            }
+            updateRebaseQueueLastTokens(DEAD, circulating, total);
+        }
+        // Update the shadow of the rebase queue
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
             lastBalance[actor] = fu.balanceOf(actor);
         }
+        lastBalance[DEAD] = fu.balanceOf(DEAD);
 
         shareRatio = newRatio;
     }
@@ -313,7 +391,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function transfer(uint256 actorIndex, address to, uint256 amount, bool boundTo, bool boundAmount) external {
-        address actor = getActor(actorIndex);
+        (address actor, uint256 originalBalance) = getActor(actorIndex);
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         } else {
@@ -322,10 +400,11 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         if (actor == pair) {
             assume(amount < fu.balanceOf(actor));
         }
+        uint256 originalBalanceTo;
         if (boundTo) {
-            to = getActor(to);
+            (to, originalBalanceTo) = getActor(to);
         } else {
-            maybeCreateActor(to);
+            originalBalanceTo = maybeCreateActor(to);
         }
 
         uint256 beforeBalance = lastBalance[actor];
@@ -339,12 +418,32 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
         uint256 tax = fu.tax();
+        address rebaseQueueHead = getRebaseQueueHead();
 
         if (!_transferShouldFail(actor, to, amount, beforeBalance)) {
             expectEmit(true, true, true, false, address(fu));
             emit IERC20.Transfer(actor, to, type(uint256).max);
             expectEmit(true, true, true, false, address(fu));
             emit IERC20.Transfer(actor, address(0), type(uint256).max);
+            uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
+            uint256 votes = divisor == 0
+                ? 0
+                : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(
+                    beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR
+                );
+            address actorDelegatee = fu.delegates(actor);
+            address toDelegatee = fu.delegates(actor);
+            console.log("votes", votes);
+            if (votes != 0 && actorDelegatee != toDelegatee) {
+                if (actorDelegatee != address(0)) {
+                    expectEmit(true, true, true, false, address(fu));
+                    emit IERC5805.DelegateVotesChanged(actorDelegatee, type(uint256).max, type(uint256).max);
+                }
+                if (toDelegatee != address(0)) {
+                    expectEmit(true, true, true, false, address(fu));
+                    emit IERC5805.DelegateVotesChanged(toDelegatee, type(uint256).max, type(uint256).max);
+                }
+            }
         }
 
         vm.recordLogs();
@@ -363,6 +462,10 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                     != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001")
             );
             assertNoMutation(accountAccesses, logs);
+            restoreActor(actor, originalBalance);
+            if (actor != to) {
+                restoreActor(to, originalBalanceTo);
+            }
             return;
         }
 
@@ -388,13 +491,17 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 assertEq(log.emitter, address(fu), "wrong log emitter");
                 assertEq(log.data.length, 32, "wrong burn Transfer data length (amount)");
                 logAmountBurn = uint256(bytes32(log.data));
+
+                // delete both the entries we just looked at from `logs`
+                assembly ("memory-safe") {
+                    let length := sub(mload(logs), 0x02)
+                    let start := add(0x20, add(shl(0x05, i), logs))
+                    mcopy(start, add(0x40, start), shl(0x05, sub(length, i)))
+                    mstore(logs, length)
+                }
                 break;
             }
         }
-
-        // TODO: check for "rebase queue" events
-        // 0-8 transfer events?
-        // delegation events?
 
         uint256 afterBalance = lastBalance[actor];
         uint256 afterBalanceTo = lastBalance[to];
@@ -411,10 +518,12 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             string.concat(
                 "summary"
                 "\n\tamount:                ", amount.itoa(),
+                "\n\toriginal from balance: ", originalBalance.itoa(),
                 "\n\tbefore from balance:   ", beforeBalance.itoa(),
                 "\n\tafter from balance:    ", afterBalance.itoa(),
                 "\n\tbefore whale limit:    ", beforeWhaleLimit.itoa(),
                 "\n\tafter whale limit:     ", afterWhaleLimit.itoa(),
+                "\n\toriginal to balance:   ", originalBalanceTo.itoa(),
                 "\n\tbefore to balance:     ", beforeBalanceTo.itoa(),
                 "\n\tafter to balance:      ", afterBalanceTo.itoa(),
                 "\n\tbefore whale limit to: ", beforeWhaleLimitTo.itoa(),
@@ -463,6 +572,62 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 (logAmountTransfer + logAmountBurn) * tax / 10_000, logAmountBurn, "log tax ratio upper (insane whale)"
             );
         }
+
+        for (uint256 i; i < logs.length; i++) {
+            VmSafe.Log memory log = logs[i];
+            if (log.topics[0] == IERC20.Transfer.selector) {
+                assertEq(log.emitter, address(fu), "wrong log emitter");
+                assertEq(log.topics.length, 3, "wrong topics");
+                assertEq(log.data.length, 32, "wrong Transfer data length (amount)");
+                assertEq(log.topics[1], bytes32(0), "wrong from address");
+                assertLe(uint256(log.topics[2]), type(uint160).max, "dirty `to` topic");
+                address rebaseTo = address(uint160(uint256(log.topics[2])));
+
+                // TODO: we need to check the consistency of the queue with the
+                // head, but this is complex because some elements of the queue
+                // may be skipped (if their balances are nonincreasing) and also
+                // the queue may be reordered (if the head pointed at `actor` or
+                // `to`)
+
+                uint256 rebaseAmountTokens = uint256(bytes32(log.data));
+                uint256 rebaseAmountBalance =
+                    rebaseAmountTokens * (uint160(rebaseTo) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS;
+                uint256 rebaseOriginalBalance;
+                uint256 rebaseNewBalance;
+                if (rebaseTo == actor) {
+                    rebaseOriginalBalance = originalBalance;
+                    rebaseNewBalance = beforeBalance;
+                } else if (rebaseTo == to) {
+                    rebaseOriginalBalance = originalBalanceTo;
+                    rebaseNewBalance = beforeBalanceTo;
+                } else {
+                    rebaseOriginalBalance = lastBalance[rebaseTo];
+                    rebaseNewBalance = fu.balanceOf(rebaseTo);
+                }
+                console.log("original balance", rebaseOriginalBalance);
+                console.log("new balance", rebaseNewBalance);
+                uint256 rebaseBalanceDelta = rebaseNewBalance - rebaseOriginalBalance;
+                console.log("rebaseBalanceDelta", rebaseBalanceDelta);
+                console.log("rebaseAmountBalance", rebaseAmountBalance);
+                //console.log("whaleLimit", fu.whaleLimit(rebaseTo));
+                uint256 fudge = 2; // TODO: decrease
+                if (!((rebaseTo == actor && toIsWhaleBefore) || (rebaseTo == to && actorIsWhale))) {
+                    assertGe(
+                        rebaseBalanceDelta + fudge,
+                        rebaseAmountBalance,
+                        string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress())
+                    );
+                }
+                if (rebaseTo == to ? !toIsWhale : rebaseNewBalance != fu.whaleLimit(rebaseTo)) {
+                    assertLe(
+                        rebaseBalanceDelta,
+                        rebaseAmountBalance + fudge,
+                        string.concat("rebase delta upper: ", rebaseTo.toChecksumAddress())
+                    );
+                }
+            }
+        }
+        updateLastBalanceForRebaseQueue(logs, actor, to);
 
         // Check that the balance decrease of `actor` is the expected value
         if (!toIsWhaleBefore) {
@@ -602,17 +767,36 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function delegate(uint256 actorIndex, address delegatee) external {
-        address actor = getActor(actorIndex);
+        (address actor,) = super.getActor(actorIndex);
         assume(actor != pair);
-        maybeCreateActor(delegatee);
+        super.maybeCreateActor(delegatee);
+
+        address oldDelegatee = shadowDelegates[actor];
+        uint256 oldVotes = fu.getVotes(oldDelegatee);
+        uint256 newVotes = fu.getVotes(delegatee);
+        uint256 votes = getShares(actor) / Settings.SHARES_TO_VOTES_DIVISOR;
+        expectEmit(true, true, true, true, address(fu));
+        emit IERC5805.DelegateChanged(actor, oldDelegatee, delegatee);
+        if (votes != 0 && oldDelegatee != delegatee) {
+            if (oldDelegatee != address(0)) {
+                expectEmit(true, true, true, true, address(fu));
+                emit IERC5805.DelegateVotesChanged(oldDelegatee, oldVotes, oldVotes - votes);
+            }
+            if (delegatee != address(0)) {
+                expectEmit(true, true, true, true, address(fu));
+                emit IERC5805.DelegateVotesChanged(delegatee, newVotes, newVotes + votes);
+            }
+        }
 
         prank(actor);
-        // TODO: expect events
         fu.delegate(delegatee); // ERC5805 requires that this function return nothing or revert
 
-        saveActor(actor);
+        assertEq(fu.delegates(actor), delegatee);
+
+        super.saveActor(actor);
+        shadowDelegates[actor] = fu.delegates(actor);
         if (delegatee != address(0) && delegatee != DEAD && delegatee != address(fu)) {
-            saveActor(delegatee);
+            super.saveActor(delegatee);
         }
     }
 
@@ -621,7 +805,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function burn(uint256 actorIndex, uint256 amount, bool boundAmount) external {
-        address actor = getActor(actorIndex);
+        (address actor, uint256 originalBalance) = getActor(actorIndex);
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         } else {
@@ -642,6 +826,18 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         if (!_burnShouldFail(actor, amount, beforeBalance)) {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Transfer(actor, address(0), amount);
+            uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
+            uint256 votes = divisor == 0
+                ? 0
+                : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(
+                    beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR
+                );
+            address actorDelegatee = fu.delegates(actor);
+            // TODO: `votes > 1` should be `votes != 0`, but there appears to be some rounding error in play here.
+            if (votes > 1 && actorDelegatee != address(0)) {
+                expectEmit(true, true, true, false, address(fu));
+                emit IERC5805.DelegateVotesChanged(actorDelegatee, type(uint256).max, type(uint256).max);
+            }
         }
 
         vm.recordLogs();
@@ -659,12 +855,11 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                     != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001")
             );
             assertNoMutation(accountAccesses, logs);
+            restoreActor(actor, originalBalance);
             return;
         }
 
         saveActor(actor);
-
-        // TODO: check for "rebase queue" events
 
         uint256 afterBalance = lastBalance[actor];
         uint256 afterSupply = fu.totalSupply();
@@ -672,6 +867,52 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterVotingPower = fu.getVotes(delegatee);
         uint256 afterShares = getShares(actor);
+
+        for (uint256 i; i < logs.length; i++) {
+            VmSafe.Log memory log = logs[i];
+            if (log.topics[0] == IERC20.Transfer.selector && log.topics[1] == bytes32(0)) {
+                assertEq(log.emitter, address(fu), "wrong log emitter");
+                assertEq(log.topics.length, 3, "wrong topics");
+                assertEq(log.data.length, 32, "wrong Transfer data length (amount)");
+                assertLe(uint256(log.topics[2]), type(uint160).max, "dirty `to` topic");
+                address rebaseTo = address(uint160(uint256(log.topics[2])));
+
+                // TODO: see TODO in similar block in `transfer`
+
+                uint256 rebaseAmountTokens = uint256(bytes32(log.data));
+                uint256 rebaseAmountBalance =
+                    rebaseAmountTokens * (uint160(rebaseTo) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS;
+                uint256 rebaseOriginalBalance;
+                uint256 rebaseNewBalance;
+                if (rebaseTo == actor) {
+                    rebaseOriginalBalance = originalBalance;
+                    rebaseNewBalance = beforeBalance;
+                } else {
+                    rebaseOriginalBalance = lastBalance[rebaseTo];
+                    rebaseNewBalance = fu.balanceOf(rebaseTo);
+                }
+                console.log("original balance", rebaseOriginalBalance);
+                console.log("new balance", rebaseNewBalance);
+                uint256 rebaseBalanceDelta = rebaseNewBalance - rebaseOriginalBalance;
+                console.log("rebaseBalanceDelta", rebaseBalanceDelta);
+                console.log("rebaseAmountBalance", rebaseAmountBalance);
+                //console.log("whaleLimit", fu.whaleLimit(rebaseTo));
+                uint256 fudge = 2; // TODO: decrease
+                assertGe(
+                    rebaseBalanceDelta + fudge,
+                    rebaseAmountBalance,
+                    string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress())
+                );
+                if (rebaseNewBalance != fu.whaleLimit(rebaseTo)) {
+                    assertLe(
+                        rebaseBalanceDelta,
+                        rebaseAmountBalance + fudge,
+                        string.concat("rebase delta upper: ", rebaseTo.toChecksumAddress())
+                    );
+                }
+            }
+        }
+        updateLastBalanceForRebaseQueue(logs, actor);
 
         if (beforeShares == 0) {
             assertTrue(
@@ -731,7 +972,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function deliver(uint256 actorIndex, uint256 amount, bool boundAmount) external {
-        address actor = getActor(actorIndex);
+        (address actor, uint256 originalBalance) = getActor(actorIndex);
         if (boundAmount) {
             amount = bound(amount, 0, fu.balanceOf(actor), "amount");
         } else {
@@ -746,9 +987,21 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
 
-        if (!_burnShouldFail(actor, amount, beforeBalance)) {
+        if (!_deliverShouldFail(actor, amount, beforeBalance)) {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Transfer(actor, address(0), amount);
+            uint256 divisor = uint160(actor) / Settings.ADDRESS_DIVISOR;
+            uint256 votes = divisor == 0
+                ? 0
+                : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(
+                    beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR
+                );
+            address actorDelegatee = fu.delegates(actor);
+            // TODO: `votes > 1` should be `votes != 0`, but there appears to be some rounding error in play here.
+            if (votes > 1 && actorDelegatee != address(0)) {
+                expectEmit(true, true, true, false, address(fu));
+                emit IERC5805.DelegateVotesChanged(actorDelegatee, type(uint256).max, type(uint256).max);
+            }
         }
 
         vm.recordLogs();
@@ -766,16 +1019,61 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                     != keccak256(hex"4e487b710000000000000000000000000000000000000000000000000000000000000001")
             );
             assertNoMutation(accountAccesses, logs);
+            restoreActor(actor, originalBalance);
             return;
         }
 
         saveActor(actor);
 
-        // TODO: check for "rebase queue" events
-
         uint256 afterWhaleLimit = fu.whaleLimit(actor);
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
+
+        for (uint256 i; i < logs.length; i++) {
+            VmSafe.Log memory log = logs[i];
+            if (log.topics[0] == IERC20.Transfer.selector && log.topics[1] == bytes32(0)) {
+                assertEq(log.emitter, address(fu), "wrong log emitter");
+                assertEq(log.topics.length, 3, "wrong topics");
+                assertEq(log.data.length, 32, "wrong Transfer data length (amount)");
+                assertLe(uint256(log.topics[2]), type(uint160).max, "dirty `to` topic");
+                address rebaseTo = address(uint160(uint256(log.topics[2])));
+
+                // TODO: see TODO in similar block in `transfer`
+
+                uint256 rebaseAmountTokens = uint256(bytes32(log.data));
+                uint256 rebaseAmountBalance =
+                    rebaseAmountTokens * (uint160(rebaseTo) / Settings.ADDRESS_DIVISOR) / Settings.CRAZY_BALANCE_BASIS;
+                uint256 rebaseOriginalBalance;
+                uint256 rebaseNewBalance;
+                if (rebaseTo == actor) {
+                    rebaseOriginalBalance = originalBalance;
+                    rebaseNewBalance = beforeBalance;
+                } else {
+                    rebaseOriginalBalance = lastBalance[rebaseTo];
+                    rebaseNewBalance = fu.balanceOf(rebaseTo);
+                }
+                console.log("original balance", rebaseOriginalBalance);
+                console.log("new balance", rebaseNewBalance);
+                uint256 rebaseBalanceDelta = rebaseNewBalance - rebaseOriginalBalance;
+                console.log("rebaseBalanceDelta", rebaseBalanceDelta);
+                console.log("rebaseAmountBalance", rebaseAmountBalance);
+                //console.log("whaleLimit", fu.whaleLimit(rebaseTo));
+                uint256 fudge = 2; // TODO: decrease
+                assertGe(
+                    rebaseBalanceDelta + fudge,
+                    rebaseAmountBalance,
+                    string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress())
+                );
+                if (rebaseNewBalance != fu.whaleLimit(rebaseTo)) {
+                    assertLe(
+                        rebaseBalanceDelta,
+                        rebaseAmountBalance + fudge,
+                        string.concat("rebase delta upper: ", rebaseTo.toChecksumAddress())
+                    );
+                }
+            }
+        }
+        updateLastBalanceForRebaseQueue(logs, actor);
 
         assertGe(saturatingAdd(afterWhaleLimit, 1), beforeWhaleLimit, "whale limit lower");
         assertLe(afterWhaleLimit, saturatingAdd(beforeWhaleLimit, 1), "whale limit upper");
@@ -942,6 +1240,10 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 actor := and(0xffffffffffffffffffffffffffffffffffffffff, actor)
                 condition := tload(actor)
                 tstore(actor, 0x00)
+            }
+
+            if (actor == pair) {
+                assertTrue(condition, "pair is not allowed on rebase queue");
             }
 
             if (condition) {

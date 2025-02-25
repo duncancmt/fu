@@ -142,6 +142,8 @@ contract Buyback is TwoStepOwnable, Context {
         unchecked {
             // slither-disable-next-line timestamp
             uint256 elapsed = uint32(block.timestamp) - timestampLast_; // masking and underflow is desired
+            // `_sortTokens == false` means that WETH is token1 and FU is token0
+            // `_sortTokens == true`  means that WETH is token0 and FU is token1
             // slither-disable-next-line divide-before-multiply
             priceFuWethCumulativeLast =
                 pair.fastPriceCumulativeLast(_sortTokens) + (reserveWeth << 112).unsafeDiv(reserveFu) * elapsed;
@@ -179,32 +181,35 @@ contract Buyback is TwoStepOwnable, Context {
             // the call to `burn` that happens before this ensures that
             // `pair.price?CumulativeLast()` is up-to-date. we don't need to handle any
             // counterfactual values.
-            uint256 wethFuPrice =
+            uint256 wethFuPriceQ112 =
                 uint224((pair.fastPriceCumulativeLast(!_sortTokens) - priceWethFuCumulativeLast).unsafeDiv(elapsed));
-            // `wethFuPrice` is a slight overestimate of the mean FU/WETH ratio, under the
-            // assumption that the price is a geometric process. this gives a small degree of laxity
-            // in this check.
-            uint256 currentPrice = (reserveFu << 112).unsafeDiv(reserveWeth);
-            if (currentPrice < wethFuPrice) {
-                revert PriceTooLow(currentPrice, wethFuPrice);
+            // `wethFuPriceQ112` is a slight overestimate of the mean FU/WETH ratio, under the
+            // assumption that the price is a geometric process. this makes this check slightly
+            // stricter than the corresponding geometric mean oracle check.
+            uint256 currentPriceQ112 = (reserveFu << 112).unsafeDiv(reserveWeth);
+            if (currentPriceQ112 < wethFuPriceQ112) {
+                revert PriceTooLow(currentPriceQ112, wethFuPriceQ112);
             }
         }
     }
 
-    function _hypotheticalConstantProductSwap(
-        uint256 amountFu,
-        uint256 fuWethPriceQ112,
-        uint256 reserve0,
-        uint256 reserve1
-    ) internal pure returns (uint256) {
+    function _hypotheticalConstantProductSwap(uint256 amountFu, uint256 elapsed, uint256 reserve0, uint256 reserve1)
+        internal
+        view
+        returns (uint256)
+    {
         unchecked {
             uint256 liquiditySquared = reserve0 * reserve1;
-            // `fuWethPrice` is a slight overestimate of the WETH/FU ratio under the assumption that
-            // the price is a geometric Brownian walk. consequently, `reserveFu` is an underestimate
-            // of the average reserve of FU; FU is overvalued relative to WETH. so when we perform
-            // the constant-product swap FU->WETH, we get more WETH. in other words, we err on the
-            // side of giving `owner()` a too-favorable price during this hypothetical swap.
+            // `fuWethPriceQ112` is a slight overestimate of the WETH/FU ratio, under the assumption
+            // that the price is a geometric Brownian walk.
+            uint256 fuWethPriceQ112 =
+                uint224((pair.fastPriceCumulativeLast(_sortTokens) - priceFuWethCumulativeLast).unsafeDiv(elapsed));
+            // consequently, `reserveFu` is an underestimate of the average reserve of FU; FU is
+            // overvalued relative to WETH.
             uint256 reserveFu = tmp().omul(liquiditySquared, 1 << 112).div(fuWethPriceQ112).sqrt();
+            // so when we perform the constant-product swap FU->WETH, we get more WETH. in other
+            // words, we err on the side of giving `owner()` a too-favorable price during this
+            // hypothetical swap.
             return tmp().omul(liquiditySquared, amountFu).div(reserveFu * (reserveFu + amountFu));
         }
     }
@@ -260,6 +265,8 @@ contract Buyback is TwoStepOwnable, Context {
         // get the reserves again. we have to get them _again_ because there may be excess tokens in
         // the pair before calling `burn`. calling `burn` implicitly synchronizes the pair with its
         // balances.
+        // `_sortTokens == false` means that WETH is token1 and FU is token0
+        // `_sortTokens == true`  means that WETH is token0 and FU is token1
         (amountFu, amountWeth) = _sortTokens.maybeSwap(amountFu, amountWeth);
         address owner_ = owner();
         BasisPoints ownerFee_ = BasisPoints.wrap(ownerFee);
@@ -285,12 +292,7 @@ contract Buyback is TwoStepOwnable, Context {
         // amount *SENT BY THE PAIR*, and not the amount actually received by this contract (i.e. it
         // is the amount before FU transfer fees are taken out)
         unchecked {
-            feeWeth += _hypotheticalConstantProductSwap(
-                scaleUp(amountFu, ownerFee_),
-                uint224((pair.fastPriceCumulativeLast(_sortTokens) - priceFuWethCumulativeLast).unsafeDiv(elapsed)),
-                reserveFu,
-                reserveWeth
-            );
+            feeWeth += _hypotheticalConstantProductSwap(scaleUp(amountFu, ownerFee_), elapsed, reserveFu, reserveWeth);
         }
 
         // swap the leftover WETH to FU. this is the actual buyback step

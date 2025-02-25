@@ -1,4 +1,13 @@
-![The logo of the FU token. It is a stylized, digital, cartoonish emblem of a 3-fingered, purple hand flipping "the bird" middle finger gesture. The knuckle side of the hand faces the viewer. The colors are bright and saturated, with broad swaths of solid color. The longer, vertically-extended middle finger has a blue-green gradient fingernail. A golden-orange, upside down, U-shaped outline tightly surrounds the extended middle finger forming its background. The ends of the U are atop the knuckles adjacent the middle finger. The fingers and thumb of the hand form an F lying on its side and the orange loop forms a U, together these are the name of the token.](image.svg)
+![The logo of the FU token. It is a stylized, digital, cartoonish emblem of a
+ 3-fingered, purple hand flipping "the bird" middle finger gesture. The knuckle
+ side of the hand faces the viewer. The colors are bright and saturated, with
+ broad swaths of solid color. The longer, vertically-extended middle finger has
+ a blue-green gradient fingernail. A golden-orange, upside down, U-shaped
+ outline tightly surrounds the extended middle finger forming its
+ background. The ends of the U are atop the knuckles adjacent the middle
+ finger. The fingers and thumb of the hand form an F lying on its side and the
+ orange loop forms a U, together these are the name of the
+ token.](ipfs/image.svg)
 
 FU is a shitpost of a token. It was designed and implemented purely for the
 amusement of its authors and its participants. It is, in a sense, metamodern
@@ -20,36 +29,36 @@ being maximally technically correct.
 
 ## Features
 
-* Unreasonably high decimals (35) [why not 36? fuck you.]
-* Reflection (both tax _and_ rebase)
-* Tax rate changes depending on the phase of the moon
-* Randomly reverts or returns `false` to signal failure
-* Randomly returns nothing or returns `true` to signal success
-  * Ok, this is not technically ERC20 compliant, but I'm going to say it's
-    "close enough" given that there are some important "ERC20" tokens that
-    exhibit the same behavior
-* `symbol` depends on the identity of the caller
-* The shares-to-tokens ratio depends on the address of the holder
-  * Consequently, `totalSupply` is merely an upper bound on the sum of all
-    `balanceOf(...)`
-  * Balances are not comparable among addresses
-  * This is the "crazy balance" mechanism/feature
-* Anti-whale
-  * The anti-whale doesn't prohibit transfers, it just turns transfers above the
-    limit into a `deliver`
-* Emits extraneous `Transfer` events on each call
-  * The rebases incurred by the reflection mechanism are (eventually) emitted to
-    each account as a `Transfer`
-  * This breaks some off-chain data pipelines
-* Consumes a random, hard-to-predict amount of gas on each call
-  * This makes `eth_estimateGas` unreliable
-* A base slot inspired by [ERC7201](https://eips.ethereum.org/EIPS/eip-7201)
-  (but not directly compatible with it) to make slot detection more difficult
+ * Unreasonably high decimals (35) [why not 36? fuck you.]
+ * Reflection (both tax _and_ rebase)
+ * Tax rate changes depending on the phase of the moon
+ * Randomly reverts or returns `false` to signal failure
+ * Randomly returns nothing or returns `true` to signal success
+   * Ok, this is not technically ERC20 compliant, but I'm going to say it's
+     "close enough" given that there are some important "ERC20" tokens that
+     exhibit the same behavior
+ * `symbol` depends on the identity of the caller
+ * The shares-to-tokens ratio depends on the address of the holder
+   * Consequently, `totalSupply` is merely an upper bound on the sum of all
+     `balanceOf(...)`
+   * Balances are not comparable among addresses
+   * This is the "crazy balance" mechanism/feature
+ * Anti-whale
+   * The anti-whale doesn't prohibit transfers, it just turns transfers above
+     the limit into a `deliver`
+ * Emits extraneous `Transfer` events on each call
+   * The rebases incurred by the reflection mechanism are (eventually) emitted
+     to each account as a `Transfer`
+   * This breaks some off-chain data pipelines
+ * Consumes a random, hard-to-predict amount of gas on each call
+   * This makes `eth_estimateGas` unreliable
+ * A base slot inspired by [ERC7201](https://eips.ethereum.org/EIPS/eip-7201)
+   (but not directly compatible with it) to make slot detection more difficult
 
 ### Features the authors thought of but didn't implement
 
-* The tax collected on each swap/transfer is used to "frontrun" each swap
-  against the primary liquidity pair upon each transfer not `from` it
+ * The tax collected on each swap/transfer is used to "frontrun" each swap
+   against the primary liquidity pair upon each transfer not `from` it
 
 ## Restrictions
 
@@ -59,13 +68,13 @@ tokens to return nothing to signal success). However, to make things a little
 more interesting, there are some additional restrictions the authors adopted
 during development beyond what ERC20 literally requires.
 
-* Calls to `{transfer,burn,deliver}{,From}` reduce the balance of the caller/`from`
-  by the specified amount (±1 wei)
-* Calls to `transfer` or `transferFrom` increase the balance of `to` by a value
-  that is ±1 wei from the "reasonable" range of values, accounting for the fact
-  that "crazy balance" and "tax" calculations have some inherent rounding
-  error. For the exact definition of "reasonable" consult the test file
-  [test/FU.t.sol](test/FU.t.sol).
+ * Calls to `{transfer,burn,deliver}{,From}` reduce the balance of the
+   caller/`from` by the specified amount (±1 wei)
+ * Calls to `transfer` or `transferFrom` increase the balance of `to` by a value
+   that is ±1 wei from the "reasonable" range of values, accounting for the fact
+   that "crazy balance" and "tax" calculations have some inherent rounding
+   error. For the exact definition of "reasonable" consult the test file
+   [test/FU.t.sol](test/FU.t.sol).
 
 Basically, this is as "reasonable" as you can get for a reflection token given
 that reflection tokens operate on rationals, and therefore some degree of
@@ -129,13 +138,13 @@ FU is otherwise compatible with the OpenZeppelin Governor suite. The authors
 recommend a Governor that inherits from the following OpenZeppelin contracts
 (version 5.1.0):
 
-* `Governor`
-* `GovernorSettings`
-* `GovernorCountingSimple`
-* `GovernorVotes`
-* `GovernorVotesQuorumFraction` (with the aforementioned modifications)
-* `GovernorTimelockControl`
-* `GovernorPreventLateQuorum`
+ * `Governor`
+ * `GovernorSettings`
+ * `GovernorCountingSimple`
+ * `GovernorVotes`
+ * `GovernorVotesQuorumFraction` (with the aforementioned modifications)
+ * `GovernorTimelockControl`
+ * `GovernorPreventLateQuorum`
 
 Remember that FU uses `block.timestamp` for durations, with a quantum of 1 day
 (midnight). The authors recommend setting the voting delay to 2 days, the voting

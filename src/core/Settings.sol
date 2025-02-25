@@ -49,6 +49,7 @@ library Settings {
     // constants dependant on values in other translation units. If you change this, make
     // appropriate changes over there, and be sure to run the invariant/property tests.
     uint256 internal constant SHARES_TO_VOTES_DIVISOR = 0x100000000; // 2 ** 32
+    uint256 internal constant SHARES_TO_VOTES_SHIFT = 32;
     // Where there are no *wrong* values for this constant, setting it to the ratio between the
     // voting period and the clock quantum optimizes gas.
     uint256 internal constant BISECT_WINDOW_DEFAULT = 7;

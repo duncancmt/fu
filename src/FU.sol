@@ -380,11 +380,12 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
             if (newShares >= limit) {
                 newShares = limit;
                 newTotalShares = hypotheticalTotalShares;
+
+                // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
+                // requirement that the sum of all accounts' shares equal the total shares.
                 cachedShares = ReflectMath.getCounterfactualSharesFromPairToWhale(
                     taxRate, cachedTotalSupply, cachedTotalShares, amountTokens
                 );
-                // The quantity `cachedToShares` is counterfactual. We violate (temporarily) the
-                // requirement that the sum of all accounts' shares equal the total shares.
             }
         }
 
@@ -415,7 +416,7 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         _pokeRebaseQueueTo($, to, originalShares, newShares, newTotalSupply, newTotalShares);
 
-        $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
+        $.rebaseQueue.processQueue($.sharesOf, newTotalSupply, newTotalShares);
 
         return true;
     }
@@ -479,9 +480,9 @@ contract FU is ERC20Base, TransientStorageLayout, Context {
 
         $.checkpoints.burn($.delegates[from], originalShares.toVotes() - newShares.toVotes(), clock());
 
-        _pokeRebaseQueueFrom($, from, originalShares, newShares, cachedTotalSupply, newTotalShares);
+        _pokeRebaseQueueFrom($, from, originalShares, newShares, newTotalSupply, newTotalShares);
 
-        $.rebaseQueue.processQueue($.sharesOf, cachedTotalSupply, newTotalShares);
+        $.rebaseQueue.processQueue($.sharesOf, newTotalSupply, newTotalShares);
 
         return true;
     }

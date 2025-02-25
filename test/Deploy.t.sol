@@ -41,27 +41,27 @@ abstract contract Common is StdAssertions {
         }
     }
 
-    function getActor(uint256 actorIndex) internal virtual returns (address actor) {
+    function getActor(uint256 actorIndex) internal virtual returns (address actor, uint256) {
         actor = actors[actorIndex % actors.length];
         console.log("actor", actor);
     }
 
-    function getActor(address seed) internal returns (address) {
+    function getActor(address seed) internal returns (address, uint256) {
         return getActor(uint160(seed));
     }
 
-    function maybeCreateActor(address newActor) internal virtual {
+    function maybeCreateActor(address newActor) internal virtual returns (uint256) {
         if (newActor == address(0)) {
-            return;
+            return 0;
         }
         if (newActor == DEAD) {
-            return;
+            return 0;
         }
         if (newActor == address(fu)) {
-            return;
+            return 0;
         }
         if (isActor[newActor]) {
-            return;
+            return 0;
         }
 
         isActor[newActor] = true;
@@ -233,8 +233,8 @@ contract FUDeploy is Common {
 
         deployFuDependencies();
 
-        bytes32 fuSalt = 0x0000000000000000000000000000000000000000000000000000000160b54f9c;
-        bytes32 buybackSalt = 0x00000000000000000000000000000000000000000000000000000001d615672b;
+        bytes32 fuSalt = 0x0000000000000000000000000000000000000000000000000000000190baf626;
+        bytes32 buybackSalt = 0x000000000000000000000000000000000000000000000000000000021c036a5e;
         bytes memory fuInitcode = bytes.concat(
             type(FU).creationCode,
             abi.encode(bytes20(keccak256("git commit")), string("I am totally an SVG image, I promise"), initialHolders)

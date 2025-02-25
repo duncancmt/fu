@@ -80,6 +80,7 @@ library LibRebaseQueue {
         Shares totalShares
     ) internal {
         RebaseQueueElem storage elem = self.queue[account];
+        elem.lastTokens = shares.toTokens(totalSupply, totalShares);
 
         if (self.head == account) {
             self.head = elem.next;
@@ -97,7 +98,6 @@ library LibRebaseQueue {
 
         elem.prev = tail;
         elem.next = head;
-        elem.lastTokens = shares.toTokens(totalSupply, totalShares);
 
         self.queue[prev].next = next;
         self.queue[next].prev = prev;
