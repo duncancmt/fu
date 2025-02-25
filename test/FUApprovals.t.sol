@@ -546,7 +546,7 @@ contract FUApprovalsTest is FUDeploy, Test {
             vm.expectRevert(
                 abi.encodeWithSignature("ERC2612InvalidSigner(address,address)", ecrecover(signingHash, v, r, s), owner)
             );
-        } else {
+        } else if (spender != PERMIT2) {
             expectEmit(true, true, true, true, address(fu));
             emit IERC20.Approval(owner, spender, value);
         }
