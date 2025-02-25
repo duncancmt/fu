@@ -49,12 +49,10 @@ library Settings {
     // constants dependant on values in other translation units. If you change this, make
     // appropriate changes over there, and be sure to run the invariant/property tests.
     uint256 internal constant SHARES_TO_VOTES_DIVISOR = 0x100000000; // 2 ** 32
-    uint256 internal constant SHARES_TO_VOTES_SHIFT = 32;
+    uint256 internal constant SHARES_TO_VOTES_SHIFT = 32; // log_2(SHARES_TO_VOTES_DIVISOR)
     // Where there are no *wrong* values for this constant, setting it to the ratio between the
     // voting period and the clock quantum optimizes gas.
     uint256 internal constant BISECT_WINDOW_DEFAULT = 7;
-
-    uint256 internal constant CRAZY_BALANCE_BASIS_TIMES_ANTI_WHALE_DIVISOR = 0x4fffffffd8; // CRAZY_BALANCE_BASIS * ANTI_WHALE_DIVISOR;
 
     function oneTokenInShares() internal pure returns (Shares) {
         TokensXShares initialSharesTimesOneToken = alloc().omul(INITIAL_SHARES, Tokens.wrap(10 ** DECIMALS));
