@@ -22,9 +22,9 @@ library MoonPhase {
     int256 private constant _THREE_QUARTERS = 0xc000000000000000; // 0.75 * 2 ** 64
 
     function moonPhase(uint256 timestamp) internal pure returns (BasisPoints) {
-        // This is performed outside the `unchecked` block because we want underflow checking
-        uint256 reEpoch = timestamp - _EPOCH;
         unchecked {
+            uint256 reEpoch = timestamp - _EPOCH;
+
             // `monthElapsed` represents the position of the current moment within the current lunar
             // month. It's a linear value, even though the illumination of the moon is nonlinear in
             // time. The basis, `2 ** 64`, is chosen so that when we compute `sin` below, we can
