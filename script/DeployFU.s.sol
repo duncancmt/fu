@@ -137,7 +137,9 @@ contract DeployFU is Script {
         vm.stopBroadcast();
 
         uint256 wethBalance = _WETH.balanceOf(address(pair));
+        require(wethBalance == 5 ether);
         uint256 fuBalance = fu.balanceOf(address(pair));
+        require(fuBalance == type(uint112).max / Settings.INITIAL_LIQUIDITY_DIVISOR);
         uint256 liquidity = Math.sqrt(fuBalance * wethBalance) - _MINIMUM_LIQUIDITY;
         require(pair.balanceOf(address(buyback)) == liquidity);
         require(pair.balanceOf(address(0)) == _MINIMUM_LIQUIDITY);
