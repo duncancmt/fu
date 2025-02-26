@@ -30,10 +30,10 @@ interface IMultiCall {
 abstract contract MultiCallContext is Context {
     address private constant _MULTICALL_ADDRESS = 0x00000000000000CF9E3c5A26621af382fA17f24f;
 
-    IMultiCall internal constant _MULTICALL = IMultiCall(payable(_MULTICALL_ADDRESS));
+    IMultiCall internal constant MULTICALL = IMultiCall(payable(_MULTICALL_ADDRESS));
 
     function _isForwarded() internal view virtual override returns (bool) {
-        return super._isForwarded() || super._msgSender() == address(_MULTICALL);
+        return super._isForwarded() || super._msgSender() == address(MULTICALL);
     }
 
     function _msgData() internal view virtual override returns (bytes calldata r) {
@@ -47,7 +47,7 @@ abstract contract MultiCallContext is Context {
 
     function _msgSender() internal view virtual override returns (address sender) {
         sender = super._msgSender();
-        if (sender == _MULTICALL_ADDRESS) {
+        if (sender == address(MULTICALL)) {
             bytes calldata data = super._msgData();
             assembly ("memory-safe") {
                 sender := shr(0x60, calldataload(add(data.offset, sub(data.length, 0x14))))
