@@ -169,7 +169,11 @@ contract Buyback is TwoStepOwnable, Context {
         return true;
     }
 
-    function _checkWethFuOraclePrice(uint256 reserveFu, uint256 reserveWeth) internal view returns (uint256 elapsed) {
+    function _checkWethFuOraclePrice(uint256 reserveFu, uint256 reserveWeth)
+        internal
+        view
+        returns (uint256 elapsed, uint256 priceWethFuCumulative)
+    {
         unchecked {
             elapsed = block.timestamp - timestampLast;
             if (elapsed < _TWAP_PERIOD - _TWAP_PERIOD_TOLERANCE) {
@@ -181,8 +185,8 @@ contract Buyback is TwoStepOwnable, Context {
             // the call to `burn` that happens before this ensures that
             // `pair.price?CumulativeLast()` is up-to-date. we don't need to handle any
             // counterfactual values.
-            uint256 wethFuPriceQ112 =
-                uint224((pair.fastPriceCumulativeLast(!_sortTokens) - priceWethFuCumulativeLast).unsafeDiv(elapsed));
+            priceWethFuCumulative = pair.fastPriceCumulativeLast(!_sortTokens);
+            uint256 wethFuPriceQ112 = uint224((priceWethFuCumulative - priceWethFuCumulativeLast).unsafeDiv(elapsed));
             // `wethFuPriceQ112` is a slight overestimate of the mean FU/WETH ratio, under the
             // assumption that the price is a geometric process. this makes this check slightly
             // stricter than the corresponding geometric mean oracle check.
@@ -196,21 +200,21 @@ contract Buyback is TwoStepOwnable, Context {
     function _hypotheticalConstantProductSwap(uint256 amountFu, uint256 elapsed, uint256 reserve0, uint256 reserve1)
         internal
         view
-        returns (uint256)
+        returns (uint256 amountWeth, uint256 priceFuWethCumulative)
     {
         unchecked {
             uint256 liquiditySquared = reserve0 * reserve1;
+            priceFuWethCumulative = pair.fastPriceCumulativeLast(_sortTokens);
             // `fuWethPriceQ112` is a slight overestimate of the WETH/FU ratio, under the assumption
             // that the price is a geometric Brownian walk.
-            uint256 fuWethPriceQ112 =
-                uint224((pair.fastPriceCumulativeLast(_sortTokens) - priceFuWethCumulativeLast).unsafeDiv(elapsed));
+            uint256 fuWethPriceQ112 = uint224((priceFuWethCumulative - priceFuWethCumulativeLast).unsafeDiv(elapsed));
             // consequently, `reserveFu` is an underestimate of the average reserve of FU; FU is
             // overvalued relative to WETH.
             uint256 reserveFu = tmp().omul(liquiditySquared, 1 << 112).div(fuWethPriceQ112).sqrt();
             // so when we perform the constant-product swap FU->WETH, we get more WETH. in other
             // words, we err on the side of giving `owner()` a too-favorable price during this
             // hypothetical swap.
-            return tmp().omul(liquiditySquared, amountFu).div(reserveFu * (reserveFu + amountFu));
+            amountWeth = tmp().omul(liquiditySquared, amountFu).div(reserveFu * (reserveFu + amountFu));
         }
     }
 
@@ -283,7 +287,7 @@ contract Buyback is TwoStepOwnable, Context {
         (reserveFu, reserveWeth) = _sortTokens.maybeSwap(reserveFu, reserveWeth);
 
         // consult the oracle. this is required to avoid MEV because `buyback` is permissionless
-        uint256 elapsed = _checkWethFuOraclePrice(reserveFu, reserveWeth);
+        (uint256 elapsed, uint256 priceWethFuCumulative) = _checkWethFuOraclePrice(reserveFu, reserveWeth);
 
         // convert the fee-scaled amount of FU that we withdrew from the pair into WETH using the
         // constant-product formula. this formula does not apply the 30bp UniV2 swap fee because
@@ -291,8 +295,12 @@ contract Buyback is TwoStepOwnable, Context {
         // than the current spot price. note that this calculation uses `amountFu`, which is the
         // amount *SENT BY THE PAIR*, and not the amount actually received by this contract (i.e. it
         // is the amount before FU transfer fees are taken out)
+        uint256 priceFuWethCumulative;
         unchecked {
-            feeWeth += _hypotheticalConstantProductSwap(scaleUp(amountFu, ownerFee_), elapsed, reserveFu, reserveWeth);
+            uint256 amountWethFromFu;
+            (amountWethFromFu, priceFuWethCumulative) =
+                _hypotheticalConstantProductSwap(scaleUp(amountFu, ownerFee_), elapsed, reserveFu, reserveWeth);
+            feeWeth += amountWethFromFu;
         }
 
         // swap the leftover WETH to FU. this is the actual buyback step
@@ -324,7 +332,8 @@ contract Buyback is TwoStepOwnable, Context {
         // values into exact equality requires finding a root of a degree-4 polynomial, which is
         // absolutely awful to attempt to compute on-chain. so we accept this inaccuracy as a
         // concession to the limits of complexity and gas.
-        timestampLast = 1;
+        (priceFuWethCumulativeLast, priceWethFuCumulativeLast, timestampLast) =
+            (priceFuWethCumulative, priceWethFuCumulative, block.timestamp);
 
         emit Buyback(_msgSender(), liquidityTarget);
 
