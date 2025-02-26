@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {TwoStepOwnable} from "./utils/TwoStepOwnable.sol";
-import {Context} from "./utils/Context.sol";
+import {MultiCallContext} from "./utils/MultiCallContext.sol";
 
 import {IERC20} from "@forge-std/interfaces/IERC20.sol";
 import {IFU} from "./interfaces/IFU.sol";
@@ -49,7 +49,7 @@ library FastFu {
 }
 
 /// @custom:security-contact security@fuckyou.finance
-contract Buyback is TwoStepOwnable, Context {
+contract Buyback is TwoStepOwnable, MultiCallContext {
     using FastTransferLib for IERC20;
     using FastTransferLib for IFU;
     using FastTransferLib for IUniswapV2Pair;
