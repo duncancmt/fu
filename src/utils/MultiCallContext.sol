@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import {Context} from "./Context.sol";
+
+interface IMultiCall {
+    enum RevertPolicy {
+        REVERT,
+        HALT,
+        CONTINUE
+    }
+
+    struct Call {
+        address target;
+        RevertPolicy revertPolicy;
+        uint256 value;
+        bytes data;
+    }
+
+    struct Result {
+        bool success;
+        bytes data;
+    }
+
+    function multicall(Call[] calldata calls, uint256 contextdepth) external payable returns (Result[] memory);
+
+    receive() external payable;
+}
+
+abstract contract MultiCallContext is Context {
+    address private constant _MULTICALL_ADDRESS = 0x00000000000000CF9E3c5A26621af382fA17f24f;
+
+    IMultiCall internal constant _MULTICALL = IMultiCall(payable(_MULTICALL_ADDRESS));
+
+    function _isForwarded() internal view virtual override returns (bool) {
+        return super._isForwarded() || super._msgSender() == address(_MULTICALL);
+    }
+
+    function _msgData() internal view virtual override returns (bytes calldata r) {
+        address sender = super._msgSender();
+        r = super._msgData();
+        assembly ("memory-safe") {
+            r.length :=
+                sub(r.length, mul(0x14, eq(_MULTICALL_ADDRESS, and(0xffffffffffffffffffffffffffffffffffffffff, sender))))
+        }
+    }
+
+    function _msgSender() internal view virtual override returns (address sender) {
+        sender = super._msgSender();
+        if (sender == _MULTICALL_ADDRESS) {
+            bytes calldata data = super._msgData();
+            assembly ("memory-safe") {
+                sender := shr(0x60, calldataload(add(data.offset, sub(data.length, 0x14))))
+            }
+        }
+    }
+}
