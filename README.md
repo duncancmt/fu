@@ -57,8 +57,10 @@ being maximally technically correct.
 
 ### Features the authors thought of but didn't implement
 
- * The tax collected on each swap/transfer is used to "frontrun" each swap
-   against the primary liquidity pair upon each transfer not `from` it
+ * The collected trading fees are swapped against the pair on each
+   transfer. Basically, combine the `FU` and `Buyback` contracts. This would
+   effectively "frontrun" each swap against the primary liquidity pair upon each
+   transfer not `from` it. Unfortunately, this made the contract too big.
 
 ## Restrictions
 
