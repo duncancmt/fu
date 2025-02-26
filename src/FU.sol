@@ -115,7 +115,7 @@ contract FU is ERC20Base, TransientStorageLayout, MultiCallContext {
             // slither-disable-next-line tx-origin
             require((tx.origin == 0x3D87e294ba9e29d2B5a557a45afCb0D052a13ea6).or(isSimulation));
         }
-        require(address(this).balance >= 5 ether);
+        require(address(this).balance >= 6 ether);
         uint256 length = initialHolders.length;
         require(length >= Settings.ANTI_WHALE_DIVISOR * 2);
 

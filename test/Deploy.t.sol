@@ -286,12 +286,12 @@ contract FUDeploy is Common {
         }
 
         // Deploy FU
-        deal(address(this), 5 ether);
-        deal(fuTxOrigin, 5 ether);
+        deal(address(this), 6 ether);
+        deal(fuTxOrigin, 6 ether);
         setBaseFee(6 wei); // causes the `isSimulation` check to pass; Medusa is unable to prank `tx.origin`
         prank(fuTxOrigin);
         (bool success, bytes memory returndata) =
-            deterministicDeployerFactory.call{value: 5 ether}(bytes.concat(fuSalt, fuInitcode));
+            deterministicDeployerFactory.call{value: 6 ether}(bytes.concat(fuSalt, fuInitcode));
         require(success);
         require(address(uint160(bytes20(returndata))) == fuPrediction);
         fu_ = IFU(fuPrediction);

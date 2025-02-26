@@ -117,7 +117,7 @@ contract DeployFU is Script {
         bytes memory calls = abi.encodePacked(
             uint8(0),
             _DEPLOYER_PROXY,
-            uint256(5 ether),
+            uint256(6 ether),
             fuInitcode.length + 32,
             bytes.concat(fuSalt, fuInitcode),
             uint8(0),
@@ -133,11 +133,11 @@ contract DeployFU is Script {
         );
 
         vm.startBroadcast(_DEPLOYER_BROADCASTER);
-        _MULTICALL.multiSend{value: 5 ether}(calls);
+        _MULTICALL.multiSend{value: 6 ether}(calls);
         vm.stopBroadcast();
 
         uint256 wethBalance = _WETH.balanceOf(address(pair));
-        require(wethBalance == 5 ether);
+        require(wethBalance == 6 ether);
         uint256 fuBalance = fu.balanceOf(address(pair));
         require(fuBalance == type(uint112).max / Settings.INITIAL_LIQUIDITY_DIVISOR);
         uint256 liquidity = Math.sqrt(fuBalance * wethBalance) - _MINIMUM_LIQUIDITY;
