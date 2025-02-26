@@ -27,7 +27,8 @@ abstract contract AbstractOwnable is IOwnable {
     }
 
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == type(IERC165).interfaceId || interfaceId == type(IOwnable).interfaceId;
+        return uint32(interfaceId) == uint32(type(IERC165).interfaceId)
+            || uint32(interfaceId) == uint32(type(IOwnable).interfaceId);
     }
 
     /// This modifier is not virtual on purpose; override _requireOwner instead.
