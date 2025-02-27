@@ -64,7 +64,7 @@ being maximally technically correct.
 
 ## Restrictions
 
-FU is designed to still be almost completely compliant with
+FU is designed to still be *almost* completely compliant with
 [ERC20](https://eips.ethereum.org/EIPS/eip-20) as written (ERC20 doesn't allow
 tokens to return nothing to signal success). However, to make things a little
 more interesting, there are some additional restrictions the authors adopted
