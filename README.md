@@ -22,6 +22,10 @@ its authors make no guarantees about its correctness. See
 [LICENSE.txt](./LICENSE.txt) for full IP terms. See [the Legal section](#Legal)
 for disclaimers.
 
+**0xaC03C1Efc03A62A4C86c544161E2103E9B90D6f9**
+
+![0xaC03C1Efc03A62A4C86c544161E2103E9B90D6f9](img/fu_addr.png)
+
 # Goals
 
 FU is designed to be maximally vexing for developers to integrate, while still
@@ -243,22 +247,6 @@ slither . # slither has a heisenbug; just run it repeatedly until it doesn't cra
 srcup --api-key "$(< ~/.config/dedaub/credentials)" --name fu --framework Foundry .
 ```
 
-# Deployment
-
-```Bash
-git reset --hard HEAD
-forge clean
-forge clean # do it twice
-git clean -fdx
-
-# substitute actual values
-declare -r fuSalt="$(cast hash-zero)"
-declare -r buybackSalt="$(cast hash-zero)"
-
-# add `--broadcast` when ready
-FOUNDRY_PROFILE=deploy forge script -vvvv --slow --no-storage-caching --isolate --rpc-url 'http://127.0.0.1:8545' --sig 'run(bytes32,bytes32)' script/DeployFU.s.sol "$fuSalt" "$buybackSalt"
-```
-
 # Legal
 
 If you're looking for a hot new coin to ape that's gonna give you a good pump,
@@ -281,13 +269,6 @@ set in the way.
 For developers, if your dApp works with FU, then it will probably work with
 every other token on earth. Perhaps there is some utility in having a
 maximally-badly-behaved ERC20 token for testing purposes.
-
-# Airdrop
-
-If you want to be airdropped some FU, simply submit a PR adding yourself to
-[`airdrop.json`](./airdrop.json). There are no eligibility criteria. Whether or
-not you receive an airdrop is entirely contingent on the capricious and
-arbitrary whims of the authors.
 
 ---
 
