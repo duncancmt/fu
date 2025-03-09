@@ -121,13 +121,14 @@ contract Router is MultiCallContext {
         (, fuOut) = _computeBuyExactIn(recipient, ethIn);
     }
 
-    function _computeSellExactOut(address sender, uint256 ethOut) internal view returns (uint256 fuInPair, uint256 fuIn) {
+    function _computeSellExactOut(address sender, uint256 ethOut) internal view returns (uint256 fuIn) {
         uint256 scale = uint160(sender) >> Settings.ADDRESS_SHIFT;
         if (scale == 0) {
             Panic.panic(Panic.DIVISION_BY_ZERO);
         }
 
         (uint256 reserveFu, uint256 reserveEth, ) = PAIR.fastGetReserves();
+        uint256 fuInPair;
         unchecked {
             fuInPair = (reserveFu * ethOut * _BASIS).unsafeDivUp((reserveEth - ethOut) * (_BASIS - _UNISWAPV2_FEE_BP)) + 1;
         }
@@ -138,7 +139,7 @@ contract Router is MultiCallContext {
     }
 
     function quoteSellExactOut(address sender, uint256 ethOut) external view returns (uint256 fuIn) {
-        (, fuIn) = _computeSellExactOut(sender, ethOut);
+        fuIn = _computeSellExactOut(sender, ethOut);
     }
 
     function _computeSellExactIn(address sender, uint256 fuIn) internal view returns (uint256 fuInPair, uint256 ethOut) {
@@ -198,7 +199,7 @@ contract Router is MultiCallContext {
 
     function sellExactOut(address payable recipient, uint256 ethOut, uint256 maxFuIn) external returns (uint256 fuIn) {
         address sender = _msgSender();
-        (, fuIn) = _computeSellExactOut(sender, ethOut); // TODO: remove extraneous return value
+        fuIn = _computeSellExactOut(sender, ethOut);
         if (fuIn > maxFuIn) {
             revert TooMuchSlippage(FU, fuIn, maxFuIn);
         }
