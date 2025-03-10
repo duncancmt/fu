@@ -102,10 +102,12 @@ contract Router is MultiCallContext {
     using SafeTransferLib for IFU;
     using FastFu for IFU;
 
-    constructor() {
+    constructor(bytes20 gitCommit) payable {
         require(msg.sender == 0x4e59b44847b379578588920cA78FbF26c0B4956C);
         require(address(this).balance >= 1 wei);
         payable(address(WETH)).fastSendEth(address(this).balance);
+
+        emit IFU.GitCommit(gitCommit);
     }
 
     error TooMuchSlippage(IERC20 token, uint256 actual, uint256 expected);
