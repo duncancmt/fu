@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Router, FU, PAIR} from "src/Router.sol";
+import {Router, FU, WETH, PAIR} from "src/Router.sol";
+import {Settings} from "src/core/Settings.sol";
 
 import {UnsafeMath} from "src/lib/UnsafeMath.sol";
 
@@ -31,6 +32,7 @@ contract RouterTest is Test {
         router = Router(payable(address(uint160(bytes20(returndata)))));
 
         (uint256 reserveFu, uint256 reserveEth, ) = PAIR.getReserves();
+        // TODO: tighten bounds
         tol = reserveFu.unsafeDivUp(reserveEth) + 1;
     }
 
@@ -48,11 +50,20 @@ contract RouterTest is Test {
 
         vm.deal(actor, ethIn);
         vm.prank(actor);
-        router.buyExactOut{value: ethIn}(recipient, fuOut);
-
-        uint256 afterBalance = FU.balanceOf(recipient);
-
-        // TODO: tighten bounds
-        assertApproxEqAbs(afterBalance - beforeBalance, fuOut, tol);
+        try router.buyExactOut{value: ethIn}(recipient, fuOut) {
+            uint256 afterBalance = FU.balanceOf(recipient);
+            assertApproxEqAbs(afterBalance - beforeBalance, fuOut, tol * (uint160(recipient) >> Settings.ADDRESS_SHIFT));
+        } catch Error(string memory reason) {
+            if (recipient == address(PAIR)) {
+                assertEq(reason, "UniswapV2: TRANSFER_FAILED");
+            } else if (recipient == address(FU) || recipient == address(WETH)) {
+                assertEq(reason, "UniswapV2: INVALID_TO");
+            } else {
+                assertLe(fuOut, tol * (uint160(recipient) >> Settings.ADDRESS_SHIFT));
+                assertEq(reason, "UniswapV2: INSUFFICIENT_OUTPUT_AMOUNT");
+            }
+        } catch {
+            assertGe(beforeBalance + fuOut, FU.whaleLimit(recipient));
+        }
     }
 }
