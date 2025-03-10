@@ -11,6 +11,7 @@ import {Settings} from "./core/Settings.sol";
 import {MoonPhase} from "./core/MoonPhase.sol";
 
 import {BasisPoints, BASIS} from "./types/BasisPoints.sol";
+import {Tokens} from "./types/Tokens.sol";
 
 import {Panic} from "./lib/Panic.sol";
 import {UnsafeMath} from "./lib/UnsafeMath.sol";
@@ -115,6 +116,8 @@ contract Router is MultiCallContext {
     // TODO: review under-/over-flow conditions
 
     function _computeBuyExactOut(address recipient, uint256 fuOut) internal view returns (uint256 fuOutPair, uint256 ethIn) {
+        require(fuOut <= Tokens.unwrap(Settings.INITIAL_SUPPLY));
+
         uint256 scale = uint160(recipient) >> Settings.ADDRESS_SHIFT;
         if (scale == 0) {
             Panic.panic(Panic.DIVISION_BY_ZERO);
@@ -126,8 +129,12 @@ contract Router is MultiCallContext {
             //fuOutPair++;
         }
         (uint256 reserveFu, uint256 reserveEth, ) = PAIR.fastGetReserves();
+        if (fuOutPair > reserveFu) {
+            Panic.panic(Panic.ARITHMETIC_OVERFLOW);
+        }
 
         unchecked {
+            // `+ 1 wei` from the original UniswapV2 formula
             ethIn = (reserveEth * fuOutPair * _BASIS).unsafeDivUp((reserveFu - fuOutPair) * (_BASIS - _UNISWAPV2_FEE_BP)) + 1 wei;
         }
     }
@@ -137,6 +144,7 @@ contract Router is MultiCallContext {
     }
 
     function _computeBuyExactIn(address recipient, uint256 ethIn) internal view returns (uint256 fuOutPair, uint256 fuOut) {
+        require(ethIn <= 1e27);
         uint256 scale = uint160(recipient) >> Settings.ADDRESS_SHIFT;
         if (scale == 0) {
             Panic.panic(Panic.DIVISION_BY_ZERO);
@@ -149,6 +157,7 @@ contract Router is MultiCallContext {
         }
 
         unchecked {
+            // `- 1` to account for rounding in FU
             fuOut = (fuOutPair * (_BASIS - tax())) / _BASIS * scale - 1;
         }
     }
@@ -164,17 +173,23 @@ contract Router is MultiCallContext {
         }
 
         (uint256 reserveFu, uint256 reserveEth, ) = PAIR.fastGetReserves();
+        if (ethOut > reserveEth) {
+            Panic.panic(Panic.ARITHMETIC_OVERFLOW);
+        }
         uint256 fuInPair;
         unchecked {
+            // `+ 1` from the original UniswapV2 formula
             fuInPair = (reserveFu * ethOut * _BASIS).unsafeDivUp((reserveEth - ethOut) * (_BASIS - _UNISWAPV2_FEE_BP)) + 1;
         }
 
         unchecked {
+            // `+ 1` to account for rounding in FU
             fuIn = (fuInPair * _BASIS).unsafeDivUp(_BASIS - tax()) * scale + 1;
         }
     }
 
     function quoteSellExactIn(address sender, uint256 fuIn) public view returns (uint256 ethOut) {
+        require(fuIn <= Tokens.unwrap(Settings.INITIAL_SUPPLY));
         uint256 scale = uint160(sender) >> Settings.ADDRESS_SHIFT;
         if (scale == 0) {
             Panic.panic(Panic.DIVISION_BY_ZERO);
