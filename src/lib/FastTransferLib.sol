@@ -46,7 +46,7 @@ library FastTransferLib {
             // Calldata starts at offset 16 and is 68 bytes long (2 * 32 + 4). We're not checking
             // the return value, so we don't bother to copy the returndata into memory.
             if iszero(call(gas(), token, 0x00, 0x10, 0x44, 0x00, 0x00)) {
-                let ptr := mload(0x40)
+                let ptr := and(0xffffffffffffffffffffffff, mload(0x40))
                 returndatacopy(ptr, 0x00, returndatasize())
                 revert(ptr, returndatasize())
             }
