@@ -294,7 +294,7 @@ function __gt(uint512 x, uint512 y) pure returns (bool) {
     return x.gt(y);
 }
 
-function __lt(uint512 x, uint512 y) pure returns (bool r) {
+function __lt(uint512 x, uint512 y) pure returns (bool) {
     return x.lt(y);
 }
 
