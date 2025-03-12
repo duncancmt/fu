@@ -19,6 +19,9 @@ contract RouterTest is Test {
 
     function setUp() public {
         actors = abi.decode(vm.readFile(string.concat(vm.projectRoot(), "/airdrop.json")).parseRaw("$"), (address[]));
+        for (uint256 i; i < Settings.ANTI_WHALE_DIVISOR / 2; i++) {
+            actors.push(address(uint160(uint256(keccak256(abi.encodePacked("FU actor", i))))));
+        }
 
         vm.createSelectFork(vm.envOr(string("RPC_URL"), string("http://127.0.0.1:8545")), 22016015);
 
@@ -33,11 +36,11 @@ contract RouterTest is Test {
 
         (uint256 reserveFu, uint256 reserveEth, ) = PAIR.getReserves();
         // TODO: tighten bounds
-        tol = reserveFu.unsafeDivUp(reserveEth) + 1;
+        tol = reserveFu.unsafeDivUp(reserveEth);
     }
 
     function testBuyExactOut(uint40 warp, uint256 actorIndex, address recipient, uint256 fuOut) external {
-        address actor = actors[bound(actorIndex, 0, actors.length - 1)];
+        address actor = actors[actorIndex % actors.length];
 
         warp = uint40(bound(warp, vm.getBlockTimestamp(), type(uint40).max));
         vm.warp(warp);
