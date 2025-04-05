@@ -69,4 +69,20 @@ contract RouterTest is Test {
             assertGe(beforeBalance + fuOut, FU.whaleLimit(recipient));
         }
     }
+
+    function testBuyExactOutUnderfund(uint40 warp, uint256 actorIndex, address recipient, uint256 fuOut) external {
+        address actor = actors[actorIndex % actors.length];
+
+        warp = uint40(bound(warp, vm.getBlockTimestamp(), type(uint40).max));
+        vm.warp(warp);
+
+        (bool success, bytes memory returndata) = address(router).staticcall(abi.encodeCall(router.quoteBuyExactOut, (recipient, fuOut)));
+        vm.assume(success); // TODO: handle failure
+        uint256 ethIn = abi.decode(returndata, (uint256));
+
+        vm.deal(actor, ethIn);
+        vm.prank(actor);
+        vm.expectRevert(bytes(""));
+        router.buyExactOut{value: ethIn - 1}(recipient, fuOut);
+    }
 }
