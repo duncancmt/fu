@@ -25,6 +25,7 @@ abstract contract Common is StdAssertions {
     Vm private constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
     address internal constant DEAD = 0xdeaDDeADDEaDdeaDdEAddEADDEAdDeadDEADDEaD;
     address internal constant PERMIT2 = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+    address internal constant MULTICALL = 0x00000000000000CF9E3c5A26621af382fA17f24f;
     bytes32 internal constant BASE_SLOT = 0x00000000000000000000000000000000e086ec3a639808bbda893d5b4ac93600;
 
     IFU internal fu;
@@ -131,6 +132,9 @@ abstract contract Common is StdAssertions {
         if (newActor == DEAD) {
             return 0;
         }
+        if (newActor == MULTICALL) {
+            return 0;
+        }
         if (newActor == address(fu)) {
             return 0;
         }
@@ -147,6 +151,7 @@ abstract contract Common is StdAssertions {
     function saveActor(address actor) internal virtual {
         assertNotEq(actor, address(0));
         assertNotEq(actor, DEAD);
+        assertNotEq(actor, MULTICALL);
         assertNotEq(actor, address(fu));
         assertTrue(isActor[actor]);
     }
@@ -383,6 +388,7 @@ contract FUDeploy is Common {
         buyback_ = Buyback(buybackPrediction);
 
         label(DEAD, "Super dead");
+        label(MULTICALL, "MultiCall");
     }
 
     function setUp() public virtual {

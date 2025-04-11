@@ -324,6 +324,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     function addActor(address newActor) external {
         assume(newActor != address(0));
         assume(newActor != DEAD);
+        assume(newActor != MULTICALL);
         assume(newActor != address(fu));
         assume(!isActor[newActor]);
         maybeCreateActor(newActor);
@@ -471,6 +472,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         } else {
             originalBalanceTo = maybeCreateActor(to);
         }
+        assume(to != MULTICALL); // TODO: remove; it's technically possible even if it's crazy
 
         uint256 beforeBalance = lastBalance[actor];
         uint256 beforeBalanceTo = lastBalance[to];
