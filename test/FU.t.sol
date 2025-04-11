@@ -189,25 +189,34 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         }
     }
 
-    function getShares(address account) internal view returns (uint256) {
+    function _getShares(address account) external view {
         uint256 value = uint256(load(address(fu), _sharesSlot(account)));
         assertEq(
             value & 0xffffffffff00000000000000000000000000000000000000000000ffffffffff,
             0,
             string.concat("dirty shares slot: ", value.itoa())
         );
-        return value >> 40;
+        value >>= 40;
+        _revert(value);
+    }
+
+    function getShares(address account) internal view returns (uint256) {
+        return _staticcall(uint32(this._getShares.selector), account);
     }
 
     function setShares(address account, uint256 newShares) internal {
         return store(address(fu), _sharesSlot(account), bytes32(newShares << 40));
     }
 
-    function getTotalShares() internal view returns (uint256) {
+    function _getTotalShares() external view {
         uint256 value = uint256(load(address(fu), bytes32(uint256(BASE_SLOT) + 2)));
         assertEq(value >> 177, 0, string.concat("dirty total supply slot: ", value.itoa()));
         assertNotEq(value, 0, "zero total shares");
-        return value;
+        _revert(value);
+    }
+
+    function getTotalShares() internal view returns (uint256) {
+        return _staticcall(uint32(this._getTotalShares.selector));
     }
 
     function setTotalShares(uint256 newTotalShares) internal {
@@ -215,29 +224,45 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         return store(address(fu), bytes32(uint256(BASE_SLOT) + 2), bytes32(newTotalShares));
     }
 
-    function getCirculatingTokens() internal view returns (uint256) {
+    function _getCirculatingTokens() external view {
         uint256 value = uint256(load(address(fu), BASE_SLOT));
         assertEq(value >> 145, 0, string.concat("dirty circulating tokens slot: ", value.itoa()));
         assertNotEq(value, 0, "zero circulating tokens");
-        return value;
+        _revert(value);
+    }
+
+    function getCirculatingTokens() internal view returns (uint256) {
+        return _staticcall(uint32(this._getCirculatingTokens.selector));
+    }
+
+    function _getRebaseQueueHead() external view {
+        uint256 slotValue = uint256(load(address(fu), bytes32(uint256(BASE_SLOT) + 4)));
+        assertLe(slotValue, type(uint160).max, "dirty rebase queue head slot");
+        _revert(slotValue);
     }
 
     function getRebaseQueueHead() internal view returns (address) {
-        uint256 slotValue = uint256(load(address(fu), bytes32(uint256(BASE_SLOT) + 4)));
-        assertLe(slotValue, type(uint160).max, "dirty rebase queue head slot");
-        return address(uint160(slotValue));
+        return address(uint160(_staticcall(uint32(this._getRebaseQueueHead.selector))));
+    }
+
+    function _getRebaseQueuePrev(address account) external view {
+        uint256 slotValue = uint256(load(address(fu), _rebaseQueuePrevSlot(account)));
+        assertLe(slotValue, type(uint160).max, "dirty rebase queue prev slot");
+        _revert(slotValue);
     }
 
     function getRebaseQueuePrev(address account) internal view returns (address) {
-        uint256 slotValue = uint256(load(address(fu), _rebaseQueuePrevSlot(account)));
-        assertLe(slotValue, type(uint160).max, "dirty rebase queue prev slot");
-        return address(uint160(slotValue));
+        return address(uint160(_staticcall(uint32(this._getRebaseQueuePrev.selector))));
+    }
+
+    function _getRebaseQueueNext(address account) external view {
+        uint256 slotValue = uint256(load(address(fu), _rebaseQueueNextSlot(account)));
+        assertLe(slotValue, type(uint160).max, "dirty rebase queue next slot");
+        _revert(slotValue);
     }
 
     function getRebaseQueueNext(address account) internal view returns (address) {
-        uint256 slotValue = uint256(load(address(fu), _rebaseQueueNextSlot(account)));
-        assertLe(slotValue, type(uint160).max, "dirty rebase queue next slot");
-        return address(uint160(slotValue));
+        return address(uint160(_staticcall(uint32(this._getRebaseQueueNext.selector), account)));
     }
 
     function updateRebaseQueueLastTokens(address account, uint256 circulatingTokens, uint256 totalShares) internal {
@@ -250,20 +275,20 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     function getActor(uint256 actorIndex) internal override returns (address actor, uint256 originalBalance) {
         (actor,) = super.getActor(actorIndex);
         originalBalance = lastBalance[actor];
-        lastBalance[actor] = fu.balanceOf(actor);
+        lastBalance[actor] = balanceOf(actor);
     }
 
     function maybeCreateActor(address newActor) internal override returns (uint256 originalBalance) {
         originalBalance = lastBalance[newActor];
         if (isActor[newActor]) {
-            lastBalance[newActor] = fu.balanceOf(newActor);
+            lastBalance[newActor] = balanceOf(newActor);
         }
         super.maybeCreateActor(newActor);
     }
 
     function saveActor(address actor) internal override {
         super.saveActor(actor);
-        lastBalance[actor] = fu.balanceOf(actor);
+        lastBalance[actor] = balanceOf(actor);
     }
 
     function restoreActor(address actor, uint256 originalBalance) internal {
@@ -278,7 +303,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 if (acct == skip0 || acct == skip1) {
                     continue;
                 }
-                lastBalance[acct] = fu.balanceOf(acct);
+                lastBalance[acct] = balanceOf(acct);
             }
         }
     }
@@ -291,7 +316,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 if (acct == skip) {
                     continue;
                 }
-                lastBalance[acct] = fu.balanceOf(acct);
+                lastBalance[acct] = balanceOf(acct);
             }
         }
     }
@@ -374,11 +399,51 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         // Update the shadow of the rebase queue
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
-            lastBalance[actor] = fu.balanceOf(actor);
+            lastBalance[actor] = balanceOf(actor);
         }
-        lastBalance[DEAD] = fu.balanceOf(DEAD);
+        lastBalance[DEAD] = balanceOf(DEAD);
 
         shareRatio = newRatio;
+    }
+
+    function _whaleLimit(address acct) external view {
+        _revert(fu.whaleLimit(acct));
+    }
+
+    function _tax() external view {
+        _revert(fu.tax());
+    }
+
+    function _getVotes(address acct) external view {
+        _revert(fu.getVotes(acct));
+    }
+
+    function _totalSupply() external view {
+        _revert(fu.totalSupply());
+    }
+
+    function _getTotalVotes() external view {
+        _revert(fu.getTotalVotes());
+    }
+
+    function whaleLimit(address acct) internal view returns (uint256) {
+        return _staticcall(uint32(this._whaleLimit.selector), acct);
+    }
+
+    function tax() internal view returns (uint256) {
+        return _staticcall(uint32(this._tax.selector));
+    }
+
+    function getVotes(address acct) internal view returns (uint256) {
+        return _staticcall(uint32(this._getVotes.selector), acct);
+    }
+
+    function totalSupply() internal view returns (uint256) {
+        return _staticcall(uint32(this._totalSupply.selector));
+    }
+
+    function getTotalVotes() internal view returns (uint256) {
+        return _staticcall(uint32(this._getTotalVotes.selector));
     }
 
     function _transferShouldFail(address from, address to, uint256 amount, uint256 balance)
@@ -393,12 +458,12 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     function transfer(uint256 actorIndex, address to, uint256 amount, bool boundTo, bool boundAmount) external {
         (address actor, uint256 originalBalance) = getActor(actorIndex);
         if (boundAmount) {
-            amount = bound(amount, 0, fu.balanceOf(actor), "amount");
+            amount = bound(amount, 0, balanceOf(actor), "amount");
         } else {
             console.log("amount", amount);
         }
         if (actor == pair) {
-            assume(amount < fu.balanceOf(actor));
+            assume(amount < balanceOf(actor));
         }
         uint256 originalBalanceTo;
         if (boundTo) {
@@ -409,16 +474,18 @@ contract FUGuide is Common, Bound, ListOfInvariants {
 
         uint256 beforeBalance = lastBalance[actor];
         uint256 beforeBalanceTo = lastBalance[to];
-        uint256 beforeWhaleLimit = fu.whaleLimit(actor);
-        uint256 beforeWhaleLimitTo = fu.whaleLimit(to);
+        uint256 beforeWhaleLimit = whaleLimit(actor);
+        uint256 beforeWhaleLimitTo = whaleLimit(to);
         bool actorIsWhale = beforeBalance == beforeWhaleLimit;
         bool toIsWhaleBefore = beforeBalanceTo == beforeWhaleLimitTo;
         uint256 beforeShares = getShares(actor);
         uint256 beforeSharesTo = getShares(to);
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
-        uint256 tax = fu.tax();
+        uint256 tax_ = tax();
         address rebaseQueueHead = getRebaseQueueHead();
+        address actorDelegatee = delegates(actor);
+        address toDelegatee = delegates(actor);
 
         if (!_transferShouldFail(actor, to, amount, beforeBalance)) {
             expectEmit(true, true, true, false, address(fu));
@@ -431,8 +498,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(
                     beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR
                 );
-            address actorDelegatee = fu.delegates(actor);
-            address toDelegatee = fu.delegates(actor);
             console.log("votes", votes);
             if (votes != 0 && actorDelegatee != toDelegatee) {
                 if (actorDelegatee != address(0)) {
@@ -451,6 +516,9 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         prank(actor);
 
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.transfer, (to, amount)));
+        if (success) {
+            vm.snapshotGasLastCall("transfer");
+        }
         assertEq(success, !_transferShouldFail(actor, to, amount, beforeBalance), "unexpected failure");
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
@@ -505,8 +573,8 @@ contract FUGuide is Common, Bound, ListOfInvariants {
 
         uint256 afterBalance = lastBalance[actor];
         uint256 afterBalanceTo = lastBalance[to];
-        uint256 afterWhaleLimit = fu.whaleLimit(actor);
-        uint256 afterWhaleLimitTo = fu.whaleLimit(to);
+        uint256 afterWhaleLimit = whaleLimit(actor);
+        uint256 afterWhaleLimitTo = whaleLimit(to);
         bool toIsWhale = afterBalanceTo == afterWhaleLimitTo;
         uint256 afterShares = getShares(actor);
         uint256 afterSharesTo = getShares(to);
@@ -536,7 +604,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 "\n\tafter shares from:     ", afterShares.itoa(),
                 "\n\tbefore shares to:      ", beforeSharesTo.itoa(),
                 "\n\tafter shares to:       ", afterSharesTo.itoa(),
-                "\n\ttax (basis points):    ", tax.itoa()
+                "\n\ttax (basis points):    ", tax_.itoa()
             )
         );
         */
@@ -554,22 +622,22 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         assertLe(logAmountTransfer + logAmountBurn, amount + 1, "log amount upper");
         if (
             afterCirculating < beforeCirculating
-                || (afterCirculating - beforeCirculating) * (10_000 - tax) / 10_000
+                || (afterCirculating - beforeCirculating) * (10_000 - tax_) / 10_000
                     < beforeCirculating.unsafeDivUp(Settings.ANTI_WHALE_DIVISOR)
         ) {
             assertGe(
-                ((logAmountTransfer + logAmountBurn) * tax).unsafeDivUp(10_000) + 2,
+                ((logAmountTransfer + logAmountBurn) * tax_).unsafeDivUp(10_000) + 2,
                 logAmountBurn,
                 "log tax ratio lower"
             );
-            assertLe((logAmountTransfer + logAmountBurn) * tax / 10_000, logAmountBurn + 1, "log tax ratio upper");
+            assertLe((logAmountTransfer + logAmountBurn) * tax_ / 10_000, logAmountBurn + 1, "log tax ratio upper");
         } else if (
             afterCirculating >= beforeCirculating
-                && (afterCirculating - beforeCirculating) * (10_000 - tax) / 10_000
+                && (afterCirculating - beforeCirculating) * (10_000 - tax_) / 10_000
                     >= beforeCirculating.unsafeDivUp(Settings.ANTI_WHALE_DIVISOR)
         ) {
             assertLe(
-                (logAmountTransfer + logAmountBurn) * tax / 10_000, logAmountBurn, "log tax ratio upper (insane whale)"
+                (logAmountTransfer + logAmountBurn) * tax_ / 10_000, logAmountBurn, "log tax ratio upper (insane whale)"
             );
         }
 
@@ -602,14 +670,14 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                     rebaseNewBalance = beforeBalanceTo;
                 } else {
                     rebaseOriginalBalance = lastBalance[rebaseTo];
-                    rebaseNewBalance = fu.balanceOf(rebaseTo);
+                    rebaseNewBalance = balanceOf(rebaseTo);
                 }
                 console.log("original balance", rebaseOriginalBalance);
                 console.log("new balance", rebaseNewBalance);
                 uint256 rebaseBalanceDelta = rebaseNewBalance - rebaseOriginalBalance;
                 console.log("rebaseBalanceDelta", rebaseBalanceDelta);
                 console.log("rebaseAmountBalance", rebaseAmountBalance);
-                //console.log("whaleLimit", fu.whaleLimit(rebaseTo));
+                //console.log("whaleLimit", whaleLimit(rebaseTo));
                 uint256 fudge = 2; // TODO: decrease
                 if (!((rebaseTo == actor && toIsWhaleBefore) || (rebaseTo == to && actorIsWhale))) {
                     assertGe(
@@ -618,7 +686,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                         string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress())
                     );
                 }
-                if (rebaseTo == to ? !toIsWhale : rebaseNewBalance != fu.whaleLimit(rebaseTo)) {
+                if (rebaseTo == to ? !toIsWhale : rebaseNewBalance != whaleLimit(rebaseTo)) {
                     assertLe(
                         rebaseBalanceDelta,
                         rebaseAmountBalance + fudge,
@@ -678,8 +746,8 @@ contract FUGuide is Common, Bound, ListOfInvariants {
             }
             //console.log("sendTokensLo", sendTokensLo);
             //console.log("sendTokensHi", sendTokensHi);
-            uint256 receiveTokensXBasisPointsLo = sendTokensLo * (10_000 - tax);
-            uint256 receiveTokensXBasisPointsHi = sendTokensHi * (10_000 - tax);
+            uint256 receiveTokensXBasisPointsLo = sendTokensLo * (10_000 - tax_);
+            uint256 receiveTokensXBasisPointsHi = sendTokensHi * (10_000 - tax_);
             //console.log("receiveTokensXBasisPointsLo", receiveTokensXBasisPointsLo);
             //console.log("receiveTokensXBasisPointsHi", receiveTokensXBasisPointsHi);
             uint256 balanceDeltaLo = receiveTokensXBasisPointsLo * multiplier;
@@ -772,8 +840,8 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         super.maybeCreateActor(delegatee);
 
         address oldDelegatee = shadowDelegates[actor];
-        uint256 oldVotes = fu.getVotes(oldDelegatee);
-        uint256 newVotes = fu.getVotes(delegatee);
+        uint256 oldVotes = getVotes(oldDelegatee);
+        uint256 newVotes = getVotes(delegatee);
         uint256 votes = getShares(actor) / Settings.SHARES_TO_VOTES_DIVISOR;
         expectEmit(true, true, true, true, address(fu));
         emit IERC5805.DelegateChanged(actor, oldDelegatee, delegatee);
@@ -791,10 +859,10 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         prank(actor);
         fu.delegate(delegatee); // ERC5805 requires that this function return nothing or revert
 
-        assertEq(fu.delegates(actor), delegatee);
+        assertEq(delegates(actor), delegatee);
 
         super.saveActor(actor);
-        shadowDelegates[actor] = fu.delegates(actor);
+        shadowDelegates[actor] = delegates(actor);
         if (delegatee != address(0) && delegatee != DEAD && delegatee != address(fu)) {
             super.saveActor(delegatee);
         }
@@ -807,7 +875,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     function burn(uint256 actorIndex, uint256 amount, bool boundAmount) external {
         (address actor, uint256 originalBalance) = getActor(actorIndex);
         if (boundAmount) {
-            amount = bound(amount, 0, fu.balanceOf(actor), "amount");
+            amount = bound(amount, 0, balanceOf(actor), "amount");
         } else {
             console.log("amount", amount);
         }
@@ -816,12 +884,13 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         address delegatee = shadowDelegates[actor];
 
         uint256 beforeBalance = lastBalance[actor];
-        uint256 beforeWhaleLimit = fu.whaleLimit(actor);
-        uint256 beforeSupply = fu.totalSupply();
+        uint256 beforeWhaleLimit = whaleLimit(actor);
+        uint256 beforeSupply = totalSupply();
         uint256 beforeTotalShares = getTotalShares();
         uint256 beforeCirculating = getCirculatingTokens();
-        uint256 beforeVotingPower = fu.getVotes(delegatee);
+        uint256 beforeVotingPower = getVotes(delegatee);
         uint256 beforeShares = getShares(actor);
+        address actorDelegatee = delegates(actor);
 
         if (!_burnShouldFail(actor, amount, beforeBalance)) {
             expectEmit(true, true, true, true, address(fu));
@@ -832,7 +901,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(
                     beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR
                 );
-            address actorDelegatee = fu.delegates(actor);
             // TODO: `votes > 1` should be `votes != 0`, but there appears to be some rounding error in play here.
             if (votes > 1 && actorDelegatee != address(0)) {
                 expectEmit(true, true, true, false, address(fu));
@@ -844,6 +912,9 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         vm.startStateDiffRecording();
         prank(actor);
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.burn, (amount)));
+        if (success) {
+            vm.snapshotGasLastCall("burn");
+        }
         assertEq(success, !_burnShouldFail(actor, amount, beforeBalance), "unexpected failure");
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
@@ -862,10 +933,10 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         saveActor(actor);
 
         uint256 afterBalance = lastBalance[actor];
-        uint256 afterSupply = fu.totalSupply();
+        uint256 afterSupply = totalSupply();
         uint256 afterTotalShares = getTotalShares();
         uint256 afterCirculating = getCirculatingTokens();
-        uint256 afterVotingPower = fu.getVotes(delegatee);
+        uint256 afterVotingPower = getVotes(delegatee);
         uint256 afterShares = getShares(actor);
 
         for (uint256 i; i < logs.length; i++) {
@@ -889,21 +960,21 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                     rebaseNewBalance = beforeBalance;
                 } else {
                     rebaseOriginalBalance = lastBalance[rebaseTo];
-                    rebaseNewBalance = fu.balanceOf(rebaseTo);
+                    rebaseNewBalance = balanceOf(rebaseTo);
                 }
                 console.log("original balance", rebaseOriginalBalance);
                 console.log("new balance", rebaseNewBalance);
                 uint256 rebaseBalanceDelta = rebaseNewBalance - rebaseOriginalBalance;
                 console.log("rebaseBalanceDelta", rebaseBalanceDelta);
                 console.log("rebaseAmountBalance", rebaseAmountBalance);
-                //console.log("whaleLimit", fu.whaleLimit(rebaseTo));
+                //console.log("whaleLimit", whaleLimit(rebaseTo));
                 uint256 fudge = 2; // TODO: decrease
                 assertGe(
                     rebaseBalanceDelta + fudge,
                     rebaseAmountBalance,
                     string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress())
                 );
-                if (rebaseNewBalance != fu.whaleLimit(rebaseTo)) {
+                if (rebaseNewBalance != whaleLimit(rebaseTo)) {
                     assertLe(
                         rebaseBalanceDelta,
                         rebaseAmountBalance + fudge,
@@ -974,18 +1045,19 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     function deliver(uint256 actorIndex, uint256 amount, bool boundAmount) external {
         (address actor, uint256 originalBalance) = getActor(actorIndex);
         if (boundAmount) {
-            amount = bound(amount, 0, fu.balanceOf(actor), "amount");
+            amount = bound(amount, 0, balanceOf(actor), "amount");
         } else {
             console.log("amount", amount);
         }
         assume(actor != pair || amount == 0);
 
         uint256 beforeBalance = lastBalance[actor];
-        uint256 beforeWhaleLimit = fu.whaleLimit(actor);
+        uint256 beforeWhaleLimit = whaleLimit(actor);
         bool actorIsWhale = beforeBalance == beforeWhaleLimit;
         uint256 beforeShares = getShares(actor);
         uint256 beforeCirculating = getCirculatingTokens();
         uint256 beforeTotalShares = getTotalShares();
+        address actorDelegatee = delegates(actor);
 
         if (!_deliverShouldFail(actor, amount, beforeBalance)) {
             expectEmit(true, true, true, true, address(fu));
@@ -996,7 +1068,6 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 : tmp().omul(amount * Settings.CRAZY_BALANCE_BASIS, beforeTotalShares).div(
                     beforeCirculating * divisor * Settings.SHARES_TO_VOTES_DIVISOR
                 );
-            address actorDelegatee = fu.delegates(actor);
             // TODO: `votes > 1` should be `votes != 0`, but there appears to be some rounding error in play here.
             if (votes > 1 && actorDelegatee != address(0)) {
                 expectEmit(true, true, true, false, address(fu));
@@ -1008,6 +1079,9 @@ contract FUGuide is Common, Bound, ListOfInvariants {
         vm.startStateDiffRecording();
         prank(actor);
         (bool success, bytes memory returndata) = callOptionalReturn(abi.encodeCall(fu.deliver, (amount)));
+        if (success) {
+            vm.snapshotGasLastCall("deliver");
+        }
         assertEq(success, !_deliverShouldFail(actor, amount, beforeBalance), "unexpected failure");
 
         VmSafe.AccountAccess[] memory accountAccesses = vm.stopAndReturnStateDiff();
@@ -1025,7 +1099,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
 
         saveActor(actor);
 
-        uint256 afterWhaleLimit = fu.whaleLimit(actor);
+        uint256 afterWhaleLimit = whaleLimit(actor);
         uint256 afterCirculating = getCirculatingTokens();
         uint256 afterTotalShares = getTotalShares();
 
@@ -1050,21 +1124,21 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                     rebaseNewBalance = beforeBalance;
                 } else {
                     rebaseOriginalBalance = lastBalance[rebaseTo];
-                    rebaseNewBalance = fu.balanceOf(rebaseTo);
+                    rebaseNewBalance = balanceOf(rebaseTo);
                 }
                 console.log("original balance", rebaseOriginalBalance);
                 console.log("new balance", rebaseNewBalance);
                 uint256 rebaseBalanceDelta = rebaseNewBalance - rebaseOriginalBalance;
                 console.log("rebaseBalanceDelta", rebaseBalanceDelta);
                 console.log("rebaseAmountBalance", rebaseAmountBalance);
-                //console.log("whaleLimit", fu.whaleLimit(rebaseTo));
+                //console.log("whaleLimit", whaleLimit(rebaseTo));
                 uint256 fudge = 2; // TODO: decrease
                 assertGe(
                     rebaseBalanceDelta + fudge,
                     rebaseAmountBalance,
                     string.concat("rebase delta lower: ", rebaseTo.toChecksumAddress())
                 );
-                if (rebaseNewBalance != fu.whaleLimit(rebaseTo)) {
+                if (rebaseNewBalance != whaleLimit(rebaseTo)) {
                     assertLe(
                         rebaseBalanceDelta,
                         rebaseAmountBalance + fudge,
@@ -1098,25 +1172,25 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     function invariant_nonNegativeRebase() external view override {
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
-            uint256 balance = fu.balanceOf(actor);
+            uint256 balance = balanceOf(actor);
             if (uint160(actor) < Settings.ADDRESS_DIVISOR) {
                 assertEq(balance, 0);
                 assertEq(lastBalance[actor], 0);
                 continue;
             }
-            uint256 whaleLimit = fu.whaleLimit(actor);
+            uint256 whaleLimit = whaleLimit(actor);
             assertLe(balance, whaleLimit, string.concat("whale limit exceeded: ", actor.toChecksumAddress()));
             if (balance != whaleLimit) {
                 assertGe(balance, lastBalance[actor], string.concat("negative rebase: ", actor.toChecksumAddress()));
             }
         }
-        assertGe(fu.balanceOf(DEAD), lastBalance[DEAD], "negative rebase: DEAD");
+        assertGe(balanceOf(DEAD), lastBalance[DEAD], "negative rebase: DEAD");
     }
 
     function invariant_delegatesNotChanged() external view override {
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
-            assertEq(fu.delegates(actor), shadowDelegates[actor], "delegates mismatch");
+            assertEq(delegates(actor), shadowDelegates[actor], "delegates mismatch");
         }
     }
 
@@ -1150,7 +1224,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 tstore(delegatee, add(votes, tload(delegatee)))
             }
         }
-        assertEq(fu.getTotalVotes(), total);
+        assertEq(getTotalVotes(), total);
         {
             uint256 power;
             assembly ("memory-safe") {
@@ -1158,7 +1232,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 tstore(DEAD, 0x00)
             }
             total -= power;
-            assertEq(fu.getVotes(DEAD), power, string.concat("voting power for ", DEAD.toChecksumAddress()));
+            assertEq(getVotes(DEAD), power, string.concat("voting power for ", DEAD.toChecksumAddress()));
         }
         {
             uint256 power;
@@ -1169,7 +1243,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 tstore(fu_, 0x00)
             }
             total -= power;
-            assertEq(fu.getVotes(fu_), power, string.concat("voting power for ", fu_.toChecksumAddress()));
+            assertEq(getVotes(fu_), power, string.concat("voting power for ", fu_.toChecksumAddress()));
         }
         for (uint256 i; i < actors.length; i++) {
             address actor = actors[i];
@@ -1180,7 +1254,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
                 tstore(actor, 0x00)
             }
             total -= power;
-            assertEq(fu.getVotes(actor), power, string.concat("voting power for ", actor.toChecksumAddress()));
+            assertEq(getVotes(actor), power, string.concat("voting power for ", actor.toChecksumAddress()));
         }
         assertEq(total, 0);
     }
@@ -1190,7 +1264,7 @@ contract FUGuide is Common, Bound, ListOfInvariants {
     }
 
     function invariant_delegateeZero() external view override {
-        assertEq(fu.getVotes(address(0)), 0, "zero cannot have voting power");
+        assertEq(getVotes(address(0)), 0, "zero cannot have voting power");
     }
 
     function _invariant_rebaseQueueContents() internal {

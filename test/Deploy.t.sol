@@ -33,6 +33,80 @@ abstract contract Common is StdAssertions {
     address[] internal actors;
     mapping(address => bool) internal isActor;
 
+    function _revert(uint256 v) internal pure {
+        assembly ("memory-safe") {
+            mstore(0x00, v)
+            revert(0x00, 0x20)
+        }
+    }
+
+    function _smuggle(function (uint32, address) internal returns (uint256) contraband) private pure returns (function (uint32, address) internal pure returns (uint256) smuggled) {
+        assembly ("memory-safe") {
+            smuggled := contraband
+        }
+    }
+
+    function __staticcallArg(uint32 selector, address acct) private returns (uint256 r) {
+        assembly ("memory-safe") {
+            mstore(0x14, acct)
+            mstore(0x00, shl(0x60, selector))
+            if call(gas(), address(), 0x00, 0x10, 0x24, 0x00, 0x20) {
+                revert(0x00, 0x00)
+            }
+            if xor(0x20, returndatasize()) {
+                let ptr := mload(0x40)
+                returndatacopy(ptr, 0x00, returndatasize())
+                revert(ptr, returndatasize())
+            }
+            r := mload(0x00)
+        }
+    }
+
+    function _staticcall(uint32 selector, address acct) internal view returns (uint256) {
+        return _smuggle(__staticcallArg)(selector, acct);
+    }
+
+    function _smuggle(function (uint32) internal returns (uint256) contraband) private pure returns (function (uint32) internal pure returns (uint256) smuggled) {
+        assembly ("memory-safe") {
+            smuggled := contraband
+        }
+    }
+
+    function __staticcall(uint32 selector) private returns (uint256 r) {
+        assembly ("memory-safe") {
+            mstore(0x00, selector)
+            if call(gas(), address(), 0x00, 0x1c, 0x04, 0x00, 0x20) {
+                revert(0x00, 0x00)
+            }
+            if xor(0x20, returndatasize()) {
+                let ptr := mload(0x40)
+                returndatacopy(ptr, 0x00, returndatasize())
+                revert(ptr, returndatasize())
+            }
+            r := mload(0x00)
+        }
+    }
+
+    function _staticcall(uint32 selector) internal view returns (uint256) {
+        return _smuggle(__staticcall)(selector);
+    }
+
+    function _balanceOf(address acct) external view {
+        _revert(fu.balanceOf(acct));
+    }
+
+    function _delegates(address acct) external view {
+        _revert(uint160(fu.delegates(acct)));
+    }
+
+    function balanceOf(address acct) internal view returns (uint256) {
+        return _staticcall(uint32(this._balanceOf.selector), acct);
+    }
+
+    function delegates(address acct) internal view returns (address) {
+        return address(uint160(_staticcall(uint32(this._delegates.selector), acct)));
+    }
+
     function setUpActors(address[] memory initialActors) internal {
         for (uint256 i; i < initialActors.length; i++) {
             address actor = initialActors[i];
@@ -66,8 +140,8 @@ abstract contract Common is StdAssertions {
 
         isActor[newActor] = true;
         actors.push(newActor);
-        assertEq(fu.balanceOf(newActor), 0);
-        assertEq(fu.delegates(newActor), address(0));
+        assertEq(balanceOf(newActor), 0);
+        assertEq(delegates(newActor), address(0));
     }
 
     function saveActor(address actor) internal virtual {
